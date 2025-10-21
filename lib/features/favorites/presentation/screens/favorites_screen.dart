@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../widgets/favorite_products_tab.dart';
 import '../widgets/favorite_shops_tab.dart';
 

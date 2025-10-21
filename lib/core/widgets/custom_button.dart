@@ -20,16 +20,18 @@ class CustomButton extends StatelessWidget {
           ? BoxDecoration(
         borderRadius: BorderRadius.circular(42),
         gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
           colors: [
             Color(0xFF2A8A49), // koyu yeşil
+            Color(0xFF4CB96A), // orta ton (parlaklık efekti)
             Color(0xFF6ABF7C), // açık yeşil
           ],
+          stops: [0.0, 0.5, 1.0],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
+            color: Color(0xFF2A8A49).withValues(alpha: 0.2), // %15 shadow
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -41,10 +43,12 @@ class CustomButton extends StatelessWidget {
       ),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          elevation: 0, // gölgeyi dış container veriyor
+          elevation: 0,
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(42)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(42),
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         ),
         onPressed: onPressed,

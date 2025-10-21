@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/providers/app_state_provider.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -53,7 +54,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ref.read(appStateProvider.notifier).setSeenOnboarding(true);
       context.go('/location');
     } else {
-      _pageController.nextPage(duration: const Duration(milliseconds: 350), curve: Curves.easeInOut);
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -83,11 +87,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             bottom: 24,
             right: 24,
             child: TextButton(
-              onPressed: () async {
+              onPressed: () {
                 ref.read(appStateProvider.notifier).setSeenOnboarding(true);
                 context.go('/location');
               },
-              child: const Text('Atla', style: TextStyle(fontSize: 16)),
+              child: Text(
+                'Atla',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],
@@ -119,24 +130,44 @@ class OnboardingPage extends StatelessWidget {
       width: size.width,
       height: size.height,
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFF7FDF9), Color(0xFFEAF9EE)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+        gradient: AppGradients.light,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: size.width * 0.25, color: Theme.of(context).colorScheme.primary),
+            Icon(
+              icon,
+              size: size.width * 0.25,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             const SizedBox(height: 48),
-            Text(title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 16),
-            Text(description, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87, height: 1.4)),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
             const SizedBox(height: 48),
-            SizedBox(width: double.infinity, child: CustomButton(text: isLast ? 'Hazırım!' : 'İleri', onPressed: onNext)),
+            SizedBox(
+              width: double.infinity,
+              child: CustomButton(
+                text: isLast ? 'Hazırım!' : 'İleri',
+                onPressed: onNext,
+              ),
+            ),
           ],
         ),
       ),

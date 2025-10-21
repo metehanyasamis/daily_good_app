@@ -5,16 +5,18 @@ import 'package:go_router/go_router.dart';
 // 🔹 Feature imports
 import '../../features/account/presentation/screens/account_screen.dart';
 import '../../features/auth/presentation/screens/intro_screen.dart';
+import '../../features/business/model/business_model.dart';
+import '../../features/business/presentation/screens/business_details_screen.dart';
+import '../../features/explore/presentation/screens/explore_map_screen.dart';
 import '../../features/product/presentation/widgets/product_card.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
-import '../../features/auth/presentation/screens/otp_screen.dart';
 import '../../features/auth/presentation/screens/profile_details_screen.dart';
 import '../../features/location/presentation/screens/location_info_screen.dart';
 import '../../features/location/presentation/screens/location_map_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
-import '../../features/explore/presentation/screens/explore_screen.dart';
+import '../../features/explore/presentation/screens/explore_list_screen.dart';
 import '../../features/favorites/presentation/screens/favorites_screen.dart';
 import '../../features/product/presentation/screens/product_detail_screen.dart';
 import 'app_shell.dart';
@@ -116,6 +118,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      GoRoute(
+        path: '/business-detail',
+        pageBuilder: (context, state) {
+          final business = state.extra as BusinessModel;
+          return buildAnimatedPage(
+            key: state.pageKey,
+            child: BusinessDetailScreen(business: business),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/explore-map',
+        builder: (context, state) => const ExploreMapScreen(),
+      ),
+
+      GoRoute(
+        path: '/explore-list',
+        builder: (context, state) => const ExploreListScreen(),
+      ),
 
       // 🔹 ShellRoute (bottom nav)
       ShellRoute(
@@ -123,7 +145,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppShell(child: child, location: state.uri.toString()),
         routes: [
           GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-          GoRoute(path: '/explore', builder: (_, __) => const ExploreScreen()),
+          GoRoute(path: '/explore', builder: (_, __) => const ExploreListScreen()),
           GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
           GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
         ],

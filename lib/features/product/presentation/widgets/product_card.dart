@@ -128,7 +128,7 @@ class ProductCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               product.brandName,
-                              style: AppTextStyles.productBrandName,
+                              //style: AppTextStyles.productBrandName,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),

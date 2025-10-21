@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/providers/app_state_provider.dart';
+import '../../../../core/theme/app_theme.dart';
 
 class ProfileDetailsScreen extends ConsumerStatefulWidget {
   const ProfileDetailsScreen({super.key});
@@ -24,23 +25,20 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       email: _emailController.text,
       gender: _selectedGender ?? '',
     );
-
     context.go('/onboarding');
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FBF8),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// 🔹 Geri butonu
+              /// 🔹 Geri Butonu + Başlık
               Row(
                 children: [
                   GestureDetector(
@@ -48,11 +46,11 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(50),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: AppColors.gray.withValues(alpha: 0.2), // %20
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -62,64 +60,60 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       "Profil Detayları",
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
-                  const SizedBox(width: 36), // sağ tarafı dengele
+                  const SizedBox(width: 36), // Sağ boşluk
                 ],
               ),
 
               const SizedBox(height: 24),
 
-              /// 🔹 Ad alanı
               _buildTextField("Ad", _nameController),
-
-              /// 🔹 Soyad alanı
               _buildTextField("Soyad", _surnameController),
-
-              /// 🔹 E-posta adresi
               _buildTextField("E-posta adresi", _emailController,
                   keyboardType: TextInputType.emailAddress),
-
-              /// 🔹 Cinsiyet dropdown
               _buildDropdown(),
 
               const Spacer(),
 
-              /// 🔹 Kaydet butonu
+              /// 🔹 Kaydet Butonu
               GestureDetector(
                 onTap: _onSave,
                 child: Container(
                   width: double.infinity,
                   height: 56,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(40),
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF3E8D4E), Color(0xFF7EDC8A)],
+                      colors: [
+                        AppColors.primaryDarkGreen,
+                        AppColors.primaryLightGreen,
+                      ],
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.green.withOpacity(0.2),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      )
+                        color:
+                        AppColors.gray.withValues(alpha: 0.5),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
                     ],
                   ),
-                  alignment: Alignment.center,
                   child: const Text(
                     "Kaydet",
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.surface,
                       fontWeight: FontWeight.w600,
                       fontSize: 18,
                     ),
@@ -144,10 +138,10 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
+            style: Theme.of(context)
+                .textTheme
+                .labelLarge
+                ?.copyWith(color: AppColors.textPrimary),
           ),
           const SizedBox(height: 6),
           TextField(
@@ -155,19 +149,18 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
             keyboardType: keyboardType,
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white,
+              fillColor: AppColors.surface,
               contentPadding:
               const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide(
-                  color: Colors.black.withOpacity(0.25),
-                ),
+                borderSide:
+                BorderSide(color: AppColors.textPrimary.withValues(alpha: 0.2)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30),
                 borderSide: const BorderSide(
-                  color: Color(0xFF49A05D),
+                  color: AppColors.primaryDarkGreen,
                   width: 1.5,
                 ),
               ),
@@ -184,19 +177,19 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Cinsiyet",
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
+            style: Theme.of(context)
+                .textTheme
+                .labelLarge
+                ?.copyWith(color: AppColors.textPrimary),
           ),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
             value: _selectedGender,
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white,
+              fillColor: AppColors.surface,
               contentPadding:
               const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
               border: OutlineInputBorder(
@@ -205,12 +198,12 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30),
                 borderSide:
-                BorderSide(color: Colors.black.withOpacity(0.25)),
+                BorderSide(color: AppColors.textPrimary.withValues(alpha: 0.2)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30),
-                borderSide:
-                const BorderSide(color: Color(0xFF49A05D), width: 1.5),
+                borderSide: const BorderSide(
+                    color: AppColors.textPrimary),
               ),
             ),
             items: const [
