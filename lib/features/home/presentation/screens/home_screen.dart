@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
-import '../../../product/presentation/widgets/product_card.dart';
+import '../../../product/data/mock/mock_product_model.dart';
+import '../../../product/data/models/product_model.dart';
+import '../../../product/presentation/widgets/product_card.dart' hide ProductModel;
 import '../../../location/presentation/screens/location_picker_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -355,45 +357,21 @@ class SampleProductList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<ProductModel> sampleProducts = [
-      ProductModel(
-        bannerImage: 'assets/images/sample_food3.jpg',
-        logoImage: 'assets/images/sample_productLogo1.jpg',
-        brandName: 'Sandwich City',
-        packageName: 'Sürpriz Paket',
-        pickupTimeText: 'Bugün teslim al 15:30 - 17:00',
-        rating: 4.7,
-        distanceKm: 0.8,
-        oldPrice: 270.00,
-        newPrice: 70.00,
-        stockLabel: 'Son 3',
-      ),
-      ProductModel(
-        bannerImage: 'assets/images/sample_food4.jpg',
-        logoImage: 'assets/images/sample_productLogo1.jpg',
-        brandName: 'VGreen Dükkan',
-        packageName: 'Vegan Sandviç',
-        pickupTimeText: 'Bugün teslim al 14:00 - 16:00',
-        rating: 4.5,
-        distanceKm: 1.2,
-        oldPrice: 220.00,
-        newPrice: 55.00,
-        stockLabel: 'Son 5',
-      ),
-    ];
+    final List<ProductModel> sampleHomeProducts = mockProducts;
+
 
     return SizedBox(
       height: 240, // kart yüksekliği
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: sampleProducts.length,
+        itemCount: sampleHomeProducts.length,
         itemBuilder: (context, index) {
-          final product = sampleProducts[index];
+          final product = sampleHomeProducts[index];
           return Container(
             width: MediaQuery.of(context).size.width * 0.82, // 🔹 genişliği biraz küçült
             margin: EdgeInsets.only(
-              right: index == sampleProducts.length - 1 ? 0 : 1,
+              right: index == sampleHomeProducts.length - 1 ? 0 : 1,
             ),
             child: ProductCard(product: product,
               onTap: () => context.push('/product-detail', extra: product),

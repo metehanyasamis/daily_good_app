@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
 import 'otp_screen.dart';
@@ -238,6 +239,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           asset: 'assets/logos/google.png',
                           text: "Google ile devam et",
                           onTap: () {},
+                        ),
+                        // Demo Butonu
+                        _buildSocialButton(
+                          asset: 'assets/logos/google.png',
+                          text: "Demo ile devam et",
+                          onTap: () {
+                            context.go('/home');
+                            },
                         ),
                       ],
                     ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../model/business_model.dart'; // ProductModel için
+import '../../data/model/businessShop_model.dart'; // ProductModel için
 
 class BusinessDetailScreen extends StatelessWidget {
   final BusinessModel business;
@@ -11,10 +11,11 @@ class BusinessDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
-    
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: const BackButton(color: Colors.black), // 👈 Geri butonu eklendi
         title: Text(business.name),
         centerTitle: true,
         backgroundColor: Colors.white,
@@ -27,7 +28,7 @@ class BusinessDetailScreen extends StatelessWidget {
           children: [
             // 🔹 Kapak görseli
             Image.asset(
-              business.image,
+              business.businessShopLogoImage,
               width: double.infinity,
               height: 220,
               fit: BoxFit.cover,
@@ -121,7 +122,7 @@ class BusinessDetailScreen extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.asset(
-                            product.logoImage,
+                            product.bannerImage,
                             width: 48,
                             height: 48,
                             fit: BoxFit.cover,

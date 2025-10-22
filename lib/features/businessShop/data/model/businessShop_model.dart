@@ -1,18 +1,20 @@
-import '../../product/presentation/widgets/product_card.dart';
+import '../../../product/data/models/product_model.dart';
 
 class BusinessModel {
+  final String id;
   final String name;
   final String address;
-  final String image;
+  final String businessShopLogoImage;
   final double rating;
   final double distance;
   final String workingHours;
   final List<ProductModel> products;
 
   BusinessModel({
+    required this.id,
     required this.name,
     required this.address,
-    required this.image,
+    required this.businessShopLogoImage,
     required this.rating,
     required this.distance,
     required this.workingHours,

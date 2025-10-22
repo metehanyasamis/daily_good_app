@@ -9,6 +9,7 @@ class AppColors {
   static const Color surface = Color(0xFFFFFFFF);
   static const Color textPrimary = Color(0xFF1A1A1A);
   static const Color textSecondary = Color(0xFF4F4F4F);
+  static const Color textProductCardBrandName = Color(0xFFFFFFFF);
   static const Color gray = Color(0xFFBDBDBD);
   static const Color error = Color(0xFFFF4D4D);
 
@@ -56,6 +57,7 @@ class AppTheme {
     ),
 
     textTheme: GoogleFonts.nunitoTextTheme().copyWith(
+
       headlineLarge: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
       headlineMedium: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
       titleLarge: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
@@ -65,6 +67,8 @@ class AppTheme {
       bodySmall: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
       labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
       labelSmall: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+      labelMedium: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.textProductCardBrandName),
+
     ),
 
     elevatedButtonTheme: ElevatedButtonThemeData(

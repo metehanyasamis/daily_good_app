@@ -5,10 +5,11 @@ import 'package:go_router/go_router.dart';
 // 🔹 Feature imports
 import '../../features/account/presentation/screens/account_screen.dart';
 import '../../features/auth/presentation/screens/intro_screen.dart';
-import '../../features/business/model/business_model.dart';
-import '../../features/business/presentation/screens/business_details_screen.dart';
+import '../../features/businessShop/data/model/businessShop_model.dart';
+import '../../features/businessShop/presentation/screens/businessShop_details_screen.dart';
 import '../../features/explore/presentation/screens/explore_map_screen.dart';
-import '../../features/product/presentation/widgets/product_card.dart';
+import '../../features/product/data/models/product_model.dart';
+import '../../features/product/presentation/widgets/product_card.dart' hide ProductModel;
 import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/profile_details_screen.dart';
@@ -119,7 +120,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(
-        path: '/business-detail',
+        path: '/businessShop-detail',
         pageBuilder: (context, state) {
           final business = state.extra as BusinessModel;
           return buildAnimatedPage(
@@ -129,15 +130,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      GoRoute(
-        path: '/explore-map',
-        builder: (context, state) => const ExploreMapScreen(),
-      ),
-
-      GoRoute(
-        path: '/explore-list',
-        builder: (context, state) => const ExploreListScreen(),
-      ),
 
       // 🔹 ShellRoute (bottom nav)
       ShellRoute(
@@ -145,7 +137,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppShell(child: child, location: state.uri.toString()),
         routes: [
           GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+
           GoRoute(path: '/explore', builder: (_, __) => const ExploreListScreen()),
+          GoRoute(path: '/explore-list', builder: (_, __) => const ExploreListScreen()),
+          GoRoute(path: '/explore-map', builder: (_, __) => const ExploreMapScreen()),
+
           GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
           GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
         ],

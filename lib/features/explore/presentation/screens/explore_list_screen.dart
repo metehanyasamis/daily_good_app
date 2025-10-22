@@ -1,9 +1,11 @@
+import 'package:daily_good/features/product/data/mock/mock_product_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_bottom_nav_bar.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
-import '../../../product/presentation/widgets/product_card.dart';
+import '../../../product/data/models/product_model.dart';
+import '../../../product/presentation/widgets/product_card.dart' hide ProductModel;
 
 class ExploreListScreen extends StatefulWidget {
   const ExploreListScreen({super.key});
@@ -15,33 +17,7 @@ class ExploreListScreen extends StatefulWidget {
 class _ExploreListScreenState extends State<ExploreListScreen> {
   String selectedAddress = 'Nail Bey Sok.';
   String selectedSort = 'recommended';
-
-  final List<ProductModel> products = [
-    ProductModel(
-      bannerImage: 'assets/images/sample_food4.jpg',
-      logoImage: 'assets/images/sample_productLogo1.jpg',
-      brandName: 'Sandwich City',
-      packageName: 'Sürpriz Paket',
-      pickupTimeText: 'Bugün teslim al 15:30 - 17:00',
-      rating: 4.7,
-      distanceKm: 0.8,
-      oldPrice: 270,
-      newPrice: 70,
-      stockLabel: 'Son 3',
-    ),
-    ProductModel(
-      bannerImage: 'assets/images/sample_food2.jpg',
-      logoImage: 'assets/images/sample_productLogo1.jpg',
-      brandName: 'VGreen Dükkan',
-      packageName: 'Vegan Sandviç',
-      pickupTimeText: 'Bugün teslim al 14:00 - 16:00',
-      rating: 4.5,
-      distanceKm: 1.2,
-      oldPrice: 220,
-      newPrice: 55,
-      stockLabel: 'Son 5',
-    ),
-  ];
+  final List<ProductModel> sampleExploreProducts = mockProducts;
 
   void _selectLocation() {
     // Lokasyon seçim ekranına yönlendirme
@@ -63,12 +39,6 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
           onLocationTap: _selectLocation,
           onNotificationsTap: _openNotifications,
         ),
-      ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: 1, // KEŞFET
-        onTabSelected: (index) {
-          // tab geçiş işlemleri yapılabilir
-        },
       ),
       body: Stack(
         children: [
@@ -124,7 +94,7 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
                 const SizedBox(height: 8),
 
                 // 🧾 Ürünler
-                ...products.map((product) => ProductCard(
+                ...sampleExploreProducts.map((product) => ProductCard(
                   product: product,
                   onTap: () => context.push('/product-detail', extra: product),
                 )),
@@ -135,8 +105,10 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
           // 🗺 Harita Butonu (tam sağda, sağ kenarı düz)
           Positioned(
             right: 0,
-            bottom: MediaQuery.of(context).padding.bottom + 16,
-            child: ElevatedButton.icon(
+          bottom: (MediaQuery.of(context).padding.bottom > 0
+          ? MediaQuery.of(context).padding.bottom
+              : 20) + 80, // ✅ Alt nav bar üstüne tam oturur
+             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryDarkGreen,
                 shape: const RoundedRectangleBorder(
@@ -147,7 +119,6 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
                     bottomRight: Radius.zero,
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
               onPressed: () {
                 context.push('/explore-map');
