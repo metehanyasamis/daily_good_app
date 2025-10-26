@@ -16,7 +16,7 @@ class LocationInfoScreen extends ConsumerWidget {
       final position = await Geolocator.getCurrentPosition();
       debugPrint("Konum: ${position.latitude}, ${position.longitude}");
 
-      // ✅ Riverpod state güncelle
+      // ✅ Riverpod states güncelle
       ref.read(appStateProvider.notifier).setLocationAccess(true);
 
       // ✅ Artık harita ekranına geç

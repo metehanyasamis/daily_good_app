@@ -51,7 +51,7 @@ class _LocationMapScreenState extends ConsumerState<LocationMapScreen> {
   }
 
   Future<void> _confirmLocation() async {
-    // ✅ Konum seçildiyse state güncelle
+    // ✅ Konum seçildiyse states güncelle
     ref.read(appStateProvider.notifier).setLocationAccess(true);
     context.go('/home');
   }

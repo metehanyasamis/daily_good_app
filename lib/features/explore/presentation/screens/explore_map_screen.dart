@@ -5,7 +5,6 @@ import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../businessShop/data/mock/mock_businessShop_model.dart';
 import '../../../businessShop/data/model/businessShop_model.dart';
 import '../../../businessShop/presentation/widgets/businessShop_details_content.dart';
-import '../../../product/data/models/product_model.dart';
 
 class ExploreMapScreen extends StatefulWidget {
   const ExploreMapScreen({super.key});

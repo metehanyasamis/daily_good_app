@@ -1,31 +1,64 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../widgets/favorite_products_tab.dart';
 import '../widgets/favorite_shops_tab.dart';
 
-class FavoritesScreen extends StatelessWidget {
+class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
   @override
+  State<FavoritesScreen> createState() => _FavoritesScreenState();
+}
+
+class _FavoritesScreenState extends State<FavoritesScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Favorilerim'),
-          centerTitle: true,
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Ürünler'),
-              Tab(text: 'İşletmeler'),
-            ],
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Favorilerim',
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        body: const TabBarView(
-          children: [
-            FavoriteProductsTab(),
-            FavoriteShopsTab(),
+        centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: AppColors.primaryDarkGreen,
+          unselectedLabelColor: Colors.black54,
+          indicatorColor: AppColors.primaryDarkGreen,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          tabs: const [
+            Tab(text: 'Favori Ürün'),
+            Tab(text: 'Favori İşletme'),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: const [
+          FavoriteProductsTab(),
+          FavoriteShopsTab(),
+        ],
       ),
     );
   }

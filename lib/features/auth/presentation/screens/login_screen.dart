@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
+import '../../domain/providers/auth_notifier.dart';
+import '../../domain/states/auth_state.dart';
 import 'otp_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -29,6 +31,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (_isOtpOpen) return;
 
     if (_phoneController.text.length == 10 && isTermsChecked) {
+      ref.read(authNotifierProvider.notifier).login(_phoneController.text.trim()); // ✅ backend'e trigger
+
       setState(() => _isOtpOpen = true);
       await showModalBottomSheet(
         context: context,
@@ -51,7 +55,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+
+    ref.listen<AuthState>(authNotifierProvider, (previous, next) {
+      if (next.status == AuthStatus.authenticated) {
+        context.go('/home');
+      } else if (next.status == AuthStatus.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.errorMessage ?? 'Hata oldu')),
+        );
+      }
+    });
+
+    // UI: telefon alanı, gönder butonu …
+    // “Gönder” düğmesine basıldığında:
+    // ref.read(authNotifierProvider.notifier).loginWithPhone(phoneNumber);
 
     return Scaffold(
       backgroundColor: AppColors.primaryLightGreen, // üst logo alanı için açık arka plan
@@ -185,7 +202,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               onChanged: (val) => setState(() => isTermsChecked = val!),
                               activeColor: AppColors.primaryDarkGreen,
                               checkColor: AppColors.surface,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                              ),
+                              side: BorderSide.none,
                             ),
                             Expanded(
                               child: Text(

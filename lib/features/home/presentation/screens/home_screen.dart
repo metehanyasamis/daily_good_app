@@ -6,8 +6,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../product/data/mock/mock_product_model.dart';
 import '../../../product/data/models/product_model.dart';
-import '../../../product/presentation/widgets/product_card.dart' hide ProductModel;
 import '../../../location/presentation/screens/location_picker_screen.dart';
+import '../../../product/presentation/widgets/product_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

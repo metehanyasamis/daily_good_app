@@ -9,10 +9,9 @@ import '../../features/businessShop/data/model/businessShop_model.dart';
 import '../../features/businessShop/presentation/screens/businessShop_details_screen.dart';
 import '../../features/explore/presentation/screens/explore_map_screen.dart';
 import '../../features/product/data/models/product_model.dart';
-import '../../features/product/presentation/widgets/product_card.dart' hide ProductModel;
-import '../../features/splash/presentation/screens/splash_screen.dart';
+import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
-import '../../features/auth/presentation/screens/profile_details_screen.dart';
+import '../../features/account/presentation/screens/profile_details_screen.dart';
 import '../../features/location/presentation/screens/location_info_screen.dart';
 import '../../features/location/presentation/screens/location_map_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -80,17 +79,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) =>
             buildAnimatedPage(key: state.pageKey, child: const LoginScreen()),
       ),
-      /*GoRoute(
-        path: '/otp',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const OtpScreen()),
-      ),
-
-       */
       GoRoute(
         path: '/profileDetail',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const ProfileDetailsScreen()),
+        pageBuilder: (context, state) {
+          final fromOnboarding =
+              state.extra is Map && (state.extra as Map)['fromOnboarding'] == true;
+
+          return buildAnimatedPage(
+            key: state.pageKey,
+            child: ProfileDetailsScreen(fromOnboarding: fromOnboarding),
+          );
+        },
       ),
       GoRoute(
         path: '/onboarding',
@@ -118,7 +117,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-
       GoRoute(
         path: '/businessShop-detail',
         pageBuilder: (context, state) {
