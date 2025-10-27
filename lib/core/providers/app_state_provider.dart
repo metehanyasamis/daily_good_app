@@ -112,6 +112,14 @@ class AppStateNotifier extends StateNotifier<AppState> {
     _saveState();
   }
 
+  void setProfileCompleted(bool value) {
+    state = state.copyWith(hasCompletedProfile: value);
+  }
+
+  void setOnboardingSeen(bool value) {
+    state = state.copyWith(hasSeenOnboarding: value);
+  }
+
   void logout() {
     state = state.copyWith(isLoggedIn: false);
     _saveState();

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/custom_bottom_nav_bar.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
-import '../../../business/model/business_model.dart';
-import '../../../business/presentation/widgets/business_details_content.dart';
-import '../../../product/presentation/widgets/product_card.dart';
+import '../../../businessShop/data/mock/mock_businessShop_model.dart';
+import '../../../businessShop/data/model/businessShop_model.dart';
+import '../../../businessShop/presentation/widgets/businessShop_details_content.dart';
 
 class ExploreMapScreen extends StatefulWidget {
   const ExploreMapScreen({super.key});
@@ -15,31 +14,21 @@ class ExploreMapScreen extends StatefulWidget {
 }
 
 class _ExploreMapScreenState extends State<ExploreMapScreen> {
-  // Mock veriler
-  final List<Map<String, dynamic>> _shops = [
-    {
-      'id': '1',
-      'name': 'Sandwich City',
-      'pickupTime': '15:30 - 17:00',
-      'rating': 4.7,
-      'distance': 0.8,
-      'address': 'Terzi Bey Sokak no: 46 / Kadıköy',
-    },
-    {
-      'id': '2',
-      'name': 'VGreen Dükkan',
-      'pickupTime': '14:00 - 16:00',
-      'rating': 4.5,
-      'distance': 1.2,
-      'address': 'Moda Cd. no: 12 / Kadıköy',
-    },
-  ];
 
+  final List<BusinessModel> _sampleBusinessShop = mockBusinessList;
   String? _selectedShopId;
 
-  Map<String, dynamic>? get _selectedShop {
+  // Seçilen işletmeyi ID'sine göre BusinessModel listesinden bulur.
+  BusinessModel? get _selectedShop {
     if (_selectedShopId == null) return null;
-    return _shops.firstWhere((s) => s['id'] == _selectedShopId, orElse: () => {});
+
+    try {
+      // Doğrudan BusinessModel'in id alanını kullanarak arama yapılır.
+      return _sampleBusinessShop.firstWhere((s) => s.id == _selectedShopId);
+    } catch (e) {
+      // Eğer ID bulunamazsa (güvenlik için) null döndürülür.
+      return null;
+    }
   }
 
   void _onPinTap(String shopId) {
@@ -49,66 +38,10 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
   }
 
   void _onCardTap() {
-    final shop = _selectedShop;
-    if (shop != null) {
-      final business = BusinessModel(
-        name: shop['name'] ?? 'İşletme Adı Yok',
-        address: shop['address'] ?? 'Adres bilgisi yok',
-        image: shop['image'] ?? 'assets/images/shop1.jpg',
-        rating: shop['rating'] ?? 4.5,
-        distance: shop['distance'] ?? 0.8,
-        workingHours: shop['workingHours'] ?? '08:00 - 16:00',
-        products: [
-          ProductModel(
-            bannerImage: 'assets/images/sample_food4.jpg',
-            logoImage: 'assets/images/sample_productLogo1.jpg',
-            brandName: shop['name'] ?? 'İşletme Adı',
-            packageName: 'Sürpriz Paket',
-            pickupTimeText: 'Bugün teslim al 15:30 - 17:00',
-            rating: 4.7,
-            distanceKm: 0.8,
-            oldPrice: 270,
-            newPrice: 70,
-            stockLabel: 'Son 3',
-          ),
-          ProductModel(
-            bannerImage: 'assets/images/sample_food4.jpg',
-            logoImage: 'assets/images/sample_productLogo1.jpg',
-            brandName: shop['name'] ?? 'İşletme Adı',
-            packageName: 'Sürpriz Paket',
-            pickupTimeText: 'Bugün teslim al 15:30 - 17:00',
-            rating: 4.7,
-            distanceKm: 0.8,
-            oldPrice: 270,
-            newPrice: 70,
-            stockLabel: 'Son 3',
-          ),
-          ProductModel(
-            bannerImage: 'assets/images/sample_food4.jpg',
-            logoImage: 'assets/images/sample_productLogo1.jpg',
-            brandName: shop['name'] ?? 'İşletme Adı',
-            packageName: 'Sürpriz Paket',
-            pickupTimeText: 'Bugün teslim al 15:30 - 17:00',
-            rating: 4.7,
-            distanceKm: 0.8,
-            oldPrice: 270,
-            newPrice: 70,
-            stockLabel: 'Son 3',
-          ),
-          ProductModel(
-            bannerImage: 'assets/images/sample_food4.jpg',
-            logoImage: 'assets/images/sample_productLogo1.jpg',
-            brandName: shop['name'] ?? 'İşletme Adı',
-            packageName: 'Sürpriz Paket',
-            pickupTimeText: 'Bugün teslim al 15:30 - 17:00',
-            rating: 4.7,
-            distanceKm: 0.8,
-            oldPrice: 270,
-            newPrice: 70,
-            stockLabel: 'Son 3',
-          ),
-        ],
-      );
+    final business = _selectedShop;
+
+    if (business != null) {
+      // Seçilen BusinessModel objesi zaten tüm ürün verilerini içeriyor.
 
       showModalBottomSheet(
         context: context,
@@ -126,7 +59,8 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
             ),
             child: SingleChildScrollView(
               controller: controller,
-              child: BusinessDetailContent(business: business),
+              // BusinessDetailContent widget'ına BusinessModel objesi doğrudan iletilir.
+              child: BusinessDetailContent(businessShop: business),
             ),
           ),
         ),
@@ -134,22 +68,6 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
     }
   }
 
-
-
-  final dummyProducts = [
-    ProductModel(
-      logoImage: 'assets/images/sample_productLogo1.jpg',
-      bannerImage: 'assets/images/sample_food1.jpg',
-      brandName: 'Sandwich City',
-      packageName: 'Sürpriz Paket',
-      pickupTimeText: 'Bugün teslim al 15:30 - 17:00',
-      rating: 4.7,
-      distanceKm: 0.8,
-      oldPrice: 270,
-      newPrice: 70,
-      stockLabel: 'Son 3',
-    ),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -168,12 +86,6 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
           },
         ),
       ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: 1,
-        onTabSelected: (index) {
-          // Tab geçişleri
-        },
-      ),
       body: Stack(
         children: [
           // Harita yerine mock görsel
@@ -184,12 +96,12 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
             ),
           ),
 
-          // Mock pinler (ikon ile)
+          // Mock pinler (id'lerin mockBusinessList'teki id'ler ile eşleştiğinden emin olun)
           Positioned(
             left: 60,
             top: 220,
             child: GestureDetector(
-              onTap: () => _onPinTap('1'),
+              onTap: () => _onPinTap('1'), // 'Altın Fırın' id'si
               child: Icon(Icons.location_on, color: AppColors.primaryDarkGreen, size: 36),
             ),
           ),
@@ -197,7 +109,7 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
             left: 180,
             top: 350,
             child: GestureDetector(
-              onTap: () => _onPinTap('2'),
+              onTap: () => _onPinTap('2'), // 'VGreen Dükkan' id'si
               child: Icon(Icons.location_on, color: AppColors.primaryDarkGreen, size: 36),
             ),
           ),
@@ -224,21 +136,24 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
           ),
 
           // Alt kart: pin seçildiğinde göster
-          if (_selectedShop != null && _selectedShop!['name'] != null)
+          if (_selectedShop != null)
             Positioned(
               bottom: kBottomNavigationBarHeight + 80,
               left: 16,
               right: 16,
               child: GestureDetector(
                 onTap: _onCardTap,
-                child: _BusinessCard(shop: _selectedShop!),
+                // BusinessModel objesini _BusinessCard widget'ına iletiyoruz.
+                child: _BusinessCard(business: _selectedShop!),
               ),
             ),
 
           // Liste butonu
           Positioned(
             right: 0,
-            bottom: kBottomNavigationBarHeight + 16,
+            bottom: (MediaQuery.of(context).padding.bottom > 0
+                ? MediaQuery.of(context).padding.bottom
+                : 20) + 80,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryDarkGreen,
@@ -250,9 +165,9 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
                     bottomRight: Radius.zero,
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
               onPressed: () {
+                // 'go_router' ile listeleme ekranına yönlendirme
                 context.push('/explore-list');
               },
               icon: const Icon(Icons.list, color: Colors.white),
@@ -268,10 +183,10 @@ class _ExploreMapScreenState extends State<ExploreMapScreen> {
   }
 }
 
-// Alt kart widget
+// Alt kart widget'ı (BusinessModel objesi kullanır)
 class _BusinessCard extends StatelessWidget {
-  final Map<String, dynamic> shop;
-  const _BusinessCard({required this.shop});
+  final BusinessModel business;
+  const _BusinessCard({required this.business});
 
   @override
   Widget build(BuildContext context) {
@@ -286,22 +201,23 @@ class _BusinessCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const CircleAvatar(
+            // İşletme görseli (image alanı, bu kart için logo yerine kullanıldı)
+            CircleAvatar(
               radius: 24,
-              backgroundImage: AssetImage('assets/images/sample_productLogo1.jpg'),
+              backgroundImage: AssetImage(business.businessShopLogoImage),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(shop['name'] ?? 'İşletme adı yok',
+                  // Sınıf üyelerine nokta operatörü ile erişim
+                  Text(business.name,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
+                  // Sınıf üyelerine nokta operatörü ile erişim
                   Text(
-                    shop['pickupTime'] != null
-                        ? 'Bugün teslim al ${shop['pickupTime']}'
-                        : 'Bugün teslim al',
+                    'Bugün teslim al ${business.workingHours}',
                     style: TextStyle(color: Colors.grey[700]),
                   ),
                 ],

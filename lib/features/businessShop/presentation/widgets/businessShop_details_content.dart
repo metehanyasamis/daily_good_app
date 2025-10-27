@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../model/business_model.dart';
+import '../../data/model/businessShop_model.dart';
 
 class BusinessDetailContent extends StatelessWidget {
-  final BusinessModel business;
+  final BusinessModel businessShop;
 
-  const BusinessDetailContent({super.key, required this.business});
+  const BusinessDetailContent({super.key, required this.businessShop});
 
   @override
   Widget build(BuildContext context) {
+    final String businessLogoPath = businessShop.businessShopLogoImage;
+
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -19,7 +22,7 @@ class BusinessDetailContent extends StatelessWidget {
             topRight: Radius.circular(24),
           ),
           child: Image.asset(
-            business.image,
+            businessShop.businessShopLogoImage,
             width: double.infinity,
             height: 200,
             fit: BoxFit.cover,
@@ -31,20 +34,20 @@ class BusinessDetailContent extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(business.name,
+              Text(businessShop.name,
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
-              Text('${business.distance.toStringAsFixed(1)} km • ${business.address}',
+              Text('${businessShop.distance.toStringAsFixed(1)} km • ${businessShop.address}',
                   style: const TextStyle(color: Colors.grey)),
               const SizedBox(height: 6),
-              Text('Çalışma Saatleri: ${business.workingHours}',
+              Text('Çalışma Saatleri: ${businessShop.workingHours}',
                   style: const TextStyle(color: Colors.grey)),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Icon(Icons.star, color: Colors.amber[600], size: 20),
                   const SizedBox(width: 4),
-                  Text('${business.rating.toStringAsFixed(1)} (70+)'),
+                  Text('${businessShop.rating.toStringAsFixed(1)} (70+)'),
                 ],
               ),
               const SizedBox(height: 16),
@@ -54,7 +57,7 @@ class BusinessDetailContent extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              ...business.products.map((product) {
+              ...businessShop.products.map((product) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
@@ -62,7 +65,7 @@ class BusinessDetailContent extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(6),
                         child: Image.asset(
-                          product.logoImage,
+                          businessLogoPath,
                           width: 40,
                           height: 40,
                           fit: BoxFit.cover,

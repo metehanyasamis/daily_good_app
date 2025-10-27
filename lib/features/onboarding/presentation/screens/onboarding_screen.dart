@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/data/prefs_service.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
@@ -51,6 +52,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _nextPage() async {
     if (_currentPage == _pages.length - 1) {
+      await PrefsService.setHasSeenOnboarding(true);
       ref.read(appStateProvider.notifier).setSeenOnboarding(true);
       context.go('/location');
     } else {
@@ -84,10 +86,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             },
           ),
           Positioned(
-            bottom: 24,
+            top: 70,
             right: 24,
             child: TextButton(
-              onPressed: () {
+              onPressed: () async {
+                await PrefsService.setHasSeenOnboarding(true);
                 ref.read(appStateProvider.notifier).setSeenOnboarding(true);
                 context.go('/location');
               },

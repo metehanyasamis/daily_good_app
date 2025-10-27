@@ -1,225 +1,226 @@
+
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-
-class ProductModel {
-  final String bannerImage;
-  final String logoImage;
-  final String brandName;
-  final String packageName;
-  final String pickupTimeText;
-  final double rating;
-  final double distanceKm;
-  final double oldPrice;
-  final double newPrice;
-  final String stockLabel;
-
-  ProductModel({
-    required this.bannerImage,
-    required this.logoImage,
-    required this.brandName,
-    required this.packageName,
-    required this.pickupTimeText,
-    required this.rating,
-    required this.distanceKm,
-    required this.oldPrice,
-    required this.newPrice,
-    required this.stockLabel,
-  });
-}
+// BusinessModel ve findBusinessById fonksiyonunu kullanmak için import
+import '../../../businessShop/data/mock/mock_businessShop_model.dart';
+import '../../../businessShop/data/model/businessShop_model.dart';
+import '../../data/models/product_model.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
-  final VoidCallback? onTap;
-  final VoidCallback? onFavoriteToggle;
+  final VoidCallback onTap;
 
   const ProductCard({
     super.key,
     required this.product,
-    this.onTap,
-    this.onFavoriteToggle,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Banner image + stock label + favorite icon overlay
-              Stack(
+    final p = product;
+
+    // businessId ile BusinessModel'i bul
+    final BusinessModel? business = findBusinessById(p.businessId);
+
+    // İşletme bulunamazsa kartı göstermemek en güvenlisidir.
+    if (business == null) {
+      return const SizedBox.shrink();
+    }
+
+    // BusinessModel'den çekilecek veriler
+    final String logoPath = business.businessShopLogoImage;
+    final String brandName = business.name;
+    final double rating = business.rating;
+    final double distanceKm = business.distance;
+
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        // Dış kenar boşluğu
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        // Taşan Column
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          // Buradaki Column'un içerikleri
+          children: [
+            // Üst Kısım: Banner Resmi ve Stok Etiketi
+            ClipRRect(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+              child: Stack(
                 children: [
                   Image.asset(
-                    product.bannerImage,
+                    p.bannerImage,
+                    height: 145,
                     width: double.infinity,
-                    height: 140,
                     fit: BoxFit.cover,
                   ),
+                  // 🟢 Stok Etiketi
                   Positioned(
-                    top: 12,
+                    top: 10,
                     left: 0,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12))
+                        color: Colors.white.withValues(alpha: 0.95),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
                       ),
                       child: Text(
-                        product.stockLabel,
-                        style: TextStyle(
+                        p.stockLabel,
+                        style: const TextStyle(
                           color: AppColors.primaryDarkGreen,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
-                        textAlign: TextAlign.start,
                       ),
                     ),
                   ),
+                  // 🟢 Logo + Marka Adı (sol alt)
                   Positioned(
-                    top: 12,
-                    right: 12,
-                    child: ClipOval(
-                      child: Container(
-                        alignment: Alignment.center,
-                        width: 35,
-                        height: 35,
-                        color: Colors.white.withValues(alpha: 0.9),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        icon: Icon(
-                          Icons.favorite_border,
-                          color: AppColors.primaryDarkGreen,
-                          size: 26,
+                    bottom: 10,
+                    left: 10,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: Colors.white,
+                          child: ClipOval(
+                            child: Image.asset(
+                              logoPath,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         ),
-                        onPressed: onFavoriteToggle,
-                      ),
-                    ),
-                  ),
-                  ),
-                  Positioned(
-                    bottom: 12,
-                    left: 0,
-                    right: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        children: [
-                          ClipOval(
-                            child: Container(
-                              color: Colors.white, // Arka plan beyaz
-                              child: Image.asset(
-                                product.logoImage,
-                                width: 40,
-                                height: 40,
-                                fit: BoxFit.contain, // 🔄 Değişiklik burada
+                        const SizedBox(width: 8),
+                        // Gölge efektiyle okunabilir brand name
+                        Text(
+                          brandName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            shadows: [
+                              Shadow(
+                                offset: Offset(0, 0),
+                                blurRadius: 4,
+                                color: Colors.black87,
                               ),
-                            ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-
-                          // Logo + brand name
-                          Expanded(
-                            child: Text(
-                              product.brandName,
-                              //style: AppTextStyles.productBrandName,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
+            ),
 
+            const SizedBox(height: 4),
 
-              const SizedBox(height: 4),
+            // Alt Kısım: Detaylar
+            // Package name
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12,),
+              child: Row(
+                children: [
+                  Text(
+                    product.packageName,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const Spacer(),
 
-              // Package name
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12,),
-                child: Row(
-                  children: [
-                    Text(
-                      product.packageName,
-                      style: Theme.of(context).textTheme.bodyLarge,
+                  // Prices
+
+                  Text(
+                    '${product.oldPrice.toStringAsFixed(2)} ₺',
+                    style: const TextStyle(
+                      decoration: TextDecoration.lineThrough,
+                      //fontSize: 15,
+                      color: Colors.grey,
                     ),
-                    const Spacer(),
-
-                    // Prices
-
-                    Text(
-                      '${product.oldPrice.toStringAsFixed(2)} ₺',
-                      style: const TextStyle(
-                        decoration: TextDecoration.lineThrough,
-                        //fontSize: 15,
-                        color: Colors.grey,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${product.newPrice.toStringAsFixed(2)} ₺',
+                    style: TextStyle(
+                      fontSize: 17,
+                      color: AppColors.primaryDarkGreen,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${product.newPrice.toStringAsFixed(2)} ₺',
-                      style: TextStyle(
-                        fontSize: 17,
-                        color: AppColors.primaryDarkGreen,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  ),
 
-                  ],
-                ),
+                ],
               ),
+            ),
 
-              // Pickup time, rating & distance
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  product.pickupTimeText,
-                  style: TextStyle(fontSize: 15, color: Colors.grey[700]),
-                ),
+            // Pickup time, rating & distance
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                product.pickupTimeText,
+                style: TextStyle(fontSize: 15, color: Colors.grey[700]),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
-                child: Row(
-                  children: [
-
-                    Icon(Icons.star, size: 14, color: AppColors.primaryDarkGreen),
-                    const SizedBox(width: 2),
-                    Text(
-                      product.rating.toStringAsFixed(1),
-                      style: TextStyle(fontSize: 12, ),
+            ),
+            // Alt Bilgi: Puan ve Mesafe
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
+              child: Row(
+                children: [
+                  // Puan
+                  Icon(Icons.star, size: 14, color: AppColors.primaryDarkGreen),
+                  const SizedBox(width: 8),
+                  // rating BusinessModel'den çekildi
+                  Text(
+                    rating.toStringAsFixed(1),
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    '|',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
                     ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      '|',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(Icons.place, size: 14, color: AppColors.primaryDarkGreen),
-                    const SizedBox(width: 2),
-                    Text(
-                      '${product.distanceKm.toStringAsFixed(1)} km',
-                      style: TextStyle(fontSize: 12),
-                    ),
-
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Mesafe
+                  Icon(Icons.place, size: 14, color: AppColors.primaryDarkGreen),
+                  const SizedBox(width: 4),
+                  // distanceKm BusinessModel'den çekildi
+                  Text(
+                    '${distanceKm.toStringAsFixed(1)} km',
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                  ),
+                ],
               ),
-
-            ],
-          ),
+            ),
+            // 🟢 ÇÖZÜM: Column'un sonunda bir miktar boşluk bırakarak taşmayı engelledik.
+          ],
         ),
       ),
     );
   }
 }
+

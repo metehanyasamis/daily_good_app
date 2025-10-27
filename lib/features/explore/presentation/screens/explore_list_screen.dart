@@ -1,8 +1,9 @@
+import 'package:daily_good/features/product/data/mock/mock_product_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/custom_bottom_nav_bar.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
+import '../../../product/data/models/product_model.dart';
 import '../../../product/presentation/widgets/product_card.dart';
 
 class ExploreListScreen extends StatefulWidget {
@@ -15,33 +16,7 @@ class ExploreListScreen extends StatefulWidget {
 class _ExploreListScreenState extends State<ExploreListScreen> {
   String selectedAddress = 'Nail Bey Sok.';
   String selectedSort = 'recommended';
-
-  final List<ProductModel> products = [
-    ProductModel(
-      bannerImage: 'assets/images/sample_food4.jpg',
-      logoImage: 'assets/images/sample_productLogo1.jpg',
-      brandName: 'Sandwich City',
-      packageName: 'Sürpriz Paket',
-      pickupTimeText: 'Bugün teslim al 15:30 - 17:00',
-      rating: 4.7,
-      distanceKm: 0.8,
-      oldPrice: 270,
-      newPrice: 70,
-      stockLabel: 'Son 3',
-    ),
-    ProductModel(
-      bannerImage: 'assets/images/sample_food2.jpg',
-      logoImage: 'assets/images/sample_productLogo1.jpg',
-      brandName: 'VGreen Dükkan',
-      packageName: 'Vegan Sandviç',
-      pickupTimeText: 'Bugün teslim al 14:00 - 16:00',
-      rating: 4.5,
-      distanceKm: 1.2,
-      oldPrice: 220,
-      newPrice: 55,
-      stockLabel: 'Son 5',
-    ),
-  ];
+  final List<ProductModel> sampleExploreProducts = mockProducts;
 
   void _selectLocation() {
     // Lokasyon seçim ekranına yönlendirme
@@ -64,78 +39,49 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
           onNotificationsTap: _openNotifications,
         ),
       ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: 1, // KEŞFET
-        onTabSelected: (index) {
-          // tab geçiş işlemleri yapılabilir
-        },
-      ),
       body: Stack(
         children: [
           // 📋 Liste içeriği
           Positioned.fill(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 100), // navbar + buton için boşluk
-              children: [
-                // 🔍 Arama alanı
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search),
-                      hintText: 'Restoran, paket veya mekan ara',
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
+            child: CustomScrollView(
+              slivers: [
+                // 🔍 Arama ve Sıralama sabit kalsın
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SearchAndSortHeader(
+                    selectedSort: selectedSort,
+                    onSortChanged: (value) {
+                      if (value != null) {
+                        setState(() => selectedSort = value); // ✅ value artık non-null
+                      }                    },
                   ),
                 ),
 
-                // 🔽 Sıralama
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Text('Sırala:', style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(width: 6),
-                      DropdownButton<String>(
-                        value: selectedSort,
-                        underline: const SizedBox(),
-                        items: const [
-                          DropdownMenuItem(value: 'recommended', child: Text('Önerilen')),
-                          DropdownMenuItem(value: 'price', child: Text('Fiyata göre')),
-                          DropdownMenuItem(value: 'rating', child: Text('Puana göre')),
-                          DropdownMenuItem(value: 'distance', child: Text('Mesafeye göre')),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => selectedSort = value);
-                          }
-                        },
-                      ),
-                    ],
+                // 🧾 Ürün Listesi
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                      final product = sampleExploreProducts[index];
+                      return ProductCard(
+                        product: product,
+                        onTap: () => context.push('/product-detail', extra: product),
+                      );
+                    },
+                    childCount: sampleExploreProducts.length,
                   ),
                 ),
 
-                const SizedBox(height: 8),
-
-                // 🧾 Ürünler
-                ...products.map((product) => ProductCard(
-                  product: product,
-                  onTap: () => context.push('/product-detail', extra: product),
-                )),
+                const SliverToBoxAdapter(child: SizedBox(height: 120)),
               ],
             ),
           ),
 
-          // 🗺 Harita Butonu (tam sağda, sağ kenarı düz)
+          // 🗺 Harita Butonu
           Positioned(
             right: 0,
-            bottom: MediaQuery.of(context).padding.bottom + 16,
+            bottom: (MediaQuery.of(context).padding.bottom > 0
+                ? MediaQuery.of(context).padding.bottom
+                : 20) + 80,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryDarkGreen,
@@ -143,15 +89,10 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(30),
                     bottomLeft: Radius.circular(30),
-                    topRight: Radius.zero,
-                    bottomRight: Radius.zero,
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
-              onPressed: () {
-                context.push('/explore-map');
-              },
+              onPressed: () => context.push('/explore-map'),
               icon: const Icon(Icons.map, color: Colors.white),
               label: const Text(
                 'Harita',
@@ -163,4 +104,75 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
       ),
     );
   }
+
+}
+
+
+class _SearchAndSortHeader extends SliverPersistentHeaderDelegate {
+  final String selectedSort;
+  final ValueChanged<String?> onSortChanged;
+
+  _SearchAndSortHeader({
+    required this.selectedSort,
+    required this.onSortChanged,
+  });
+
+  @override
+  double get minExtent => 100;
+  @override
+  double get maxExtent => 100;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: AppColors.background,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 🔍 Arama
+          TextField(
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: 'Restoran, paket veya mekan ara',
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          // 🔽 Sıralama
+          Row(
+            children: [
+              Text('Sırala:', style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(width: 6),
+              DropdownButton<String>(
+                value: selectedSort,
+                underline: const SizedBox(),
+                items: const [
+                  DropdownMenuItem(value: 'recommended', child: Text('Önerilen')),
+                  DropdownMenuItem(value: 'price', child: Text('Fiyata göre')),
+                  DropdownMenuItem(value: 'rating', child: Text('Puana göre')),
+                  DropdownMenuItem(value: 'distance', child: Text('Mesafeye göre')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    onSortChanged(value); // burada artık hata vermez
+                  }
+                },
+              )
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => true;
 }
