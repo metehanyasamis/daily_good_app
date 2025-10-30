@@ -35,8 +35,9 @@ class _ExploreFilterSheetState extends State<ExploreFilterSheet> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      top: false,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -53,8 +54,8 @@ class _ExploreFilterSheetState extends State<ExploreFilterSheet> {
             CustomButton(
               text: 'Uygula',
               onPressed: () {
-                widget.onApply(_selectedOption);
-                Navigator.pop(context);
+                widget.onApply(_selectedOption); // ✅ sadece callback
+                Navigator.of(context).pop();   // sadece sheet'i kapat
               },
             ),
           ],
@@ -68,11 +69,7 @@ class _ExploreFilterSheetState extends State<ExploreFilterSheet> {
       title: Text(label),
       value: value,
       groupValue: _selectedOption,
-      onChanged: (val) {
-        setState(() {
-          _selectedOption = val!;
-        });
-      },
+      onChanged: (val) => setState(() => _selectedOption = val!),
       activeColor: AppColors.primaryDarkGreen,
     );
   }

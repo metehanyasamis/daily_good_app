@@ -1,12 +1,12 @@
-
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-// BusinessModel ve findBusinessById fonksiyonunu kullanmak için import
+import '../../../../core/widgets/fav_button.dart';
+import '../../../../core/widgets/animated_toast.dart';
 import '../../../businessShop/data/mock/mock_businessShop_model.dart';
 import '../../../businessShop/data/model/businessShop_model.dart';
 import '../../data/models/product_model.dart';
 
-class ProductCard extends StatelessWidget {
+class ProductCard extends StatefulWidget {
   final ProductModel product;
   final VoidCallback onTap;
 
@@ -17,49 +17,46 @@ class ProductCard extends StatelessWidget {
   });
 
   @override
+  State<ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<ProductCard> {
+  bool isFav = false;
+
+  @override
   Widget build(BuildContext context) {
-    final p = product;
+    final p = widget.product;
 
-    // businessId ile BusinessModel'i bul
     final BusinessModel? business = findBusinessById(p.businessId);
+    if (business == null) return const SizedBox.shrink();
 
-    // İşletme bulunamazsa kartı göstermemek en güvenlisidir.
-    if (business == null) {
-      return const SizedBox.shrink();
-    }
-
-    // BusinessModel'den çekilecek veriler
     final String logoPath = business.businessShopLogoImage;
     final String brandName = business.name;
-    final double rating = business.rating;
-    final double distanceKm = business.distance;
+    final double rating = p.rating;
+    final double distanceKm = p.distance;
 
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
-        // Dış kenar boşluğu
         margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withOpacity(0.08),
               blurRadius: 10,
-              offset: const Offset(0, 4),
             ),
           ],
         ),
-        // Taşan Column
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-          // Buradaki Column'un içerikleri
           children: [
-            // Üst Kısım: Banner Resmi ve Stok Etiketi
+            // 🟢 Üst Kısım (Banner + Logo + Favori Butonu)
             ClipRRect(
-              borderRadius: BorderRadius.only(
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
               ),
@@ -71,14 +68,16 @@ class ProductCard extends StatelessWidget {
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
-                  // 🟢 Stok Etiketi
+
+                  // 🟢 Stok etiketi
                   Positioned(
                     top: 10,
                     left: 0,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.95),
+                        color: Colors.white.withOpacity(0.95),
                         borderRadius: const BorderRadius.only(
                           topRight: Radius.circular(12),
                           bottomRight: Radius.circular(12),
@@ -94,7 +93,27 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // 🟢 Logo + Marka Adı (sol alt)
+
+                  // 🩶 Favori Butonu (sağ üst)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: FavButton(
+                      isFav: isFav,
+                      context: context,
+                      onToggle: () {
+                        setState(() => isFav = !isFav);
+                        widget.product.isFav = isFav; // 🔹 modele de yaz
+                        showAnimatedToast(
+                          context,
+                          isFav ? 'Favorilere eklendi 💚' : 'Favorilerden kaldırıldı ❌',
+                        );
+                      },
+                      size: 34,
+                    ),
+                  ),
+
+                  // 🟢 Logo + Marka
                   Positioned(
                     bottom: 10,
                     left: 10,
@@ -114,7 +133,6 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        // Gölge efektiyle okunabilir brand name
                         Text(
                           brandName,
                           style: const TextStyle(
@@ -139,76 +157,63 @@ class ProductCard extends StatelessWidget {
 
             const SizedBox(height: 4),
 
-            // Alt Kısım: Detaylar
-            // Package name
+            // 🧾 Paket Adı + Fiyat
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12,),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
                   Text(
-                    product.packageName,
+                    p.packageName,
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   const Spacer(),
-
-                  // Prices
-
                   Text(
-                    '${product.oldPrice.toStringAsFixed(2)} ₺',
+                    '${p.oldPrice.toStringAsFixed(2)} ₺',
                     style: const TextStyle(
                       decoration: TextDecoration.lineThrough,
-                      //fontSize: 15,
                       color: Colors.grey,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '${product.newPrice.toStringAsFixed(2)} ₺',
-                    style: TextStyle(
+                    '${p.newPrice.toStringAsFixed(2)} ₺',
+                    style: const TextStyle(
                       fontSize: 17,
                       color: AppColors.primaryDarkGreen,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                 ],
               ),
             ),
 
-            // Pickup time, rating & distance
+            // ⏰ Teslimat Zamanı
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
-                product.pickupTimeText,
+                p.pickupTimeText,
                 style: TextStyle(fontSize: 15, color: Colors.grey[700]),
               ),
             ),
-            // Alt Bilgi: Puan ve Mesafe
+
+            // ⭐ Puan ve Mesafe
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
               child: Row(
                 children: [
-                  // Puan
-                  Icon(Icons.star, size: 14, color: AppColors.primaryDarkGreen),
+                  Icon(Icons.star,
+                      size: 14, color: AppColors.primaryDarkGreen),
                   const SizedBox(width: 8),
-                  // rating BusinessModel'den çekildi
                   Text(
                     rating.toStringAsFixed(1),
                     style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
                   ),
                   const SizedBox(width: 6),
-                  const Text(
-                    '|',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
+                  const Text('|', style: TextStyle(fontSize: 14)),
                   const SizedBox(width: 6),
-                  // Mesafe
-                  Icon(Icons.place, size: 14, color: AppColors.primaryDarkGreen),
+                  Icon(Icons.place,
+                      size: 14, color: AppColors.primaryDarkGreen),
                   const SizedBox(width: 4),
-                  // distanceKm BusinessModel'den çekildi
                   Text(
                     '${distanceKm.toStringAsFixed(1)} km',
                     style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
@@ -216,11 +221,9 @@ class ProductCard extends StatelessWidget {
                 ],
               ),
             ),
-            // 🟢 ÇÖZÜM: Column'un sonunda bir miktar boşluk bırakarak taşmayı engelledik.
           ],
         ),
       ),
     );
   }
 }
-

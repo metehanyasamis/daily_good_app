@@ -2,7 +2,6 @@ import '../../../product/data/mock/mock_product_model.dart';
 import '../model/businessShop_model.dart';
 
 final List<BusinessModel> mockBusinessList = [
-  // 1. İşletme: Sandwich City (Yeni eklendi)
   BusinessModel(
     id: '1',
     name: 'Sandwich City',
@@ -11,23 +10,18 @@ final List<BusinessModel> mockBusinessList = [
     rating: 4.7,
     distance: 0.8,
     workingHours: '15:30 - 17:00',
-    // Bu liste, mockProducts listesinin filtrelemiş halini temsil eder.
-    products: [mockProducts[0], mockProducts[2]],
+    products: mockProducts.where((p) => p.businessId == '1').toList(),
   ),
-
-  // 2. İşletme: VGreen Dükkan
   BusinessModel(
     id: '2',
     name: 'VGreen Dükkan',
-    address: 'Moda Cd. no: 12 / Kadıköy',
-    businessShopLogoImage: 'assets/images/shop1.jpg', // Farklı logo kullandım
+    address: 'Moda Cd. No: 12 / Kadıköy',
+    businessShopLogoImage: 'assets/images/shop1.jpg',
     rating: 4.5,
     distance: 1.2,
     workingHours: '14:00 - 16:00',
-    products: [mockProducts[1], mockProducts[3], mockProductVegan],
+    products: mockProducts.where((p) => p.businessId == '2').toList(),
   ),
-
-  // 3. İşletme: Altın Fırın (Fırın)
   BusinessModel(
     id: '3',
     name: 'Altın Fırın',
@@ -36,10 +30,8 @@ final List<BusinessModel> mockBusinessList = [
     rating: 4.8,
     distance: 0.7,
     workingHours: '18:00 - 20:00',
-    products: [mockProductBread],
+    products: mockProducts.where((p) => p.businessId == '3').toList(),
   ),
-
-  // 4. İşletme: Şeker Dükkanı (Yeni eklendi - Tatlıcı)
   BusinessModel(
     id: '4',
     name: 'Şeker Dükkanı',
@@ -48,16 +40,14 @@ final List<BusinessModel> mockBusinessList = [
     rating: 4.5,
     distance: 1.2,
     workingHours: '15:30 - 17:00',
-    products: [mockProductDessert],
+    products: mockProducts.where((p) => p.businessId == '4').toList(),
   ),
 ];
 
-
 BusinessModel? findBusinessById(String id) {
   try {
-    return mockBusinessList.firstWhere((business) => business.id == id);
+    return mockBusinessList.firstWhere((b) => b.id == id);
   } catch (e) {
-    // ID bulunamazsa null döner
     return null;
   }
 }

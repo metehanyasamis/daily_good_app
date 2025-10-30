@@ -15,12 +15,17 @@ class BusinessDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        leading: const BackButton(color: Colors.black), // 👈 Geri butonu eklendi
+       // leading: const BackButton(color: Colors.black), // 👈 Geri butonu eklendi
+        leading: _roundIcon(
+          icon: Icons.arrow_back_ios_new_rounded,
+          onTap: () => Navigator.pop(context),
+        ),
         title: Text(business.name),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
+
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -216,4 +221,31 @@ class BusinessDetailScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+// ================= helpers =================
+
+Widget _roundIcon({required IconData icon, VoidCallback? onTap}) {
+  return Padding(
+    padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8),
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.95),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 18, color: Colors.black87),
+      ),
+    ),
+  );
 }

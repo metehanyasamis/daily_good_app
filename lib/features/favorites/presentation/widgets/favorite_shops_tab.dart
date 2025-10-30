@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/fav_button.dart';
+import '../../../../core/widgets/animated_toast.dart';
 import '../../../businessShop/data/mock/mock_businessShop_model.dart';
 import '../../../businessShop/data/model/businessShop_model.dart';
 
-class FavoriteShopsTab extends StatelessWidget {
+class FavoriteShopsTab extends StatefulWidget {
   const FavoriteShopsTab({super.key});
 
   @override
+  State<FavoriteShopsTab> createState() => _FavoriteShopsTabState();
+}
+
+class _FavoriteShopsTabState extends State<FavoriteShopsTab> {
+  @override
   Widget build(BuildContext context) {
+    // ❤️ Gerçek favoriler
     final List<BusinessModel> favoriteShops =
-    mockBusinessList.where((b) => b.rating >= 4.6).toList();
+    mockBusinessList.where((b) => b.isFav).toList();
 
     if (favoriteShops.isEmpty) return _buildEmptyState(context);
 
@@ -28,65 +36,85 @@ class FavoriteShopsTab extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withOpacity(0.05),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: Row(
+            child: Stack(
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
-                  ),
-                  child: Image.asset(
-                    shop.businessShopLogoImage,
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(shop.name,
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 6),
-                        Text(shop.address,
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 13)),
-                        const SizedBox(height: 8),
-                        Row(
+                Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        bottomLeft: Radius.circular(16),
+                      ),
+                      child: Image.asset(
+                        shop.businessShopLogoImage,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.star,
-                                size: 14, color: AppColors.primaryDarkGreen),
-                            const SizedBox(width: 4),
-                            Text(shop.rating.toStringAsFixed(1),
-                                style: const TextStyle(fontSize: 13)),
-                            const SizedBox(width: 10),
-                            Icon(Icons.place,
-                                size: 14, color: AppColors.primaryDarkGreen),
-                            const SizedBox(width: 4),
-                            Text('${shop.distance.toStringAsFixed(1)} km',
-                                style: const TextStyle(fontSize: 13)),
+                            Text(shop.name,
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            Text(shop.address,
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 13)),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(Icons.star,
+                                    size: 14,
+                                    color: AppColors.primaryDarkGreen),
+                                const SizedBox(width: 4),
+                                Text(shop.rating.toStringAsFixed(1),
+                                    style: const TextStyle(fontSize: 13)),
+                                const SizedBox(width: 10),
+                                Icon(Icons.place,
+                                    size: 14,
+                                    color: AppColors.primaryDarkGreen),
+                                const SizedBox(width: 4),
+                                Text('${shop.distance.toStringAsFixed(1)} km',
+                                    style: const TextStyle(fontSize: 13)),
+                              ],
+                            ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.favorite,
-                      color: AppColors.primaryDarkGreen),
-                  onPressed: () {
-                    // TODO: favoriden çıkarma işlemi
-                  },
+
+                // ❤️ Favori butonu sağ üst
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: FavButton(
+                    isFav: shop.isFav,
+                    context: context,
+                    size: 34,
+                    onToggle: () {
+                      setState(() => shop.isFav = !shop.isFav);
+                      showAnimatedToast(
+                        context,
+                        shop.isFav
+                            ? 'İşletme favorilere eklendi 💚'
+                            : 'Favorilerden kaldırıldı ❌',
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

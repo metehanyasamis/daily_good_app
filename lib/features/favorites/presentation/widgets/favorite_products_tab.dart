@@ -5,18 +5,21 @@ import '../../../product/data/mock/mock_product_model.dart';
 import '../../../product/data/models/product_model.dart';
 import '../../../product/presentation/widgets/product_card.dart';
 
-class FavoriteProductsTab extends StatelessWidget {
+class FavoriteProductsTab extends StatefulWidget {
   const FavoriteProductsTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<ProductModel> favoriteProducts = mockProducts
-        .where((p) => p.stockLabel.toLowerCase().contains('kaldı'))
-        .toList();
+  State<FavoriteProductsTab> createState() => _FavoriteProductsTabState();
+}
 
-    if (favoriteProducts.isEmpty) {
-      return _buildEmptyState(context);
-    }
+class _FavoriteProductsTabState extends State<FavoriteProductsTab> {
+  @override
+  Widget build(BuildContext context) {
+    // 🟢 Gerçek favori listesi (isFav = true)
+    final List<ProductModel> favoriteProducts =
+    mockProducts.where((p) => p.isFav == true).toList();
+
+    if (favoriteProducts.isEmpty) return _buildEmptyState(context);
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -38,9 +41,8 @@ class FavoriteProductsTab extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 🟢 Başlık
             Text(
-              'Henüz Keşfedilecek Çok Lezzet Var! 🤩',
+              'Henüz Favori Ürünün Yok 💚',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
@@ -48,20 +50,15 @@ class FavoriteProductsTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 40),
-
-            // 🟢 Büyük ikon
             const Icon(
-              Icons.favorite_outline,
+              Icons.favorite_outline_rounded,
               size: 72,
               color: AppColors.primaryDarkGreen,
             ),
             const SizedBox(height: 40),
-
-            // 🟢 Açıklama metni
             Text(
-              'Favorilediğiniz tüm DailyGood mağazaları ve\n'
-                  'kurtarılmayı bekleyen sürprizleri burada görebilirsiniz.\n\n'
-                  'Hemen haritayı açın ve size en yakın lezzet duraklarını kalpleyin!',
+              'Favorilediğin tüm ürünleri burada görebilirsin.\n'
+                  'Ana sayfadan beğendiğin sürpriz paketleri kalple işaretle 💚',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 height: 1.5,
@@ -69,25 +66,25 @@ class FavoriteProductsTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 40),
-
-            // 🟢 Placeholder kart (görsel hissi)
             Container(
               width: double.infinity,
               height: 160,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primaryDarkGreen, width: 1.2),
+                border: Border.all(
+                    color: AppColors.primaryDarkGreen.withOpacity(0.4),
+                    width: 1.2),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Padding(
+                children: const [
+                  Padding(
                     padding: EdgeInsets.all(16),
                     child: Icon(Icons.image_outlined,
                         size: 50, color: AppColors.primaryDarkGreen),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     child: Icon(Icons.favorite_border,
                         size: 35, color: AppColors.primaryDarkGreen),
                   ),
@@ -99,5 +96,4 @@ class FavoriteProductsTab extends StatelessWidget {
       ),
     );
   }
-
 }

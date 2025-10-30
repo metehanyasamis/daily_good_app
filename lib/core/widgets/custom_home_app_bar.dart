@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../features/cart/domain/providers/cart_provider.dart';
 
-class CustomHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
+class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String address;
   final VoidCallback onLocationTap;
   final VoidCallback onNotificationsTap;
+
 
   const CustomHomeAppBar({
     super.key,
@@ -14,97 +18,109 @@ class CustomHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(100);
+  Size get preferredSize => const Size.fromHeight(70);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cartCount = ref.watch(cartCountProvider); // 🔹 cart sayısı Riverpod'dan geliyor
+    final double topPadding = MediaQuery.of(context).padding.top;
+
     return Container(
-      // 👇 Arka plan tamamen şeffaf
       color: Colors.transparent,
-        padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 8),
+      padding: EdgeInsets.only(
+        top: topPadding + 8,  // 🔹 Safe area + ufak ekstra boşluk
+        left: 16,
+        right: 16,
+        bottom: 8,
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center, // 🔹 tam ortalama
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            flex: 1,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Image.asset(
-                  'assets/logos/dailyGood_tekSaatLogo.png',
-                  height: 55,
-                ),
+          // 🟢 Sol: Logo
+          Image.asset(
+            'assets/logos/dailyGood_tekSaatLogo.png',
+            height: 45,
+          ),
+
+          const SizedBox(width: 6),
+
+          // 🟢 Orta: Adres kapsülü
+          GestureDetector(
+            onTap: onLocationTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7FAF7),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.primaryDarkGreen, width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.location_on,
+                      size: 18, color: AppColors.primaryDarkGreen),
+                  const SizedBox(width: 6),
+                  Text(
+                    address,
+                    style: const TextStyle(
+                      color: AppColors.primaryDarkGreen,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Icon(Icons.keyboard_arrow_down,
+                      color: AppColors.primaryDarkGreen, size: 20),
+                ],
               ),
             ),
           ),
 
-          // 📍 Ortadaki adres kutusu
-          Expanded(
-            flex: 2,
-            child: Center(
-              child: GestureDetector(
-                onTap: onLocationTap,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF7FAF7), // çok açık yeşilimsi beyaz, Figma’daki gibi
-                    //color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.primaryDarkGreen, width: 1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                      /*BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        blurRadius: 2,
-                        offset: const Offset(0, -1),
-                      ),
+          // 🟢 Sağ: Cart + Notification ikonları
+          Row(
+            children: [
+              // 🔔 Bildirim
+              IconButton(
+                onPressed: onNotificationsTap,
+                icon: const Icon(
+                  Icons.notifications_none_rounded,
+                  color: AppColors.primaryDarkGreen,
+                ),
+              ),
 
-                       */
-                    ],
+              // 🛒 Sepet ikonu (GoRouter push ile)
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    onPressed: () => context.push('/cart'),
+                    icon: const Icon(
+                      Icons.shopping_cart_outlined,
+                      color: AppColors.primaryDarkGreen,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.location_on,
-                          size: 18, color: AppColors.primaryDarkGreen),
-                      const SizedBox(width: 6),
-                      Expanded(
+                  if (cartCount > 0)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         child: Text(
-                          address,
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
+                          '$cartCount',
                           style: const TextStyle(
-                            fontSize: 15,
-                            color: AppColors.primaryDarkGreen,
-                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      const Icon(Icons.keyboard_arrow_down,
-                          color: AppColors.primaryDarkGreen, size: 20),
-                    ],
-                  ),
-                ),
+                    ),
+                ],
               ),
-            ),
-          ),
-
-          // 🔔 Sağ bildirim ikonu
-          Expanded(
-            flex: 1,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                onPressed: onNotificationsTap,
-                icon: const Icon(Icons.notifications_outlined, color: AppColors.primaryDarkGreen,),
-              ),
-            ),
+            ],
           ),
         ],
       ),

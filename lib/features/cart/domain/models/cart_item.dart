@@ -1,13 +1,13 @@
 class CartItem {
-  final String id;
-  final String name;
-  final String shopId;
-  final String shopName;
-  final String image;
-  final double price;
-  final int quantity;
+  final String id;          // ürün id
+  final String name;        // ürün adı
+  final String shopId;      // işletme id
+  final String shopName;    // işletme adı
+  final String image;       // görsel (opsiyonel)
+  final double price;       // birim fiyat
+  final int quantity;       // adet
 
-  CartItem({
+  const CartItem({
     required this.id,
     required this.name,
     required this.shopId,
@@ -16,4 +16,15 @@ class CartItem {
     required this.price,
     this.quantity = 1,
   });
+
+  CartItem copyWith({int? quantity}) =>
+      CartItem(
+        id: id,
+        name: name,
+        shopId: shopId,
+        shopName: shopName,
+        image: image,
+        price: price,
+        quantity: quantity ?? this.quantity,
+      );
 }

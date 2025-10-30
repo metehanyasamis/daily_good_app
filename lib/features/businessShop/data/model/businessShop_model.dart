@@ -9,6 +9,7 @@ class BusinessModel {
   final double distance;
   final String workingHours;
   final List<ProductModel> products;
+  bool isFav; // ❤️ favori alanı
 
   BusinessModel({
     required this.id,
@@ -19,5 +20,6 @@ class BusinessModel {
     required this.distance,
     required this.workingHours,
     required this.products,
+    this.isFav = false, // varsayılan false
   });
 }

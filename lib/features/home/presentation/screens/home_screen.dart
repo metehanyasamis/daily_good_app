@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -31,8 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openNotifications() {
-    Navigator.pushNamed(context, '/notifications');
+    context.push('/notifications');
   }
+
 
   final List<String> categories = [
     'Tümü',
@@ -384,6 +386,156 @@ class SampleProductList extends StatelessWidget {
 }
 
 class _BannerSlider extends StatefulWidget {
+  const _BannerSlider({Key? key}) : super(key: key);
+  @override
+  State<_BannerSlider> createState() => _BannerSliderState();
+}
+
+class _BannerSliderState extends State<_BannerSlider> {
+  late final PageController _controller;
+  late int _virtualPage;            // gerçek sayfa değil, sanal sayaç
+  int _currentIndex = 0;            // göstergeler için (0..len-1)
+  Timer? _autoTimer;
+
+  final List<String> banners = [
+    'assets/images/banner_veggie.jpg',
+    'assets/images/banner_food2.jpg',
+    'assets/images/banner_food3.jpg',
+  ];
+
+  static const _period = Duration(seconds: 5);
+  static const _anim = Duration(milliseconds: 800);
+
+  @override
+  void initState() {
+    super.initState();
+    // çok büyük bir başlangıç — sağa doğru sonsuz akar
+    _virtualPage = banners.length * 1000;
+    _controller = PageController(
+      viewportFraction: 0.96,
+      initialPage: _virtualPage,
+    );
+    _startAuto();
+  }
+
+  void _startAuto() {
+    _autoTimer?.cancel();
+    _autoTimer = Timer.periodic(_period, (_) {
+      if (!mounted || !_controller.hasClients) return;
+      _virtualPage++;
+      _controller.animateToPage(
+        _virtualPage,
+        duration: _anim,
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  void _pauseThenResume() {
+    _autoTimer?.cancel();
+    // kullanıcı dokunduğunda 3 sn sonra yeniden başlat
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) _startAuto();
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 180,
+          width: w,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (n) {
+              if (n is ScrollStartNotification ||
+                  n is UserScrollNotification ||
+                  n is ScrollUpdateNotification) _pauseThenResume();
+              return false;
+            },
+            child: PageView.builder(
+              controller: _controller,
+              // itemCount'i BILEREK vermiyoruz → sanal sonsuz
+              onPageChanged: (idx) {
+                _virtualPage = idx;
+                setState(() => _currentIndex = idx % banners.length);
+              },
+              itemBuilder: (context, index) {
+                final real = index % banners.length;
+                return AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, _) {
+                    double scale = 1.0;
+                    if (_controller.hasClients && _controller.position.haveDimensions) {
+                      final page = _controller.page ?? _virtualPage.toDouble();
+                      scale = (page - index).abs().clamp(0.0, 1.0);
+                      scale = 1 - (scale * 0.08);
+                    }
+                    return Transform.scale(
+                      scale: scale,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset(
+                            banners[real],
+                            fit: BoxFit.cover,
+                            width: w,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(banners.length, (i) {
+            final active = i == _currentIndex;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              height: 6,
+              width: active ? 18 : 6,
+              decoration: BoxDecoration(
+                color: active ? AppColors.primaryDarkGreen
+                    : AppColors.primaryLightGreen.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
+
+/*
+class _BannerSlider extends StatefulWidget {
   @override
   State<_BannerSlider> createState() => _BannerSliderState();
 }
@@ -391,6 +543,7 @@ class _BannerSlider extends StatefulWidget {
 class _BannerSliderState extends State<_BannerSlider> {
   final PageController _controller = PageController(viewportFraction: 0.96);
   int _currentIndex = 0;
+  Timer? _autoSlideTimer;
 
   final List<String> banners = [
     'assets/images/banner_veggie.jpg',
@@ -399,13 +552,41 @@ class _BannerSliderState extends State<_BannerSlider> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+
+    _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      if (_controller.hasClients) {
+        int nextPage = _currentIndex + 1;
+        if (nextPage >= banners.length) {
+          // 🔹 En sona geldiyse anında başa dön (animasyonsuz)
+          await _controller.jumpToPage(0);
+          nextPage = 1;
+        }
+        _controller.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 1000),
+          curve: Curves.easeInOutCubic, // 💫 daha smooth geçiş
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoSlideTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
 
     return Column(
       children: [
         SizedBox(
-          height: 180, // Banner yüksekliği
+          height: 180,
           width: screenWidth,
           child: PageView.builder(
             controller: _controller,
@@ -418,18 +599,18 @@ class _BannerSliderState extends State<_BannerSlider> {
                   double scale = 1.0;
                   if (_controller.position.haveDimensions) {
                     scale = (_controller.page! - index).abs().clamp(0.0, 1.0);
-                    scale = 1 - (scale * 0.08); // Hafif zoom efekti
+                    scale = 1 - (scale * 0.08);
                   }
 
                   return Transform.scale(
                     scale: scale,
                     child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4), // kenar boşluğu
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
+                            color: Colors.black.withOpacity(0.08),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -463,7 +644,7 @@ class _BannerSliderState extends State<_BannerSlider> {
               decoration: BoxDecoration(
                 color: isActive
                     ? AppColors.primaryDarkGreen
-                    : AppColors.primaryLightGreen.withValues(alpha: 0.4),
+                    : AppColors.primaryLightGreen.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(3),
               ),
             );
@@ -473,3 +654,4 @@ class _BannerSliderState extends State<_BannerSlider> {
     );
   }
 }
+*/
