@@ -10,7 +10,9 @@ class BusinessModel {
   final double distance;
   final String workingHours;
   final List<ProductModel> products;
-  bool isFav; // ❤️ favori alanı
+  final double latitude;   // ✅ eklendi
+  final double longitude;  // ✅ eklendi
+  bool isFav;
 
   BusinessModel({
     required this.id,
@@ -22,6 +24,8 @@ class BusinessModel {
     required this.distance,
     required this.workingHours,
     required this.products,
-    this.isFav = false, // varsayılan false
+    this.latitude = 41.0082,   // 🌍 Default: İstanbul örneği
+    this.longitude = 28.9784,
+    this.isFav = false,
   });
 }

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
 class KnowMoreFull extends StatefulWidget {
-  const KnowMoreFull({super.key});
+  final bool forceBoxMode; // 🔹 yeni eklendi
+  const KnowMoreFull({super.key, this.forceBoxMode = false});
 
   @override
   State<KnowMoreFull> createState() => _KnowMoreFullState();
@@ -46,10 +47,12 @@ class _KnowMoreFullState extends State<KnowMoreFull>
   @override
   Widget build(BuildContext context) {
     final content = _buildCard(context);
-    final parent = context.findAncestorWidgetOfExactType<CustomScrollView>();
 
-    // 🔹 Ortama göre otomatik davranış
-    if (parent != null) {
+    // 🔹 forceBoxMode true ise sliver modunu devre dışı bırak
+    final parent = context.findAncestorWidgetOfExactType<CustomScrollView>();
+    final bool useSliver = !widget.forceBoxMode && parent != null;
+
+    if (useSliver) {
       return SliverToBoxAdapter(child: content);
     } else {
       return content;
@@ -58,7 +61,10 @@ class _KnowMoreFullState extends State<KnowMoreFull>
 
   Widget _buildCard(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      width: MediaQuery.of(context).size.width, // ✅ cihaz genişliği
+      margin: widget.forceBoxMode
+          ? const EdgeInsets.only(top: 8) // CartScreen’de yatay margin yok
+          : const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       decoration: BoxDecoration(
         color: Colors.white,

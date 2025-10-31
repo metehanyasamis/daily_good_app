@@ -11,6 +11,8 @@ final List<BusinessModel> mockBusinessList = [
     rating: 4.7,
     distance: 0.8,
     workingHours: '15:30 - 17:00',
+    latitude: 41.0430, // 📍 Beşiktaş
+    longitude: 29.0045,
     products: mockProducts.where((p) => p.businessId == '1').toList(),
   ),
   BusinessModel(
@@ -22,6 +24,8 @@ final List<BusinessModel> mockBusinessList = [
     rating: 4.5,
     distance: 1.2,
     workingHours: '14:00 - 16:00',
+    latitude: 40.9873, // 📍 Kadıköy Moda
+    longitude: 29.0276,
     products: mockProducts.where((p) => p.businessId == '2').toList(),
   ),
   BusinessModel(
@@ -33,6 +37,8 @@ final List<BusinessModel> mockBusinessList = [
     rating: 4.8,
     distance: 0.7,
     workingHours: '18:00 - 20:00',
+    latitude: 40.9650, // 📍 Erenköy
+    longitude: 29.0748,
     products: mockProducts.where((p) => p.businessId == '3').toList(),
   ),
   BusinessModel(
@@ -44,6 +50,8 @@ final List<BusinessModel> mockBusinessList = [
     rating: 4.5,
     distance: 1.2,
     workingHours: '15:30 - 17:00',
+    latitude: 41.0419, // 📍 Akaretler civarı
+    longitude: 29.0084,
     products: mockProducts.where((p) => p.businessId == '4').toList(),
   ),
 ];

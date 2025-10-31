@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/navigation_utils.dart';
 import '../../../../core/widgets/know_more_full.dart';
 import '../../../../core/widgets/product_bottom_bar.dart';
 import '../../../../core/widgets/fav_button.dart';
@@ -34,22 +35,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     return match != null ? int.parse(match.group(0)!) : 99;
   }
 
-  /*
-  static const String _knowMoreFull = '''
-🔔 Mobil Alım ve Teslimat Kuralları
-📱 Mobil Alım Zorunluluğu: Bu indirimler sadece mobil uygulama üzerinden yapılan alımlarda geçerlidir. Direkt mağazadan alımlarda bu indirim uygulanmamaktadır.
-⏰ Teslimat Saat Aralığı: Ürünü, siparişinizde belirtilen saat aralığında mağazadan teslim alabilirsiniz.
-↩️ İptal Hakkı: Siparişinizi teslim alma zamanına 3 saate kadar iptal etme hakkınız bulunmaktadır.
-❌ Teslim Almama Durumu: Belirtilen zaman diliminde teslim alınmayan ürünler için, işletmenin bu ürünü başkasına satma hakkı bulunmaktadır (iade yapılmaz).
-
-🎁 Paket İçeriği ve Güvenlik
-💚 Sürprizleri Seviyoruz! Her paket birbirinden farklıdır. Gün sonunda gıda israfını önlemek amacıyla, yenilebilir durumda kalan ürünlerle her seferinde yeni bir sürpriz hazırlanır.
-⚠️ Önemli Alerji Bilgisi: Alerjiniz veya özel bir isteğiniz varsa, paketi teslim almadan önce lütfen işletmeye danışmanızı şiddetle öneririz.
-
-🌱 Doğa Dostu Hatırlatma
-🌿 Çantanızı Getirin: Sürpriz paketinizi alırken kendi çantanızı getirerek hem doğaya hem de kendinize katkıda bulunun! Yanınızda çantanız yoksa, işletmeden uygun fiyata kraft kâğıt ambalaj temin edebilirsiniz.
-''';
-  */
 
   @override
   Widget build(BuildContext context) {
@@ -213,15 +198,26 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           Positioned(
             left: 16,
             bottom: 16,
-            child: CircleAvatar(
-              radius: 37,
-              backgroundColor: Colors.white,
-              child: ClipOval(
-                child: Image.asset(
-                  business.businessShopLogoImage,
-                  width: 60,
-                  height: 60,
-                  fit: BoxFit.cover,
+            child: Container(
+              width: 74,  // radius:37 → diameter 74
+              height: 74,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.primaryDarkGreen, // ✅ yeşil çerçeve
+                  width: 1,
+                ),
+              ),
+              child: CircleAvatar(
+                radius: 35,
+                backgroundColor: Colors.white,
+                child: ClipOval(
+                  child: Image.asset(
+                    business.businessShopLogoImage,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
@@ -304,27 +300,116 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   );
 
   Widget _deliveryCard(BusinessModel business) => SliverToBoxAdapter(
-    child: _card(
-      child: InkWell(
-        onTap: () => context.go('/businessShop-detail', extra: business),
-        child: Row(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.storefront_outlined,
-                color: AppColors.primaryDarkGreen),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
+            // 🟢 Başlık
+            const Text(
+              "Teslim alma bilgileri",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              height: 1,
+              width: double.infinity,
+              color: AppColors.primaryDarkGreen.withOpacity(0.3),
+            ),
+            const SizedBox(height: 12),
+
+            // 🏪 İşletme Bilgisi
+            InkWell(
+              onTap: () => context.push('/businessShop-detail', extra: business),
+              borderRadius: BorderRadius.circular(8),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(business.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryDarkGreen,
-                          decoration: TextDecoration.underline)),
-                  const SizedBox(height: 4),
-                  Text(business.address,
-                      style: TextStyle(color: Colors.grey.shade700)),
+                  const Icon(
+                    Icons.storefront_outlined,
+                    color: AppColors.primaryDarkGreen,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 10),
+
+                  // 🔹 Metinler
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // İşletme Adı
+                        Text(
+                          business.name,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+
+                        // Adres Bilgisi
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.location_on_outlined,
+                              color: AppColors.primaryDarkGreen,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                business.address,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+
+                        // Navigasyon açıklaması
+                        InkWell(
+                          onTap: () => openBusinessMap(business),
+                          child: Text(
+                            "Navigasyon yönlendirme için tıklayınız 📍",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                              decoration: TextDecoration.underline, // 👀 kullanıcıya tıklanabilir his verir
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.primaryDarkGreen,
+                    size: 22,
+                  ),
                 ],
               ),
             ),
