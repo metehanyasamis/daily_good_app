@@ -1,3 +1,4 @@
+import 'package:daily_good/core/widgets/custom_toggle_button.dart';
 import 'package:daily_good/features/product/data/mock/mock_product_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -82,44 +83,52 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
           onNotificationsTap: () {},
         ),
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _SearchAndSortHeader(
-              controller: _searchController,
-              selectedSort: selectedFilter,
-              sortDirection: sortDirection,
-              onSortChanged: (value) {
-                setState(() {
-                  if (value == selectedFilter) {
-                    sortDirection = sortDirection == SortDirection.ascending
-                        ? SortDirection.descending
-                        : SortDirection.ascending;
-                  } else {
-                    selectedFilter = value!;
-                    sortDirection = SortDirection.ascending;
-                  }
-                  _applySorting();
-                });
-              },
-              onSearchChanged: _applySearch,
-            ),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _SearchAndSortHeader(
+                  controller: _searchController,
+                  selectedSort: selectedFilter,
+                  sortDirection: sortDirection,
+                  onSortChanged: (value) {
+                    setState(() {
+                      if (value == selectedFilter) {
+                        sortDirection = sortDirection == SortDirection.ascending
+                            ? SortDirection.descending
+                            : SortDirection.ascending;
+                      } else {
+                        selectedFilter = value!;
+                        sortDirection = SortDirection.ascending;
+                      }
+                      _applySorting();
+                    });
+                  },
+                  onSearchChanged: _applySearch,
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final product = filteredProducts[index];
+                  return ProductCard(
+                    product: product,
+                    onTap: () =>
+                        context.push('/product-detail', extra: product),
+                  );
+                }, childCount: filteredProducts.length),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            ],
           ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                final product = filteredProducts[index];
-                return ProductCard(
-                  product: product,
-                  onTap: () =>
-                      context.push('/product-detail', extra: product),
-                );
-              },
-              childCount: filteredProducts.length,
-            ),
+
+          // 🔹 Harita / Liste geçiş butonu
+          CustomToggleButton(
+            label: "Harita",
+            icon: Icons.map_outlined,
+            onPressed: () => context.push('/explore-map'),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
       ),
     );
@@ -144,6 +153,7 @@ class _SearchAndSortHeader extends SliverPersistentHeaderDelegate {
 
   @override
   double get minExtent => 100;
+
   @override
   double get maxExtent => 100;
 
@@ -166,7 +176,10 @@ class _SearchAndSortHeader extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(
       color: AppColors.background,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -215,7 +228,9 @@ class _SearchAndSortHeader extends SliverPersistentHeaderDelegate {
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 8),
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
                         child: AnimatedRotation(
                           turns: sortDirection == SortDirection.ascending
                               ? 0.0
@@ -259,7 +274,9 @@ class _SearchAndSortHeader extends SliverPersistentHeaderDelegate {
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         child: Text(
                           '${_labelForOption(selectedSort)} ${_sortDirectionLabel(selectedSort, sortDirection)}',
                           style: const TextStyle(

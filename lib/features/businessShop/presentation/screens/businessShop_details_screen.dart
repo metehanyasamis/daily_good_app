@@ -1,251 +1,126 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../data/model/businessShop_model.dart'; // ProductModel için
+import '../../../../core/widgets/fav_button.dart';
+import '../../../../core/widgets/animated_toast.dart';
+import '../../data/model/businessShop_model.dart';
+import '../widgets/businessShop_details_content.dart';
 
-class BusinessDetailScreen extends StatelessWidget {
+class BusinessShopDetailsScreen extends StatefulWidget {
   final BusinessModel business;
 
-  const BusinessDetailScreen({super.key, required this.business});
+  const BusinessShopDetailsScreen({
+    super.key,
+    required this.business,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  State<BusinessShopDetailsScreen> createState() =>
+      _BusinessShopDetailsScreenState();
+}
 
+class _BusinessShopDetailsScreenState extends State<BusinessShopDetailsScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final business = widget.business;
 
     return Scaffold(
       backgroundColor: Colors.white,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-       // leading: const BackButton(color: Colors.black), // 👈 Geri butonu eklendi
-        leading: _roundIcon(
-          icon: Icons.arrow_back_ios_new_rounded,
-          onTap: () => Navigator.pop(context),
-        ),
-        title: Text(business.name),
-        centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-
+        leadingWidth: 60,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8, top: 4),
+          child: GestureDetector(
+            onTap: () {
+              if (context.canPop()) {
+                context.pop(); // go_router güvenli geri dönüş
+              } else {
+                Navigator.of(context).maybePop(); // fallback
+              }
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.95),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: Colors.black87),
+            ),
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8, top: 4),
+            child: FavButton(
+              isFav: business.isFav,
+              context: context,
+              size: 38,
+              onToggle: () {
+                setState(() => business.isFav = !business.isFav);
+              },
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 Kapak görseli
-            Image.asset(
-              business.businessShopLogoImage,
-              width: double.infinity,
-              height: 220,
-              fit: BoxFit.cover,
-            ),
-
-            // 🔹 Başlık ve temel bilgiler
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    business.name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on_outlined,
-                          color: AppColors.primaryDarkGreen, size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                        "${business.distance.toStringAsFixed(1)} km • ${business.address}",
-                        style:
-                        const TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time_outlined,
-                          color: AppColors.primaryDarkGreen, size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                        business.workingHours,
-                        style:
-                        const TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(Icons.star,
-                          color: Colors.amber[600], size: 20),
-                      const SizedBox(width: 4),
-                      Text('${business.rating.toStringAsFixed(1)} (70+)'),
-                    ],
-                  ),
-                ],
+            // 🏞️ Banner görseli
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(18),
+                bottomRight: Radius.circular(18),
+              ),
+              child: Image.asset(
+                business.businessShopBannerImage,
+                width: double.infinity,
+                height: 230,
+                fit: BoxFit.cover,
               ),
             ),
+            const SizedBox(height: 12),
 
-            const Divider(height: 0),
-
-            // 🔹 Paket Listesi
-            Padding(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: const Text(
-                "Seni bekleyen lezzetler",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // 📋 İçerik
+            BusinessShopDetailsContent(
+              businessShop: business,
+              onProductTap: (product) => context.push(
+                '/product-detail',
+                extra: product,
               ),
             ),
-            ...business.products.map((product) {
-              return GestureDetector(
-                onTap: () =>
-                    context.push('/product-detail', extra: product),
-                child: Padding(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.asset(
-                            product.bannerImage,
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(product.packageName,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16)),
-                              const SizedBox(height: 2),
-                              Text(product.pickupTimeText,
-                                  style: const TextStyle(
-                                      color: Colors.grey, fontSize: 13)),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              "${product.oldPrice.toStringAsFixed(2)} ₺",
-                              style: const TextStyle(
-                                  decoration: TextDecoration.lineThrough,
-                                  fontSize: 12,
-                                  color: Colors.grey),
-                            ),
-                            Text(
-                              "${product.newPrice.toStringAsFixed(2)} ₺",
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryDarkGreen,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+            const SizedBox(height: 16),
+
+            // 🗺️ Mini Harita (tam genişlik)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  'assets/images/sample_map.png',
+                  width: double.infinity,
+                  height: 160,
+                  fit: BoxFit.cover,
                 ),
-              );
-            }).toList(),
-
-            const SizedBox(height: 24),
-
-            // 🔹 İstatistik + Puan Alanı (basit versiyon)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("İşletme Değerlendirme",
-                      style:
-                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  _buildRatingRow("Servis", 4.5),
-                  _buildRatingRow("Ürün Miktarı", 5.0),
-                  _buildRatingRow("Ürün Lezzeti", 5.0),
-                  _buildRatingRow("Ürün Çeşitliliği", 4.0),
-                ],
               ),
             ),
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
-
-  Widget _buildRatingRow(String label, double rating) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(width: 130, child: Text(label)),
-          Expanded(
-            child: LinearProgressIndicator(
-              value: rating / 5,
-              backgroundColor: Colors.grey[200],
-              color: AppColors.primaryDarkGreen,
-              minHeight: 6,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(rating.toStringAsFixed(1)),
-        ],
-      ),
-    );
-  }
-}
-
-// ================= helpers =================
-
-Widget _roundIcon({required IconData icon, VoidCallback? onTap}) {
-  return Padding(
-    padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8),
-    child: GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Icon(icon, size: 18, color: Colors.black87),
-      ),
-    ),
-  );
 }

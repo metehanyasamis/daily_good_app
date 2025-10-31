@@ -126,7 +126,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final business = state.extra as BusinessModel;
           return buildAnimatedPage(
             key: state.pageKey,
-            child: BusinessDetailScreen(business: business),
+            child: BusinessShopDetailsScreen(business: business),
           );
         },
       ),
