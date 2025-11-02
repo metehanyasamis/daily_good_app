@@ -1,4 +1,4 @@
-package com.example.daily_good
+package com.metehanyasamis.dailygood
 
 import io.flutter.embedding.android.FlutterActivity
 

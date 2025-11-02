@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // 👈 arka plan sabit
+      backgroundColor: AppColors.background,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(70),
         child: CustomHomeAppBar(
@@ -65,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // 🔹 Banner alanı
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.only(top: 0, bottom: 8), // ✅ yan padding’leri kaldırdık
+              padding: const EdgeInsets.only(top: 0, bottom: 8, left: 8,right: 8),
               child: _BannerSlider(), // 👈 yeni widget
             ),
           ),
@@ -147,7 +147,7 @@ class CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
             child: Container( // Güvenli alan ve margin için Container kullanıldı
               width: 78,
               height: currentContainerHeight, // maxExtent (120) ile minExtent (110.0) arasında değişir
-              margin: const EdgeInsets.only(right: 12),
+              margin: const EdgeInsets.only(right: 4),
               child: Stack(
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
@@ -306,7 +306,7 @@ class _ProductSections extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(
         top: 0,
-        bottom: kBottomNavigationBarHeight + 24, // 🔥 ekstra kaydırma alanı
+        bottom: kBottomNavigationBarHeight + 24,
       ),      children: const [
         SectionTitle(title: "Hemen Yanımda"),
         SampleProductList(),
@@ -334,7 +334,7 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -363,10 +363,10 @@ class SampleProductList extends StatelessWidget {
 
 
     return SizedBox(
-      height: 240, // kart yüksekliği
+      height: 230, // kart yüksekliği
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
         itemCount: sampleHomeProducts.length,
         itemBuilder: (context, index) {
           final product = sampleHomeProducts[index];
@@ -380,6 +380,7 @@ class SampleProductList extends StatelessWidget {
             ),
           );
         },
+
       ),
     );
   }
@@ -532,126 +533,3 @@ class _BannerSliderState extends State<_BannerSlider> {
     );
   }
 }
-
-
-/*
-class _BannerSlider extends StatefulWidget {
-  @override
-  State<_BannerSlider> createState() => _BannerSliderState();
-}
-
-class _BannerSliderState extends State<_BannerSlider> {
-  final PageController _controller = PageController(viewportFraction: 0.96);
-  int _currentIndex = 0;
-  Timer? _autoSlideTimer;
-
-  final List<String> banners = [
-    'assets/images/banner_veggie.jpg',
-    'assets/images/banner_food2.jpg',
-    'assets/images/banner_food3.jpg',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-
-    _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      if (_controller.hasClients) {
-        int nextPage = _currentIndex + 1;
-        if (nextPage >= banners.length) {
-          // 🔹 En sona geldiyse anında başa dön (animasyonsuz)
-          await _controller.jumpToPage(0);
-          nextPage = 1;
-        }
-        _controller.animateToPage(
-          nextPage,
-          duration: const Duration(milliseconds: 1000),
-          curve: Curves.easeInOutCubic, // 💫 daha smooth geçiş
-        );
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _autoSlideTimer?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
-
-    return Column(
-      children: [
-        SizedBox(
-          height: 180,
-          width: screenWidth,
-          child: PageView.builder(
-            controller: _controller,
-            itemCount: banners.length,
-            onPageChanged: (index) => setState(() => _currentIndex = index),
-            itemBuilder: (context, index) {
-              return AnimatedBuilder(
-                animation: _controller,
-                builder: (context, child) {
-                  double scale = 1.0;
-                  if (_controller.position.haveDimensions) {
-                    scale = (_controller.page! - index).abs().clamp(0.0, 1.0);
-                    scale = 1 - (scale * 0.08);
-                  }
-
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
-                          banners[index],
-                          fit: BoxFit.cover,
-                          width: screenWidth,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(banners.length, (index) {
-            final bool isActive = index == _currentIndex;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              height: 6,
-              width: isActive ? 18 : 6,
-              decoration: BoxDecoration(
-                color: isActive
-                    ? AppColors.primaryDarkGreen
-                    : AppColors.primaryLightGreen.withOpacity(0.4),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
-}
-*/

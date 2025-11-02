@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/fav_button.dart';
+import '../../../../core/widgets/floating_cart_button.dart';
 import '../../data/model/businessShop_model.dart';
 import '../widgets/businessShop_details_content.dart';
 
@@ -33,43 +34,48 @@ class _BusinessShopDetailsScreenState extends State<BusinessShopDetailsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          _header(context, business),
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 12),
+      body: Stack(
+        children: [
+          CustomScrollView(
+          slivers: [
+            _header(context, business),
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 12),
 
-                // 📋 İçerik
-                BusinessShopDetailsContent(
-                  businessShop: business,
-                  onProductTap: (product) => context.push(
-                    '/product-detail',
-                    extra: product,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // 🗺️ Mini Harita
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      'assets/images/sample_map.png',
-                      width: double.infinity,
-                      height: 160,
-                      fit: BoxFit.cover,
+                  // 📋 İçerik
+                  BusinessShopDetailsContent(
+                    businessShop: business,
+                    onProductTap: (product) => context.push(
+                      '/product-detail',
+                      extra: product,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 16),
 
-                const SizedBox(height: 30),
-              ],
+                  // 🗺️ Mini Harita
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/sample_map.png',
+                        width: double.infinity,
+                        height: 160,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
+              ),
             ),
-          ),
+          ],
+        ),
+          const FloatingCartButton(),
         ],
       ),
     );

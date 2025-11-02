@@ -221,9 +221,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         // Dinamik Buton (CustomButton kullanılıyor)
                         SizedBox(
                           width: double.infinity,
-                          child: CustomButton(
+                          child: _buildPrimaryLoginButton(
                             text: isLoginTab ? "Giriş Yap" : "Kayıt Ol",
-                            onPressed: _onSubmit,
+                            onTap: _onSubmit,
                           ),
                         ),
 
@@ -279,6 +279,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       ),
     );
   }
+
+  Widget _buildPrimaryLoginButton({
+    required String text,
+    required VoidCallback onTap,
+    bool enabled = true,
+  }) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        height: 52,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(40),
+          color: enabled ? AppColors.primaryDarkGreen : AppColors.gray.withValues(alpha: 120),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              text,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildSocialButton({IconData? icon, String? asset, required String text, required VoidCallback onTap}) {
     return GestureDetector(

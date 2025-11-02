@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/navigation_utils.dart';
+import '../../../../core/widgets/floating_cart_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 import '../../../../core/widgets/product_bottom_bar.dart';
 import '../../../../core/widgets/fav_button.dart';
@@ -72,6 +73,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ],
           ),
 
+          const FloatingCartButton(),
+
+/*
 // ——— Floating Sepet Butonu ———
           Consumer(
             builder: (context, ref, _) {
@@ -103,6 +107,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               );
             },
           ),
+
+          */
 
           // 🔹 Bottom Bar
           Positioned(

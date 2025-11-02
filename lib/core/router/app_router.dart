@@ -8,9 +8,12 @@ import '../../features/auth/presentation/screens/intro_screen.dart';
 import '../../features/businessShop/data/model/businessShop_model.dart';
 import '../../features/businessShop/presentation/screens/businessShop_details_screen.dart';
 import '../../features/cart/presentation/screens/cart_screen.dart';
-import '../../features/cart/presentation/screens/payment_screen.dart';
+import '../../features/checkout/presentation/screens/payment_screen.dart';
 import '../../features/explore/presentation/screens/explore_map_screen.dart';
 import '../../features/notification/presentation/screens/notification_screen.dart';
+import '../../features/orders/presentation/screens/order_success_screen.dart';
+import '../../features/orders/presentation/screens/order_tracking_screen.dart';
+import '../../features/orders/presentation/screens/thank_you_screen.dart';
 import '../../features/product/data/models/product_model.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -132,7 +135,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/payment',
-        builder: (context, state) => const PaymentScreen(),
+        pageBuilder: (context, state) {
+          final amount = state.extra as double? ?? 0.0;
+          return buildAnimatedPage(
+            key: state.pageKey,
+            child: PaymentScreen(amount: amount),
+          );
+        },
       ),
 
       GoRoute(
@@ -146,6 +155,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/notifications',
         pageBuilder: (context, state) =>
             buildAnimatedPage(key: state.pageKey, child: const NotificationScreen()),
+      ),
+
+      GoRoute(
+        path: '/order-success',
+        builder: (context, state) => const OrderSuccessScreen(),
+      ),
+      GoRoute(
+        path: '/order-tracking',
+        builder: (context, state) => const OrderTrackingScreen(),
+      ),
+      GoRoute(
+        path: '/thank-you',
+        builder: (context, state) => const ThankYouScreen(),
       ),
 
 

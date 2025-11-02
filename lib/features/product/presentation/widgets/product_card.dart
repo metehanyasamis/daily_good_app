@@ -39,7 +39,7 @@ class _ProductCardState extends State<ProductCard> {
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        margin: const EdgeInsets.only(left: 10, right: 10, bottom: 20),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -66,7 +66,7 @@ class _ProductCardState extends State<ProductCard> {
                   children: [
                     Image.asset(
                       p.bannerImage,
-                      height: 145,
+                      height: 125,
                       width: double.infinity,
                       fit: BoxFit.cover,
                     ),
