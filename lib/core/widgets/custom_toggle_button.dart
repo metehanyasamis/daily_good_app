@@ -1,4 +1,3 @@
-///ExplreScreen LİSt & Map view toggle
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 

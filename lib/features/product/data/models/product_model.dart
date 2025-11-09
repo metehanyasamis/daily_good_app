@@ -1,4 +1,5 @@
 class ProductModel {
+  final String productId; // ✅ daha açıklayıcı
   final String businessId;
   final String businessName;
   final String bannerImage;
@@ -12,6 +13,7 @@ class ProductModel {
   bool isFav;
 
   ProductModel({
+    required this.productId,
     required this.businessId,
     required this.businessName,
     required this.bannerImage,
@@ -24,4 +26,15 @@ class ProductModel {
     required this.distance,
     this.isFav = false,
   });
+
+  // 🔹 Eşitlik tanımı artık productId üzerinden
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+          other is ProductModel &&
+              runtimeType == other.runtimeType &&
+              productId == other.productId;
+
+  @override
+  int get hashCode => productId.hashCode;
 }

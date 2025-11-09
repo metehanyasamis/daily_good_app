@@ -95,9 +95,7 @@ class _BusinessShopDetailsScreenState extends State<BusinessShopDetailsScreen> {
       Padding(
         padding: const EdgeInsets.only(right: 12),
         child: FavButton(
-          isFav: isFav,
-          onToggle: () => setState(() => isFav = !isFav),
-          context: context,
+          item: widget.business, // 👈 işletme modeli
         ),
       ),
     ],

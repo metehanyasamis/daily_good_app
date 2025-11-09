@@ -109,15 +109,18 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
                   onSearchChanged: _applySearch,
                 ),
               ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final product = filteredProducts[index];
-                  return ProductCard(
-                    product: product,
-                    onTap: () =>
-                        context.push('/product-detail', extra: product),
-                  );
-                }, childCount: filteredProducts.length),
+              SliverPadding(
+                padding: EdgeInsets.only(right: 12, left: 12),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final product = filteredProducts[index];
+                    return ProductCard(
+                      product: product,
+                      onTap: () =>
+                          context.push('/product-detail', extra: product),
+                    );
+                  }, childCount: filteredProducts.length),
+                ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
@@ -192,6 +195,11 @@ class _SearchAndSortHeader extends SliverPersistentHeaderDelegate {
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
               hintText: 'Restoran, paket veya mekan ara (3+ harf)',
+              hintStyle: const TextStyle(
+                color: Colors.grey,      // 👈 gri ton
+                fontSize: 14,          // 👈 biraz daha küçük
+                fontWeight: FontWeight.w400,
+              ),
               contentPadding: const EdgeInsets.symmetric(vertical: 8),
               filled: true,
               fillColor: Colors.white,

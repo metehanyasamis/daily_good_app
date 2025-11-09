@@ -57,6 +57,7 @@ class _ExploreFilterSheetState extends State<ExploreFilterSheet> {
                 widget.onApply(_selectedOption); // ✅ sadece callback
                 Navigator.of(context).pop();   // sadece sheet'i kapat
               },
+              showPrice: false,
             ),
           ],
         ),

@@ -1,28 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../product/data/mock/mock_product_model.dart';
-import '../../../product/data/models/product_model.dart';
+import '../../../favorites/providers/favorites_provider.dart';
 import '../../../product/presentation/widgets/product_card.dart';
 
-class FavoriteProductsTab extends StatefulWidget {
+class FavoriteProductsTab extends ConsumerWidget {
   const FavoriteProductsTab({super.key});
 
   @override
-  State<FavoriteProductsTab> createState() => _FavoriteProductsTabState();
-}
-
-class _FavoriteProductsTabState extends State<FavoriteProductsTab> {
-  @override
-  Widget build(BuildContext context) {
-    // 🟢 Gerçek favori listesi (isFav = true)
-    final List<ProductModel> favoriteProducts =
-    mockProducts.where((p) => p.isFav == true).toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final favorites = ref.watch(favoritesProvider);
+    final favoriteProducts = favorites.favoriteProducts;
 
     if (favoriteProducts.isEmpty) return _buildEmptyState(context);
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        MediaQuery.of(context).padding.bottom + 80,
+      ),
       itemCount: favoriteProducts.length,
       itemBuilder: (context, index) {
         final product = favoriteProducts[index];
@@ -41,6 +40,9 @@ class _FavoriteProductsTabState extends State<FavoriteProductsTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Icon(Icons.favorite_outline_rounded,
+                size: 72, color: AppColors.primaryDarkGreen),
+            const SizedBox(height: 20),
             Text(
               'Henüz Favori Ürünün Yok 💚',
               textAlign: TextAlign.center,
@@ -49,13 +51,7 @@ class _FavoriteProductsTabState extends State<FavoriteProductsTab> {
                 color: AppColors.primaryDarkGreen,
               ),
             ),
-            const SizedBox(height: 40),
-            const Icon(
-              Icons.favorite_outline_rounded,
-              size: 72,
-              color: AppColors.primaryDarkGreen,
-            ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 30),
             Text(
               'Favorilediğin tüm ürünleri burada görebilirsin.\n'
                   'Ana sayfadan beğendiğin sürpriz paketleri kalple işaretle 💚',
@@ -63,32 +59,6 @@ class _FavoriteProductsTabState extends State<FavoriteProductsTab> {
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 height: 1.5,
                 color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 40),
-            Container(
-              width: double.infinity,
-              height: 160,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppColors.primaryDarkGreen.withOpacity(0.4),
-                    width: 1.2),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Icon(Icons.image_outlined,
-                        size: 50, color: AppColors.primaryDarkGreen),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Icon(Icons.favorite_border,
-                        size: 35, color: AppColors.primaryDarkGreen),
-                  ),
-                ],
               ),
             ),
           ],

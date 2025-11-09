@@ -1,27 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/favorites/providers/favorites_provider.dart';
 import '../theme/app_theme.dart';
-import 'animated_toast.dart';
+import '../../features/product/data/models/product_model.dart';
+import '../../features/businessShop/data/model/businessShop_model.dart';
 
-/// 💚 Ortak Favori Butonu (toast + animasyon entegre)
-class FavButton extends StatefulWidget {
-  final bool isFav;
-  final VoidCallback onToggle;
+/// 💚 Ortak Favori Butonu (toast + animasyon + global provider entegrasyonu)
+class FavButton extends ConsumerStatefulWidget {
+  final dynamic item; // 🔹 Hem ProductModel hem BusinessModel destekler
   final double size;
-  final BuildContext context; // 🔹 context parametresi eklendi
+  final VoidCallback? onChanged; // 🔸 Favori değişince dışarıya rebuild sinyali
 
   const FavButton({
     super.key,
-    required this.isFav,
-    required this.onToggle,
-    required this.context,
+    required this.item,
     this.size = 40,
+    this.onChanged,
   });
 
   @override
-  State<FavButton> createState() => _FavButtonState();
+  ConsumerState<FavButton> createState() => _FavButtonState();
 }
 
-class _FavButtonState extends State<FavButton>
+class _FavButtonState extends ConsumerState<FavButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scale;
@@ -53,20 +54,35 @@ class _FavButtonState extends State<FavButton>
     super.dispose();
   }
 
+  bool _isFavorite(dynamic item) {
+    final favorites = ref.watch(favoritesProvider);
+    if (item is ProductModel) return favorites.favoriteProducts.contains(item);
+    if (item is BusinessModel) return favorites.favoriteShops.contains(item);
+    return false;
+  }
+
+  void _toggleFavorite(dynamic item) {
+    final notifier = ref.read(favoritesProvider.notifier);
+
+    if (item is ProductModel) {
+      notifier.toggleProduct(item);
+    } else if (item is BusinessModel) {
+      notifier.toggleShop(item);
+    }
+
+    // 🔸 Liste ekranlarında state yenileme için
+    widget.onChanged?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isFav = _isFavorite(widget.item);
+
     return GestureDetector(
       onTap: () async {
         await _animate();
-        widget.onToggle();
+        _toggleFavorite(widget.item);
 
-        // 💬 yeşil gradientli özel toast
-        showAnimatedToast(
-          widget.context,
-          widget.isFav
-              ? 'Favorilerden kaldırıldı'
-              : 'Favorilere eklendi 🤍',
-        );
       },
       child: AnimatedBuilder(
         animation: _scale,
@@ -89,7 +105,7 @@ class _FavButtonState extends State<FavButton>
             ],
           ),
           child: Icon(
-            widget.isFav ? Icons.favorite : Icons.favorite_border,
+            isFav ? Icons.favorite : Icons.favorite_border,
             color: AppColors.primaryDarkGreen,
             size: widget.size * 0.55,
           ),

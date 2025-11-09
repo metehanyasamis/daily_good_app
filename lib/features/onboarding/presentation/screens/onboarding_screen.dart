@@ -169,6 +169,7 @@ class OnboardingPage extends StatelessWidget {
               child: CustomButton(
                 text: isLast ? 'Hazırım!' : 'İleri',
                 onPressed: onNext,
+                showPrice: false,
               ),
             ),
           ],

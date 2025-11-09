@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/fav_button.dart';
-import '../../../../core/widgets/animated_toast.dart';
 import '../../../businessShop/data/mock/mock_businessShop_model.dart';
 import '../../../businessShop/data/model/businessShop_model.dart';
 import '../../data/models/product_model.dart';
@@ -98,18 +97,7 @@ class _ProductCardState extends State<ProductCard> {
                       top: 8,
                       right: 8,
                       child: FavButton(
-                        isFav: isFav,
-                        context: context,
-                        onToggle: () {
-                          setState(() => isFav = !isFav);
-                          widget.product.isFav = isFav;
-                          showAnimatedToast(
-                            context,
-                            isFav
-                                ? 'Favorilere eklendi 💚'
-                                : 'Favorilerden kaldırıldı ❌',
-                          );
-                        },
+                        item: widget.product, // 👈 sadece bu yeterli
                         size: 34,
                       ),
                     ),

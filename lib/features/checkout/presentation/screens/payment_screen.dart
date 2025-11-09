@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -153,6 +154,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             text: isLoading ? 'İşlem yapılıyor...' : 'Ödemeyi Tamamla',
             price: widget.amount,
             onPressed: isLoading ? () {} : _submit,
+            showPrice: true,
           ),
         ),
       ),
@@ -236,15 +238,29 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         TextFormField(
           controller: _numberCtrl,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Kart Numarası', hintText: '0000 0000 0000 0000', filled: true, fillColor: Colors.white),
+          inputFormatters: [
+            // ✅ Sadece rakam ve boşluk girilebilir
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
+            // ✅ Maksimum uzunluk: 16 rakam + 3 boşluk
+            LengthLimitingTextInputFormatter(19),
+          ],
+          decoration: const InputDecoration(
+            labelText: 'Kart Numarası',
+            hintText: '0000 0000 0000 0000',
+            counterText: '',
+            filled: true,
+            fillColor: Colors.white,
+          ),
           validator: (s) {
             final v = (s ?? '').replaceAll(' ', '');
-            if (v.length < 13) return 'Geçerli kart numarası girin';
+            if (v.length != 16) return 'Kart numarası 16 haneli olmalı';
             return null;
           },
           onChanged: (s) {
             final digits = s.replaceAll(' ', '');
-            final newText = _groupIntoChunks(digits, 4).join(' ');
+            // ✅ Fazla girilirse otomatik kes
+            final limited = digits.length > 16 ? digits.substring(0, 16) : digits;
+            final newText = _groupIntoChunks(limited, 4).join(' ');
             if (newText != s) {
               _numberCtrl.value = TextEditingValue(
                 text: newText,
@@ -262,16 +278,33 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               child: TextFormField(
                 controller: _expiryCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Son Kullanım Tarihi',hintText: 'MM/YY', filled: true, fillColor: Colors.white),
-                validator: (s) => (s ?? '').length < 4 ? 'AA/YY girin' : null,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')), // sadece rakam ve / işareti
+                  LengthLimitingTextInputFormatter(5), // MM/YY toplam 5 karakter
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Son Kullanım Tarihi',
+                  hintText: 'MM/YY',
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                validator: (s) {
+                  final value = s ?? '';
+                  if (!RegExp(r'^(0[1-9]|1[0-2])\/\d{2}$').hasMatch(value)) {
+                    return 'Geçerli tarih girin (AA/YY)';
+                  }
+                  return null;
+                },
                 onChanged: (s) {
-                  final digits = s.replaceAll('/', '').replaceAll(' ', '');
-                  final newText = digits.length > 2 ? digits.substring(0, 2) + '/' + digits.substring(2) : digits;
-                  if (newText != s) {
-                    _expiryCtrl.value = TextEditingValue(
-                      text: newText,
-                      selection: TextSelection.collapsed(offset: newText.length),
-                    );
+                  final digits = s.replaceAll('/', '');
+                  if (digits.length > 2) {
+                    final formatted = digits.substring(0, 2) + '/' + digits.substring(2, digits.length.clamp(2, 4));
+                    if (formatted != s) {
+                      _expiryCtrl.value = TextEditingValue(
+                        text: formatted,
+                        selection: TextSelection.collapsed(offset: formatted.length),
+                      );
+                    }
                   }
                   setState(() {});
                 },

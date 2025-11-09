@@ -129,6 +129,12 @@ final cartTotalProvider = Provider<double>((ref) {
 
 /// 🔹 Aktif işletme
 final cartBusinessProvider = Provider<BusinessModel?>((ref) {
-  final cart = ref.watch(cartProvider.notifier);
-  return cart.currentBusiness;
+  final cart = ref.watch(cartProvider); // ✅ state'i izle
+  if (cart.isEmpty) return null;
+
+  final first = cart.first;
+  final business = findBusinessById(first.shopId);
+  if (business == null) return null; // 🔒 ek güvenlik
+
+  return business;
 });

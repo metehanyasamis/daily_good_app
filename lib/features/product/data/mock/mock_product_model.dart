@@ -2,6 +2,7 @@ import '../models/product_model.dart';
 
 final List<ProductModel> mockProducts = [
   ProductModel(
+    productId: 'p1',
     businessId: '1',
     businessName: 'Sandwich City',
     bannerImage: 'assets/images/sample_food4.jpg',
@@ -14,6 +15,7 @@ final List<ProductModel> mockProducts = [
     distance: 0.8,
   ),
   ProductModel(
+    productId: 'p2',
     businessId: '2',
     businessName: 'VGreen Dükkan',
     bannerImage: 'assets/images/sample_food2.jpg',
@@ -26,6 +28,7 @@ final List<ProductModel> mockProducts = [
     distance: 1.2,
   ),
   ProductModel(
+    productId: 'p3',
     businessId: '2',
     businessName: 'VGreen Dükkan',
     bannerImage: 'assets/images/sample_food3.jpg',
@@ -38,6 +41,7 @@ final List<ProductModel> mockProducts = [
     distance: 1.2,
   ),
   ProductModel(
+    productId: 'p4',
     businessId: '2',
     businessName: 'VGreen Dükkan',
     bannerImage: 'assets/images/sample_food4.jpg',
@@ -50,6 +54,7 @@ final List<ProductModel> mockProducts = [
     distance: 1.2,
   ),
   ProductModel(
+    productId: 'p5',
     businessId: '3',
     businessName: 'Altın Fırın',
     bannerImage: 'assets/images/sample_food3.jpg',
@@ -62,6 +67,7 @@ final List<ProductModel> mockProducts = [
     distance: 2.1,
   ),
   ProductModel(
+    productId: 'p6',
     businessId: '4',
     businessName: 'Şeker Dükkanı',
     bannerImage: 'assets/images/sample_food3.jpg',

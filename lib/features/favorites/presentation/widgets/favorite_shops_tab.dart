@@ -1,29 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/fav_button.dart';
-import '../../../../core/widgets/animated_toast.dart';
-import '../../../businessShop/data/mock/mock_businessShop_model.dart';
-import '../../../businessShop/data/model/businessShop_model.dart';
+import '../../../favorites/providers/favorites_provider.dart';
 
-class FavoriteShopsTab extends StatefulWidget {
+class FavoriteShopsTab extends ConsumerWidget {
   const FavoriteShopsTab({super.key});
 
   @override
-  State<FavoriteShopsTab> createState() => _FavoriteShopsTabState();
-}
-
-class _FavoriteShopsTabState extends State<FavoriteShopsTab> {
-  @override
-  Widget build(BuildContext context) {
-    // ❤️ Gerçek favoriler
-    final List<BusinessModel> favoriteShops =
-    mockBusinessList.where((b) => b.isFav).toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final favorites = ref.watch(favoritesProvider);
+    final favoriteShops = favorites.favoriteShops;
 
     if (favoriteShops.isEmpty) return _buildEmptyState(context);
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       itemCount: favoriteShops.length,
       itemBuilder: (context, index) {
         final shop = favoriteShops[index];
@@ -102,18 +95,8 @@ class _FavoriteShopsTabState extends State<FavoriteShopsTab> {
                   top: 6,
                   right: 6,
                   child: FavButton(
-                    isFav: shop.isFav,
-                    context: context,
+                    item: shop,
                     size: 34,
-                    onToggle: () {
-                      setState(() => shop.isFav = !shop.isFav);
-                      showAnimatedToast(
-                        context,
-                        shop.isFav
-                            ? 'İşletme favorilere eklendi 💚'
-                            : 'Favorilerden kaldırıldı ❌',
-                      );
-                    },
                   ),
                 ),
               ],

@@ -108,6 +108,7 @@ class _LocationMapScreenState extends ConsumerState<LocationMapScreen> {
                 CustomButton(
                   text: 'Adresim doğru',
                   onPressed: _confirmLocation,
+                  showPrice: false,
                 ),
               ],
             ),

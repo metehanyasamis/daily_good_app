@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
 class KnowMoreFull extends StatefulWidget {
-  final bool forceBoxMode; // 🔹 yeni eklendi
+  final bool forceBoxMode; // 🔹 Cart veya Order ekranı gibi durumlar için
   const KnowMoreFull({super.key, this.forceBoxMode = false});
 
   @override
@@ -46,44 +46,50 @@ class _KnowMoreFullState extends State<KnowMoreFull>
 
   @override
   Widget build(BuildContext context) {
-    final content = _buildCard(context);
+    final theme = Theme.of(context);
 
-    // 🔹 forceBoxMode true ise sliver modunu devre dışı bırak
+    // 🔹 Eğer CustomScrollView içinde değilse normal Box olarak davran
     final parent = context.findAncestorWidgetOfExactType<CustomScrollView>();
     final bool useSliver = !widget.forceBoxMode && parent != null;
 
-    if (useSliver) {
-      return SliverToBoxAdapter(child: content);
-    } else {
-      return content;
-    }
+    final content = _buildCard(context, theme);
+
+    return useSliver
+        ? SliverToBoxAdapter(child: content)
+        : content;
   }
 
-  Widget _buildCard(BuildContext context) {
+  Widget _buildCard(BuildContext context, ThemeData theme) {
     return Container(
-      width: MediaQuery.of(context).size.width, // ✅ cihaz genişliği
+      width: double.infinity, // ✅ Sonsuz değil, parent genişliğini alır
       margin: widget.forceBoxMode
-          ? const EdgeInsets.only(top: 8) // CartScreen’de yatay margin yok
+          ? const EdgeInsets.only(top: 8)
           : const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔸 Başlık + “Devamını Gör / Daha Az Göster” + dönen ikon
+          // 🔸 Başlık ve "Devamını Gör"
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 "Bilmeniz Gerekenler",
-                style: TextStyle(
+                style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  color: Colors.black87,
+                  color: AppColors.textPrimary,
                 ),
               ),
               InkWell(
@@ -107,11 +113,14 @@ class _KnowMoreFullState extends State<KnowMoreFull>
                     RotationTransition(
                       turns: Tween(begin: 0.0, end: 0.5).animate(
                         CurvedAnimation(
-                            parent: _controller, curve: Curves.easeInOut),
+                          parent: _controller,
+                          curve: Curves.easeInOut,
+                        ),
                       ),
                       child: const Icon(
                         Icons.expand_more_rounded,
                         color: AppColors.primaryDarkGreen,
+                        size: 22,
                       ),
                     ),
                   ],
@@ -120,12 +129,23 @@ class _KnowMoreFullState extends State<KnowMoreFull>
             ],
           ),
 
-          // 🔽 Expandable metin alanı
+          const SizedBox(height: 8),
+          Container(
+            height: 1,
+            width: double.infinity,
+            color: AppColors.primaryDarkGreen.withOpacity(0.3),
+          ),
+          const SizedBox(height: 12),
+
+          // 🔽 Expandable metin
           AnimatedCrossFade(
             firstChild: _clipped(_text),
             secondChild: Text(
               _text,
-              style: const TextStyle(color: Colors.black87, height: 1.4),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.textPrimary,
+                height: 1.4,
+              ),
             ),
             crossFadeState:
             expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
@@ -143,7 +163,7 @@ class _KnowMoreFullState extends State<KnowMoreFull>
     });
   }
 
-  /// 🔽 Fade’li kısaltılmış görünüm
+  /// 🔽 Fade’li kısa metin görünümü
   Widget _clipped(String text) => ClipRect(
     child: ShaderMask(
       shaderCallback: (rect) => const LinearGradient(

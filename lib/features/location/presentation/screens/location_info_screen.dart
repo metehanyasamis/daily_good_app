@@ -46,6 +46,7 @@ class LocationInfoScreen extends ConsumerWidget {
             CustomButton(
               text: 'Mevcut Konumumu Kullan',
               onPressed: () => _requestLocation(context, ref),
+              showPrice: false,
             ),
             const SizedBox(height: 16),
             TextButton(

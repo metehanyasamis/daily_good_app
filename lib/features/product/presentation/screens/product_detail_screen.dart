@@ -75,41 +75,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
           const FloatingCartButton(),
 
-/*
-// ——— Floating Sepet Butonu ———
-          Consumer(
-            builder: (context, ref, _) {
-              final cart = ref.watch(cartProvider);
-              if (cart.isEmpty) return const SizedBox.shrink();
-
-              return Positioned(
-                right: 16,
-                bottom: MediaQuery.of(context).padding.bottom + 90,
-                child: ElevatedButton.icon(
-                  onPressed: () => context.push('/cart'),
-                  icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-                  label: const Text(
-                    'Sepete Git',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryDarkGreen,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    elevation: 8,
-                  ),
-                ),
-              );
-            },
-          ),
-
-          */
-
           // 🔹 Bottom Bar
           Positioned(
             left: 0, right: 0, bottom: 0,
@@ -151,6 +116,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         ],
       ),
     );
+
   }
 
   // 🔸 Header
@@ -167,9 +133,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       Padding(
         padding: const EdgeInsets.only(right: 12),
         child: FavButton(
-          isFav: isFav,
-          onToggle: () => setState(() => isFav = !isFav),
-          context: context,
+          item: widget.product, // 👈 artık sadece model
         ),
       ),
     ],

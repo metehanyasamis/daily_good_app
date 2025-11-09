@@ -35,6 +35,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     Future<void> _logout() async {
       final confirm = await showDialog<bool>(
         context: context,
+        useRootNavigator: true,
         builder: (_) => AlertDialog(
           title: const Text('Oturumu Kapat'),
           content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
@@ -69,26 +70,30 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     Future<void> _deleteAccount() async {
       final confirm = await showDialog<bool>(
         context: context,
-        builder: (_) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: const Text('Hesabı Sil'),
-          content: const Text(
-              'Hesabınızı kalıcı olarak silmek istediğinize emin misiniz?'),
+          content: const Text('Hesabınızı kalıcı olarak silmek istediğinize emin misiniz?'),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('İptal')),
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('İptal'),
+            ),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style:
-              ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
               child: const Text('Evet, Sil'),
             ),
           ],
         ),
       );
+
       if (confirm == true) {
         await userNotifier.deleteUserAccount();
-        context.go('/login');
+
+        // 🟢 Dialog tamamen kapandıktan sonra login ekranına yönlendir
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.go('/login');
+        });
       }
     }
 
@@ -234,7 +239,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                         color: Colors.black54),
                     title: const Text('Geçmiş Siparişlerim'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/orders'),
+                    onTap: () => context.push('/order-history'),
                   ),
                 ],
               ),

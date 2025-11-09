@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class OrderItem {
   final String id;
   final String productName;
@@ -12,6 +10,7 @@ class OrderItem {
   final String businessName;
   final String businessAddress;
   final String businessLogo;
+  final double carbonSaved; // 🌿 yeni alan
   bool isDelivered;
 
   OrderItem({
@@ -26,11 +25,11 @@ class OrderItem {
     required this.businessName,
     required this.businessAddress,
     required this.businessLogo,
+    this.carbonSaved = 0.0, // ✅ varsayılan değer
     this.isDelivered = false,
   });
 
-  Duration get remainingTime =>
-      pickupEnd.difference(DateTime.now());
+  Duration get remainingTime => pickupEnd.difference(DateTime.now());
 
   double get progress {
     final total = pickupEnd.difference(orderTime).inSeconds;
@@ -42,9 +41,10 @@ class OrderItem {
 
 String generatePickupCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return List.generate(5,
-          (i) => chars[(DateTime.now().millisecondsSinceEpoch + i) % chars.length])
-      .join();
+  return List.generate(
+    5,
+        (i) => chars[(DateTime.now().millisecondsSinceEpoch + i) % chars.length],
+  ).join();
 }
 
 String generateOrderNumber() =>

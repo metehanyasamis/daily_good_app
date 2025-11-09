@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/animated_toast.dart';
 
 class ProductBottomBar extends StatelessWidget {
   final int qty;
@@ -44,26 +43,35 @@ class ProductBottomBar extends StatelessWidget {
                 child: SizedBox(
                   height: 54,
                   child: ElevatedButton(
-                    onPressed: isDisabled ? null : () async {
-                      final ok = await onSubmit(); // <-- sadece sonucu döndür
-                      if (ok) {
-                        // toast burada, sadece gerçekten eklendi/güncellendi ise çıkacak
-                        showAnimatedToast(context, 'Sepete eklendi ✅');
-                      }
+                    onPressed: isDisabled
+                        ? null
+                        : () async {
+                      final ok = await onSubmit();
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-                      backgroundColor: isDisabled ? Colors.grey.shade400 : AppColors.primaryDarkGreen,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                      backgroundColor: isDisabled
+                          ? Colors.grey.shade400
+                          : AppColors.primaryDarkGreen,
                       elevation: isDisabled ? 0 : 6,
                     ),
                     child: Text(
-                      isDisabled ? 'Stok Tükendi' : '$qty adet için ${(qty * price).toStringAsFixed(0)} TL',
-                      style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                      isDisabled
+                          ? 'Stok Tükendi'
+                          : '$qty adet için ${(qty * price).toStringAsFixed(0)} TL',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
               ),
+
             ],
           ),
         ),

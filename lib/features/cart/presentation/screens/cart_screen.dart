@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/navigation_utils.dart';
-import '../../../../core/widgets/animated_toast.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 import '../../../businessShop/data/model/businessShop_model.dart';
-import '../../../checkout/presentation/screens/payment_screen.dart';
 import '../../../product/data/mock/mock_product_model.dart';
 import '../../domain/models/cart_item.dart';
 import '../../domain/providers/cart_provider.dart';
@@ -113,6 +111,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 context.push('/payment', extra: total);
               });
             },
+            showPrice: true,
           ),
         )
             : null,
@@ -270,12 +269,6 @@ class _CartItemRow extends ConsumerWidget {
             onIncrement: () {
               if (item.quantity < maxQty) {
                 ctrl.increment(item.id, maxQty: maxQty);
-              } else {
-                showAnimatedToast(
-                  context,
-                  'Stokta yalnızca $maxQty adet var ⚠️',
-                  backgroundColor: Colors.orange.shade700,
-                );
               }
             },
             maxReached: item.quantity >= maxQty,

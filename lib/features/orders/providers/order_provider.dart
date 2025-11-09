@@ -1,9 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/order_model.dart';
 
+/// Ana sipariş listesi sağlayıcısı
 final ordersProvider = StateNotifierProvider<OrdersNotifier, List<OrderItem>>(
       (ref) => OrdersNotifier(),
 );
+
+/// Aktif (teslim edilmemiş) sipariş var mı?
+final hasActiveOrderProvider = Provider<bool>((ref) {
+  final orders = ref.watch(ordersProvider);
+  return orders.any((o) => !o.isDelivered);
+});
 
 class OrdersNotifier extends StateNotifier<List<OrderItem>> {
   OrdersNotifier() : super([]);

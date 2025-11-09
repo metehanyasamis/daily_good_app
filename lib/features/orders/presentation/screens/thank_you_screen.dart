@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/custom_button.dart';
 
 class ThankYouScreen extends StatelessWidget {
   const ThankYouScreen({super.key});
@@ -36,17 +37,10 @@ class ThankYouScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _infoCard("Bu sipariş ile birlikte", "200 ₺", "tasarruf ettin"),
               const SizedBox(height: 32),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryDarkGreen,
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onPressed: () => context.go('/home'), // ✅ GoRouter uyumlu yönlendirme
-
-                child: const Text("Harika! Ana Sayfaya Dön"),
+              CustomButton(
+                text: 'Harika! Ana Sayfaya Dön',
+                onPressed: () => context.go('/home'),
+                showPrice: false, // 🟢 sade buton (tek renkli)
               ),
             ],
           ),

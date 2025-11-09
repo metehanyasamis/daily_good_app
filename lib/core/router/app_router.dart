@@ -11,6 +11,7 @@ import '../../features/cart/presentation/screens/cart_screen.dart';
 import '../../features/checkout/presentation/screens/payment_screen.dart';
 import '../../features/explore/presentation/screens/explore_map_screen.dart';
 import '../../features/notification/presentation/screens/notification_screen.dart';
+import '../../features/orders/presentation/screens/order_history_screen.dart';
 import '../../features/orders/presentation/screens/order_success_screen.dart';
 import '../../features/orders/presentation/screens/order_tracking_screen.dart';
 import '../../features/orders/presentation/screens/thank_you_screen.dart';
@@ -170,21 +171,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ThankYouScreen(),
       ),
 
+      GoRoute(
+        path: '/order-history',
+        builder: (context, state) =>  OrderHistoryScreen(),
+      ),
 
 
       // 🔹 ShellRoute (bottom nav)
       ShellRoute(
         builder: (context, state, child) =>
-            AppShell(child: child, location: state.uri.toString()),
+            AppShell(location: state.uri.toString(), child: child),
         routes: [
-          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+          GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
 
-          GoRoute(path: '/explore', builder: (_, __) => const ExploreListScreen()),
-          GoRoute(path: '/explore-list', builder: (_, __) => const ExploreListScreen()),
-          GoRoute(path: '/explore-map', builder: (_, __) => const ExploreMapScreen()),
+          GoRoute(path: '/explore', builder: (_, _) => const ExploreListScreen()),
+          GoRoute(path: '/explore-list', builder: (_, _) => const ExploreListScreen()),
+          GoRoute(path: '/explore-map', builder: (_, _) => const ExploreMapScreen()),
 
-          GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
-          GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
+          GoRoute(path: '/favorites', builder: (_, _) => const FavoritesScreen()),
+          GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
         ],
       ),
     ],
