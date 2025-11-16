@@ -2,42 +2,61 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
+
+	<!-- =============================== -->
+	<!--     TEMEL iOS APP AYARLARI      -->
+	<!-- =============================== -->
+
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+
 	<key>CFBundleDisplayName</key>
 	<string>Daily Good</string>
+
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
+
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+
 	<key>CFBundleName</key>
 	<string>daily_good</string>
+
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
+
 	<key>CFBundleSignature</key>
 	<string>????</string>
+
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
+
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
+
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+
+	<!-- Ekran yönleri -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -45,5 +64,61 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
+
+
+	<!-- =============================== -->
+	<!--           İZİNLER               -->
+	<!-- =============================== -->
+
+	<!-- 📸 Kamera izni -->
+	<key>NSCameraUsageDescription</key>
+	<string>Fotoğraf çekip destek ekibimizle paylaşabilmeniz için kamera erişimi gerekiyor.</string>
+
+	<!-- 🖼️ Galeri izni -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Galerinizden fotoğraf seçebilmeniz için fotoğraf galerisi erişimi gerekiyor.</string>
+
+	<!-- 📍 Konum izni -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Size yakın işletmeleri gösterebilmemiz için konum erişimi gerekiyor.</string>
+
+	<!-- 🔔 Bildirim izni -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Kişiselleştirilmiş bildirimler gönderebilmemiz için izninize ihtiyacımız var.</string>
+
+	<key>FirebaseMessagingAutoInitEnabled</key>
+	<true/>
+
+
+	<!-- =============================== -->
+	<!--       SIGN IN WITH APPLE        -->
+	<!-- =============================== -->
+
+	<key>CFBundleURLTypes</key>
+	<array>
+	  <dict>
+	    <key>CFBundleURLSchemes</key>
+	    <array>
+	      <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	    </array>
+	  </dict>
+	</array>
+
+
+	<!-- =============================== -->
+	<!--        ATS (http için)          -->
+	<!-- =============================== -->
+
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
+	<!-- Flutter için gerekli (iOS 16+ frame drop fix) -->
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+
 </dict>
 </plist>
