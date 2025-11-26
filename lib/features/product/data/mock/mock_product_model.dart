@@ -1,3 +1,5 @@
+import '../../../explore/presentation/widgets/category_filter_option.dart';
+import '../../../saving/data/carbon_rules.dart';
 import '../models/product_model.dart';
 
 final List<ProductModel> mockProducts = [
@@ -13,6 +15,8 @@ final List<ProductModel> mockProducts = [
     stockLabel: 'Son 3',
     rating: 4.7,
     distance: 0.8,
+    category: CategoryFilterOption.food,
+    carbonSaved: CarbonRules.getCarbon(CategoryFilterOption.food),
   ),
   ProductModel(
     productId: 'p2',
@@ -26,6 +30,8 @@ final List<ProductModel> mockProducts = [
     stockLabel: 'Son 5',
     rating: 4.5,
     distance: 1.2,
+    category: CategoryFilterOption.vegan,
+    carbonSaved: CarbonRules.getCarbon(CategoryFilterOption.vegan),
   ),
   ProductModel(
     productId: 'p3',
@@ -39,6 +45,8 @@ final List<ProductModel> mockProducts = [
     stockLabel: 'Son 4',
     rating: 4.8,
     distance: 1.2,
+    category: CategoryFilterOption.vegan,
+    carbonSaved: CarbonRules.getCarbon(CategoryFilterOption.vegan),
   ),
   ProductModel(
     productId: 'p4',
@@ -52,6 +60,8 @@ final List<ProductModel> mockProducts = [
     stockLabel: 'Son 2',
     rating: 4.6,
     distance: 1.2,
+    category: CategoryFilterOption.glutenFree,
+    carbonSaved: CarbonRules.getCarbon(CategoryFilterOption.glutenFree),
   ),
   ProductModel(
     productId: 'p5',
@@ -65,6 +75,8 @@ final List<ProductModel> mockProducts = [
     stockLabel: '1 Adet Kaldı',
     rating: 4.6,
     distance: 2.1,
+    category: CategoryFilterOption.bakery,
+    carbonSaved: CarbonRules.getCarbon(CategoryFilterOption.bakery),
   ),
   ProductModel(
     productId: 'p6',
@@ -78,10 +90,12 @@ final List<ProductModel> mockProducts = [
     stockLabel: '3 Adet Kaldı',
     rating: 4.8,
     distance: 0.5,
+    category: CategoryFilterOption.bakery,
+    carbonSaved: CarbonRules.getCarbon(CategoryFilterOption.bakery),
   ),
 ];
 
-// ✅ Ürün ismine göre bulma fonksiyonu (CartScreen için)
+
 ProductModel? findProductByName(String name) {
   try {
     return mockProducts.firstWhere(

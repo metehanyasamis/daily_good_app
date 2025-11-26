@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:daily_good/core/widgets/custom_toggle_button.dart';
 import 'package:daily_good/features/product/data/mock/mock_product_model.dart';
 import 'package:flutter/material.dart';
@@ -6,47 +8,72 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../product/data/models/product_model.dart';
 import '../../../product/presentation/widgets/product_card.dart';
+import '../widgets/category_filter_option.dart';
 import '../widgets/explore_filter_sheet.dart';
+import '../widgets/category_filter_sheet.dart';
 
 enum SortDirection { ascending, descending }
 
 class ExploreListScreen extends StatefulWidget {
-  const ExploreListScreen({super.key});
+  final CategoryFilterOption? initialCategory;
+  final bool fromHome;
 
+  const ExploreListScreen({
+    super.key,
+    this.initialCategory,
+    this.fromHome = false,
+  });
   @override
   State<ExploreListScreen> createState() => _ExploreListScreenState();
 }
 
+
 class _ExploreListScreenState extends State<ExploreListScreen> {
   String selectedAddress = 'Nail Bey Sok.';
+
   ExploreFilterOption selectedFilter = ExploreFilterOption.recommended;
   SortDirection sortDirection = SortDirection.ascending;
-  List<ProductModel> allProducts = List.from(mockProducts);
+
+  final List<ProductModel> allProducts = List.from(mockProducts);
   List<ProductModel> filteredProducts = List.from(mockProducts);
+
+  CategoryFilterOption selectedCategory = CategoryFilterOption.all;
 
   final TextEditingController _searchController = TextEditingController();
 
-  // 🔍 Arama
-  void _applySearch(String query) {
-    final lower = query.trim().toLowerCase();
-    setState(() {
-      if (lower.length < 3) {
-        filteredProducts = List.from(allProducts);
-      } else {
-        filteredProducts = allProducts.where((p) {
-          return p.packageName.toLowerCase().contains(lower) ||
-              p.businessName.toLowerCase().contains(lower);
-        }).toList();
-      }
-      _applySorting();
-    });
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.initialCategory != null) {
+      selectedCategory = widget.initialCategory!;
+    }
+
+    _applyFilters();
   }
 
-  // 🔽 Sıralama mantığı
-  void _applySorting() {
-    final sorted = List<ProductModel>.from(filteredProducts);
+  // ============================================================
+  // 🔥 TEK FONKSİYON → Arama + Kategori + Sıralama
+  // ============================================================
+  void _applyFilters() {
+    List<ProductModel> temp = List.from(allProducts);
 
-    sorted.sort((a, b) {
+    // 🔍 Arama
+    final q = _searchController.text.trim().toLowerCase();
+    if (q.length >= 3) {
+      temp = temp.where((p) {
+        return p.packageName.toLowerCase().contains(q) ||
+            p.businessName.toLowerCase().contains(q);
+      }).toList();
+    }
+
+    // 🟩 Kategori filtresi (artık direkt model'den gidiyoruz!)
+    if (selectedCategory != CategoryFilterOption.all) {
+      temp = temp.where((p) => p.category == selectedCategory).toList();
+    }
+
+    // 🔽 Sıralama
+    temp.sort((a, b) {
       int result;
       switch (selectedFilter) {
         case ExploreFilterOption.recommended:
@@ -66,9 +93,30 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
       return sortDirection == SortDirection.ascending ? result : -result;
     });
 
-    setState(() {
-      filteredProducts = sorted;
-    });
+    setState(() => filteredProducts = temp);
+  }
+
+  // ============================================================
+  // 🔥 Kategori bottom sheet
+  // ============================================================
+  void _openCategoryFilter() async {
+    final res = await showModalBottomSheet<CategoryFilterOption>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => CategoryFilterSheet(
+        selected: selectedCategory,
+        onApply: (cat) => Navigator.pop(context, cat),
+      ),
+    );
+
+    if (res != null) {
+      selectedCategory = res;
+      _applyFilters();
+    }
   }
 
   @override
@@ -76,57 +124,46 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(70),
+        preferredSize: Size.fromHeight(70),
         child: CustomHomeAppBar(
           address: selectedAddress,
           onLocationTap: () {},
           onNotificationsTap: () {},
+          leadingOverride: widget.fromHome
+              ? IconButton(
+            icon: Icon(Icons.arrow_back, color: AppColors.primaryDarkGreen),
+            onPressed: () => context.pop(),
+          )
+              : null,
         ),
       ),
+
       body: Stack(
         children: [
           CustomScrollView(
             slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _SearchAndSortHeader(
-                  controller: _searchController,
-                  selectedSort: selectedFilter,
-                  sortDirection: sortDirection,
-                  onSortChanged: (value) {
-                    setState(() {
-                      if (value == selectedFilter) {
-                        sortDirection = sortDirection == SortDirection.ascending
-                            ? SortDirection.descending
-                            : SortDirection.ascending;
-                      } else {
-                        selectedFilter = value!;
-                        sortDirection = SortDirection.ascending;
-                      }
-                      _applySorting();
-                    });
-                  },
-                  onSearchChanged: _applySearch,
-                ),
-              ),
+              _buildHeader(),
+
               SliverPadding(
-                padding: EdgeInsets.only(right: 12, left: 12),
+                padding: EdgeInsets.symmetric(horizontal: 12),
                 sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final product = filteredProducts[index];
-                    return ProductCard(
-                      product: product,
-                      onTap: () =>
-                          context.push('/product-detail', extra: product),
-                    );
-                  }, childCount: filteredProducts.length),
+                  delegate: SliverChildBuilderDelegate(
+                        (context, i) {
+                      final p = filteredProducts[i];
+                      return ProductCard(
+                        product: p,
+                        onTap: () => context.push('/product-detail', extra: p),
+                      );
+                    },
+                    childCount: filteredProducts.length,
+                  ),
                 ),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 120)),
+
+              SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
           ),
 
-          // 🔹 Harita / Liste geçiş butonu
           CustomToggleButton(
             label: "Harita",
             icon: Icons.map_outlined,
@@ -136,71 +173,80 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
       ),
     );
   }
+
+  // ============================================================
+  // HEADER
+  // ============================================================
+  SliverPersistentHeader _buildHeader() {
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _HeaderDelegate(
+        controller: _searchController,
+        selectedSort: selectedFilter,
+        sortDirection: sortDirection,
+        selectedCategory: selectedCategory,
+        onSearchChanged: (v) => _applyFilters(),
+        onSortChanged: (opt) {
+          if (opt == null) return;
+
+          if (opt == selectedFilter) {
+            sortDirection = sortDirection == SortDirection.ascending
+                ? SortDirection.descending
+                : SortDirection.ascending;
+          } else {
+            selectedFilter = opt;
+            sortDirection = SortDirection.ascending;
+          }
+
+          _applyFilters();
+        },
+        onCategoryTap: _openCategoryFilter,
+      ),
+    );
+  }
 }
 
-// 🔹 Header
-class _SearchAndSortHeader extends SliverPersistentHeaderDelegate {
+class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   final TextEditingController controller;
   final ExploreFilterOption selectedSort;
   final SortDirection sortDirection;
-  final ValueChanged<ExploreFilterOption?> onSortChanged;
-  final ValueChanged<String> onSearchChanged;
+  final CategoryFilterOption selectedCategory;
 
-  _SearchAndSortHeader({
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<ExploreFilterOption?> onSortChanged;
+  final VoidCallback onCategoryTap;
+
+  _HeaderDelegate({
     required this.controller,
     required this.selectedSort,
     required this.sortDirection,
-    required this.onSortChanged,
+    required this.selectedCategory,
     required this.onSearchChanged,
+    required this.onSortChanged,
+    required this.onCategoryTap,
   });
 
   @override
-  double get minExtent => 100;
+  double get minExtent => 120;
 
   @override
-  double get maxExtent => 100;
+  double get maxExtent => 120;
 
-  String _labelForOption(ExploreFilterOption opt) {
-    switch (opt) {
-      case ExploreFilterOption.recommended:
-        return 'Önerilen';
-      case ExploreFilterOption.distance:
-        return 'Mesafeye göre';
-      case ExploreFilterOption.price:
-        return 'Fiyata göre';
-      case ExploreFilterOption.rating:
-        return 'Puana göre';
-    }
-  }
-
-  String _sortDirectionLabel(ExploreFilterOption opt, SortDirection dir) {
-    return dir == SortDirection.ascending ? '(Artan)' : '(Azalan)';
-  }
-
+  // -------------------------------------------------------
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(context, shrink, overlap) {
     return Container(
       color: AppColors.background,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 🔍 Arama
           TextField(
             controller: controller,
             onChanged: onSearchChanged,
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: Icon(Icons.search),
               hintText: 'Restoran, paket veya mekan ara (3+ harf)',
-              hintStyle: const TextStyle(
-                color: Colors.grey,      // 👈 gri ton
-                fontSize: 14,          // 👈 biraz daha küçük
-                fontWeight: FontWeight.w400,
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
@@ -209,101 +255,116 @@ class _SearchAndSortHeader extends SliverPersistentHeaderDelegate {
               ),
             ),
           ),
-          const SizedBox(height: 4),
+
+          SizedBox(height: 8),
+
           Row(
             children: [
-              Text('Sırala:', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(width: 6),
+              _sortCapsule(context),
+              SizedBox(width: 10),
+              _categoryButton(),
+            ],
+          )
+        ],
+      ),
+    );
+  }
 
-              // 🔹 Yeni sıralama kapsülü
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.grey.shade300),
+  // -------------------------------------------------------
+  //  SIRALAMA KAPSÜLÜ
+  // -------------------------------------------------------
+  String _sortLabel(ExploreFilterOption opt) {
+    switch (opt) {
+      case ExploreFilterOption.recommended:
+        return "Önerilen";
+      case ExploreFilterOption.price:
+        return "Fiyat";
+      case ExploreFilterOption.distance:
+        return "Mesafe";
+      case ExploreFilterOption.rating:
+        return "Puan";
+    }
+  }
+
+  Widget _sortCapsule(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            onTap: () => onSortChanged(selectedSort),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: AnimatedRotation(
+                turns: sortDirection == SortDirection.ascending ? 0 : .5,
+                duration: Duration(milliseconds: 200),
+                child: Icon(Icons.arrow_upward,
+                    color: AppColors.primaryDarkGreen),
+              ),
+            ),
+          ),
+
+          InkWell(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                useSafeArea: true,
+                isScrollControlled: true,
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 🔽 Yön ok
-                    InkWell(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        bottomLeft: Radius.circular(30),
-                      ),
-                      onTap: () {
-                        onSortChanged(selectedSort);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 8,
-                        ),
-                        child: AnimatedRotation(
-                          turns: sortDirection == SortDirection.ascending
-                              ? 0.0
-                              : 0.5,
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeInOut,
-                          child: const Icon(
-                            Icons.arrow_upward,
-                            color: AppColors.primaryDarkGreen,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // 🔤 Etiket - filtre seçimi açar
-                    InkWell(
-                      borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(30),
-                        bottomRight: Radius.circular(30),
-                      ),
-                      onTap: () {
-                        showModalBottomSheet<ExploreFilterOption>(
-                          context: context,
-                          useRootNavigator: true,
-                          isScrollControlled: true,
-                          useSafeArea: true,
-                          backgroundColor: Colors.white,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(20),
-                            ),
-                          ),
-                          builder: (_) => ExploreFilterSheet(
-                            selected: selectedSort,
-                            onApply: (opt) {
-                              onSortChanged(opt);
-                            },
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        child: Text(
-                          '${_labelForOption(selectedSort)} ${_sortDirectionLabel(selectedSort, sortDirection)}',
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                builder: (_) => ExploreFilterSheet(
+                  selected: selectedSort,
+                  onApply: (opt) => onSortChanged(opt),
+                ),
+              );
+            },
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Text(
+                _sortLabel(selectedSort),
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
+  // -------------------------------------------------------
+  //  KATEGORİ BUTONU
+  // -------------------------------------------------------
+  Widget _categoryButton() {
+    return InkWell(
+      onTap: onCategoryTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Text(
+          "Kategori: ${categoryLabel(selectedCategory)}",
+          style: TextStyle(
+            color: AppColors.primaryDarkGreen,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
-  bool shouldRebuild(covariant _SearchAndSortHeader old) => true;
+  bool shouldRebuild(_) => true;
 }

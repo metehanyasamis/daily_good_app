@@ -27,8 +27,10 @@ class OrdersNotifier extends StateNotifier<List<OrderItem>> {
   }
 }
 
-extension on OrderItem {
-  OrderItem copyWith({bool? isDelivered}) {
+extension OrderCopy on OrderItem {
+  OrderItem copyWith({
+    bool? isDelivered,
+  }) {
     return OrderItem(
       id: id,
       productName: productName,
@@ -38,9 +40,11 @@ extension on OrderItem {
       pickupStart: pickupStart,
       pickupEnd: pickupEnd,
       pickupCode: pickupCode,
+      businessId: businessId,
       businessName: businessName,
       businessAddress: businessAddress,
       businessLogo: businessLogo,
+      carbonSaved: carbonSaved,
       isDelivered: isDelivered ?? this.isDelivered,
     );
   }

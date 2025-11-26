@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'core/notifications/notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 Future<void> main() async {
@@ -13,7 +12,7 @@ Future<void> main() async {
   await Firebase.initializeApp();
 
   // 🟢 Bildirim sistemi başlatılıyor
-  await NotificationService.init();
+ // await NotificationService.init();
 
   // 🟢 Türkçe tarih formatlarını yükle
   await initializeDateFormatting('tr_TR');

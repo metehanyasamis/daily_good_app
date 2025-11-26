@@ -6,10 +6,16 @@ class UserModel {
   final String token;
   final bool isPhoneVerified;
   final bool isEmailVerified;
+
   final String? name;
   final String? surname;
   final String? email;
   final String? gender;
+
+  // 🔥 Yeni eklenen onboarding alanları
+  final bool hasCompletedProfile;
+  final bool hasCompletedOnboarding;
+  final bool hasLocationAccess;
 
   UserModel({
     required this.id,
@@ -21,6 +27,9 @@ class UserModel {
     this.surname,
     this.email,
     this.gender,
+    this.hasCompletedProfile = false,
+    this.hasCompletedOnboarding = false,
+    this.hasLocationAccess = false,
   });
 
   UserModel copyWith({
@@ -33,6 +42,9 @@ class UserModel {
     String? surname,
     String? email,
     String? gender,
+    bool? hasCompletedProfile,
+    bool? hasCompletedOnboarding,
+    bool? hasLocationAccess,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -44,10 +56,12 @@ class UserModel {
       surname: surname ?? this.surname,
       email: email ?? this.email,
       gender: gender ?? this.gender,
+      hasCompletedProfile: hasCompletedProfile ?? this.hasCompletedProfile,
+      hasCompletedOnboarding: hasCompletedOnboarding ?? this.hasCompletedOnboarding,
+      hasLocationAccess: hasLocationAccess ?? this.hasLocationAccess,
     );
   }
 
-  /// ✅ JSON’a dönüştür
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -59,10 +73,12 @@ class UserModel {
       'surname': surname,
       'email': email,
       'gender': gender,
+      'hasCompletedProfile': hasCompletedProfile,
+      'hasCompletedOnboarding': hasCompletedOnboarding,
+      'hasLocationAccess': hasLocationAccess,
     };
   }
 
-  /// ✅ JSON’dan model oluştur
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] ?? '',
@@ -74,10 +90,12 @@ class UserModel {
       surname: json['surname'],
       email: json['email'],
       gender: json['gender'],
+      hasCompletedProfile: json['hasCompletedProfile'] ?? false,
+      hasCompletedOnboarding: json['hasCompletedOnboarding'] ?? false,
+      hasLocationAccess: json['hasLocationAccess'] ?? false,
     );
   }
 
-  /// (Opsiyonel) String serialize/deserialize için kolaylık
   String toRawJson() => jsonEncode(toJson());
   factory UserModel.fromRawJson(String str) =>
       UserModel.fromJson(jsonDecode(str));

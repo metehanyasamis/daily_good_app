@@ -1,16 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../cart/domain/providers/cart_provider.dart';
 
-class OrderSuccessScreen extends StatefulWidget {
+class OrderSuccessScreen extends ConsumerStatefulWidget {
   const OrderSuccessScreen({super.key});
 
   @override
-  State<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
+  ConsumerState<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
 }
 
-class _OrderSuccessScreenState extends State<OrderSuccessScreen>
+class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scale;
@@ -19,6 +21,11 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
   @override
   void initState() {
     super.initState();
+
+    // 🧹 ÖDEME TAMAMLANDI → SEPETİ TEMİZLE
+    Future.microtask(() {
+      ref.read(cartProvider.notifier).clearCart();
+    });
 
     _controller = AnimationController(
       vsync: this,
@@ -30,7 +37,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
 
     _controller.forward();
 
-    // 🔹 2.5 saniye sonra otomatik yönlendirme
+    // 🔹 2.5 saniye sonra sipariş takibine yönlendir
     Timer(const Duration(seconds: 2, milliseconds: 500), () {
       if (mounted) {
         context.go('/order-tracking');
@@ -56,7 +63,6 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
               return Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // ✅ Animated Check Icon
                   Transform.scale(
                     scale: _scale.value,
                     child: const Icon(
@@ -66,8 +72,6 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Başlık
                   Opacity(
                     opacity: _fade.value,
                     child: const Text(
@@ -80,10 +84,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
-                  // Açıklama
                   Opacity(
                     opacity: _fade.value,
                     child: const Text(
@@ -95,10 +96,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                       textAlign: TextAlign.center,
                     ),
                   ),
-
                   const SizedBox(height: 40),
-
-                  // 🔄 Progress Indicator (adaptive)
                   Opacity(
                     opacity: _fade.value,
                     child: Column(
@@ -107,7 +105,8 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                           width: 36,
                           height: 36,
                           child: CircularProgressIndicator.adaptive(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                            AlwaysStoppedAnimation<Color>(Colors.white),
                             strokeWidth: 3.2,
                           ),
                         ),

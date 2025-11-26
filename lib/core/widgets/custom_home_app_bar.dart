@@ -9,12 +9,15 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final VoidCallback onLocationTap;
   final VoidCallback onNotificationsTap;
 
+  /// Eğer verilirse logo yerine bunu koyacağız
+  final Widget? leadingOverride;
 
   const CustomHomeAppBar({
     super.key,
     required this.address,
     required this.onLocationTap,
     required this.onNotificationsTap,
+    this.leadingOverride,
   });
 
   @override
@@ -22,13 +25,13 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cartCount = ref.watch(cartCountProvider); // 🔹 cart sayısı Riverpod'dan geliyor
+    final cartCount = ref.watch(cartCountProvider);
     final double topPadding = MediaQuery.of(context).padding.top;
 
     return Container(
       color: Colors.transparent,
       padding: EdgeInsets.only(
-        top: topPadding + 8,  // 🔹 Safe area + ufak ekstra boşluk
+        top: topPadding + 8,
         left: 16,
         right: 16,
         bottom: 8,
@@ -36,15 +39,18 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // 🟢 Sol: Logo
-          Image.asset(
-            'assets/logos/dailyGood_tekSaatLogo.png',
-            height: 45,
-          ),
+          /// ---------------------------------------------
+          /// 🟢 Sol taraf → Logo veya Override
+          /// ---------------------------------------------
+          leadingOverride ??
+              Image.asset(
+                'assets/logos/dailyGood_tekSaatLogo.png',
+                height: 45,
+              ),
 
           const SizedBox(width: 6),
 
-          // 🟢 Orta: Adres kapsülü
+          /// ------------------------- Orta: Adres kapsülü
           GestureDetector(
             onTap: onLocationTap,
             child: Container(
@@ -74,10 +80,9 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
             ),
           ),
 
-          // 🟢 Sağ: Cart + Notification ikonları
+          /// ------------------------- Sağ taraf: Notification + Cart
           Row(
             children: [
-              // 🔔 Bildirim
               IconButton(
                 onPressed: onNotificationsTap,
                 icon: const Icon(
@@ -86,7 +91,6 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 ),
               ),
 
-              // 🛒 Sepet ikonu (GoRouter push ile)
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -102,8 +106,8 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                       right: 6,
                       top: 6,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.redAccent,
                           borderRadius: BorderRadius.circular(10),

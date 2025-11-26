@@ -1,5 +1,7 @@
+import '../../../explore/presentation/widgets/category_filter_option.dart';
+
 class ProductModel {
-  final String productId; // ✅ daha açıklayıcı
+  final String productId;
   final String businessId;
   final String businessName;
   final String bannerImage;
@@ -11,6 +13,9 @@ class ProductModel {
   final double rating;
   final double distance;
   bool isFav;
+  final CategoryFilterOption category;
+  final double carbonSaved;
+
 
   ProductModel({
     required this.productId,
@@ -24,10 +29,11 @@ class ProductModel {
     required this.stockLabel,
     required this.rating,
     required this.distance,
+    required this.category,
     this.isFav = false,
+    this.carbonSaved = 0.0,
   });
 
-  // 🔹 Eşitlik tanımı artık productId üzerinden
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

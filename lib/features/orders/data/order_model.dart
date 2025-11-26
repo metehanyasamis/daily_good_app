@@ -7,10 +7,13 @@ class OrderItem {
   final DateTime pickupStart;
   final DateTime pickupEnd;
   final String pickupCode;
+
+  final String businessId;         // 🆕 EKLENDİ
   final String businessName;
   final String businessAddress;
   final String businessLogo;
-  final double carbonSaved; // 🌿 yeni alan
+
+  final double carbonSaved;
   bool isDelivered;
 
   OrderItem({
@@ -22,10 +25,13 @@ class OrderItem {
     required this.pickupStart,
     required this.pickupEnd,
     required this.pickupCode,
+
+    required this.businessId,      // 🆕 EKLENDİ
     required this.businessName,
     required this.businessAddress,
     required this.businessLogo,
-    this.carbonSaved = 0.0, // ✅ varsayılan değer
+
+    this.carbonSaved = 0.0,
     this.isDelivered = false,
   });
 

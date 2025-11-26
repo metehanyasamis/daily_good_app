@@ -11,7 +11,7 @@ enum ExploreFilterOption {
 
 class ExploreFilterSheet extends StatefulWidget {
   final ExploreFilterOption selected;
-  final Function(ExploreFilterOption) onApply;
+  final ValueChanged<ExploreFilterOption> onApply;
 
   const ExploreFilterSheet({
     super.key,
@@ -24,54 +24,68 @@ class ExploreFilterSheet extends StatefulWidget {
 }
 
 class _ExploreFilterSheetState extends State<ExploreFilterSheet> {
-  late ExploreFilterOption _selectedOption;
+  late ExploreFilterOption _selected;
 
   @override
   void initState() {
     super.initState();
-    _selectedOption = widget.selected;
+    _selected = widget.selected;
   }
 
   @override
   Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
     return SafeArea(
       top: false,
+      bottom: true,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 20,
+          bottom: MediaQuery.of(context).viewPadding.bottom + 20, // 🔥
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Filtrele',
+              'Sırala',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            _buildOption(ExploreFilterOption.recommended, 'Önerilen'),
-            _buildOption(ExploreFilterOption.distance, 'Mesafeye Göre'),
-            _buildOption(ExploreFilterOption.price, 'Fiyata Göre'),
-            _buildOption(ExploreFilterOption.rating, 'Değerlendirmeye Göre'),
+
+            _option(ExploreFilterOption.recommended, "Önerilen"),
+            _option(ExploreFilterOption.distance, "Mesafe"),
+            _option(ExploreFilterOption.price, "Fiyat"),
+            _option(ExploreFilterOption.rating, "Puan"),
+
             const SizedBox(height: 24),
+
             CustomButton(
-              text: 'Uygula',
+              text: "Uygula",
               onPressed: () {
-                widget.onApply(_selectedOption); // ✅ sadece callback
-                Navigator.of(context).pop();   // sadece sheet'i kapat
+                widget.onApply(_selected);
+                Navigator.pop(context);
               },
               showPrice: false,
             ),
+            // 🔥 Bottom nav üstüne çıkması için ekstra boşluk
+            SizedBox(height: bottomPad + 16),
+
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOption(ExploreFilterOption value, String label) {
-    return RadioListTile<ExploreFilterOption>(
-      title: Text(label),
-      value: value,
-      groupValue: _selectedOption,
-      onChanged: (val) => setState(() => _selectedOption = val!),
+  Widget _option(ExploreFilterOption opt, String label) {
+    return RadioListTile(
+      value: opt,
+      groupValue: _selected,
       activeColor: AppColors.primaryDarkGreen,
+      title: Text(label),
+      onChanged: (v) => setState(() => _selected = v!),
     );
   }
 }

@@ -1,64 +1,93 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../states/auth_state.dart';
+import '../../../../core/providers/app_state_provider.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../../../account/domain/providers/user_notifier.dart'; // <-- Bunu ekle
-
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  // ✅ UserNotifier ile aynı MockUserRepository'yi kullanıyoruz
-  return MockAuthRepository(ref.watch(mockUserRepositoryProvider));
-});
+import '../states/auth_state.dart';
+import '../../../account/domain/providers/user_notifier.dart';
 
 final authNotifierProvider =
 StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(
-    ref: ref, // ✅ burası önemli
+    ref: ref,
     authRepository: ref.watch(authRepositoryProvider),
   );
+});
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return MockAuthRepository(ref.watch(mockUserRepositoryProvider));
 });
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final Ref ref;
   final AuthRepository authRepository;
 
-  AuthNotifier({required this.ref,required this.authRepository}) : super(const AuthState.initial());
+  AuthNotifier({
+    required this.ref,
+    required this.authRepository,
+  }) : super(const AuthState.initial());
 
-  Future<void> login(String phoneNumber) async {
-    try {
-      state = const AuthState.loading();
-      await authRepository.loginWithPhone(phoneNumber);
-      state = const AuthState.otpSent();
-    } catch (e) {
-      state = AuthState.error(e.toString());
-    }
+  /// 🔍 Telefon kayıtlı mı?
+  Future<bool> checkPhoneExists(String phone) async {
+    return await authRepository.checkPhoneExists(phone);
   }
 
-  Future<void> verifyOtp(BuildContext context, String phoneNumber, String otp) async {
+  /// 📩 OTP gönder
+  Future<void> sendOtp(String phone) async {
+    state = const AuthState.loading();
+    await authRepository.sendOtp(phone);
+    state = const AuthState.otpSent();
+  }
+
+  Future<void> verifyOtp(String phone, String otp) async {
     try {
+      print("📨 VERIFY OTP → phone=$phone otp=$otp");
+
       state = const AuthState.loading();
 
-      // 1️⃣ OTP doğrulaması
-      final user = await authRepository.verifyOtp(phoneNumber, otp);
+      // OTP backend doğrula → user döner
+      final user = await authRepository.verifyOtp(phone, otp);
+      print("📦 BACKEND USER → id=${user.id}, phone=${user.phoneNumber}");
 
-      // 2️⃣ Doğrulanan user'ı UserNotifier'a aktar
-      ref.read(userNotifierProvider.notifier).updateUser(user);
+      // Kullanıcı bilgisini güncelle
+      await ref.read(userNotifierProvider.notifier).updateUser(user);
+      print("👤 USER STATE UPDATED");
 
-      // 3️⃣ State'i güncelle
+      // Login flag
+      final app = ref.read(appStateProvider.notifier);
+      app.setLoggedIn(true);
+      print("🔓 LOGGED IN SET → true");
+
+      // ---- ÖNEMLİ: onboarding/location hiçbir şekilde elleme ----
+      final appState = ref.read(appStateProvider);
+      print("🔎 APP STATE BEFORE AUTH");
+      print("   onboardingSeen=${appState.hasSeenOnboarding}");
+      print("   locationSelected=${appState.hasSelectedLocation}");
+
+      // Başarılı → UI dinleyip yönlendirecek
+      print("➡️ EMIT authenticated state");
       state = AuthState.authenticated(user);
 
-      // 4️⃣ Profil detay ekranına yönlendir
-      if (context.mounted) {
-        context.go('/profileDetail');
-      }
+      print("✅ OTP DOĞRULANDI → USER=${user.id}");
+      print("   onboardingSeen=${appState.hasSeenOnboarding}");
+      print("   locationSelected=${appState.hasSelectedLocation}");
+
     } catch (e) {
-      state = AuthState.error(e.toString());
+      print("❌ OTP HATALI: $e");
+      state = const AuthState.invalidOtp();
     }
   }
 
 
+
+  /// 🚪 Logout → tüm appState temizlenmeli
   Future<void> logout() async {
     await authRepository.logout();
+
+    final app = ref.read(appStateProvider.notifier);
+
+    app.setLoggedIn(false);
+    app.setOnboardingSeen(false);
+    app.setLocationSelected(false);
+
     state = const AuthState.unauthenticated();
   }
 }

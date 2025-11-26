@@ -1,27 +1,60 @@
-// features/auth/domain/states/auth_state.dart
-
 import '../../../account/data/models/user_model.dart';
 
-enum AuthStatus { initial, loading, otpSent, authenticated, unauthenticated, error }
+enum AuthStatus {
+  initial,
+  loading,
+  otpSent,
+  authenticated,
+  invalidOtp,
+  unauthenticated,
+  error,
+}
 
 class AuthState {
   final AuthStatus status;
   final UserModel? user;
   final String? errorMessage;
 
-  const AuthState._({
-    required this.status,
+  const AuthState({
+    this.status = AuthStatus.initial,
     this.user,
     this.errorMessage,
   });
 
-  const AuthState.initial() : this._(status: AuthStatus.initial);
-  const AuthState.loading() : this._(status: AuthStatus.loading);
-  const AuthState.authenticated(UserModel user)
-      : this._(status: AuthStatus.authenticated, user: user);
-  const AuthState.unauthenticated() : this._(status: AuthStatus.unauthenticated);
-  const AuthState.error(String message)
-      : this._(status: AuthStatus.error, errorMessage: message);
-  const AuthState.otpSent() : this._(status: AuthStatus.otpSent);
+  // ---------------------- Constructors ----------------------
 
+  const AuthState.initial()
+      : status = AuthStatus.initial,
+        user = null,
+        errorMessage = null;
+
+  const AuthState.loading()
+      : status = AuthStatus.loading,
+        user = null,
+        errorMessage = null;
+
+  const AuthState.otpSent()
+      : status = AuthStatus.otpSent,
+        user = null,
+        errorMessage = null;
+
+  const AuthState.authenticated(UserModel u)
+      : status = AuthStatus.authenticated,
+        user = u,
+        errorMessage = null;
+
+  const AuthState.invalidOtp()
+      : status = AuthStatus.invalidOtp,
+        user = null,
+        errorMessage = "Geçersiz OTP";
+
+  const AuthState.unauthenticated()
+      : status = AuthStatus.unauthenticated,
+        user = null,
+        errorMessage = null;
+
+  const AuthState.error(String msg)
+      : status = AuthStatus.error,
+        user = null,
+        errorMessage = msg;
 }

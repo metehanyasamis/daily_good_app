@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_toggle_button.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
@@ -18,6 +20,7 @@ class ExploreMapScreen extends ConsumerStatefulWidget {
 class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
   final List<BusinessModel> _sampleBusinessShop = mockBusinessList;
   String? _selectedShopId;
+  GoogleMapController? _mapController;
 
   BusinessModel? get _selectedShop {
     if (_selectedShopId == null) return null;
@@ -26,6 +29,20 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
     } catch (_) {
       return null;
     }
+  }
+
+  /// 📍 Marker’ları işletmelerden üret
+  Set<Marker> _buildMarkers() {
+    return _sampleBusinessShop.map((shop) {
+      return Marker(
+        markerId: MarkerId(shop.id),
+        position: LatLng(shop.latitude, shop.longitude),
+        icon: BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueGreen,
+        ),
+        onTap: () => _onPinTap(shop.id),
+      );
+    }).toSet();
   }
 
   void _onPinTap(String shopId) {
@@ -77,11 +94,12 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
       backgroundColor: AppColors.background,
       extendBody: true,
 
-      // ✅ Üstte Custom App Bar
+      // ✅ Üstte Custom App Bar (şimdilik sabit adres, sonra HomeState’e bağlarız)
       appBar: CustomHomeAppBar(
         address: 'Nail Bey Sok.',
-        onLocationTap: () {
-          // 📍 Lokasyon seçimi ekranı
+        onLocationTap: () async {
+          // 📍 İleride buradan location_picker_screen'e gideceğiz
+          // final result = await context.push('/location-picker');
         },
         onNotificationsTap: () {
           // 🔔 Bildirim ekranı
@@ -90,49 +108,25 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
 
       body: Stack(
         children: [
-          // 🗺️ Harita (Mock)
-            // 🗺️ Harita (Mock)
+          // 🗺️ GERÇEK Google Map
           Positioned.fill(
-            child: GestureDetector(
-              onTap: () {
-                // 🔹 Haritadaki boş alana dokunulduğunda mini kart kapanır
+            child: GoogleMap(
+              initialCameraPosition: const CameraPosition(
+                target: LatLng(41.0082, 28.9784), // İstanbul genel
+                zoom: 12,
+              ),
+              markers: _buildMarkers(),
+              onMapCreated: (c) => _mapController = c,
+              onTap: (_) {
+                // Haritada boş alana tıklayınca mini kartı kapat
                 setState(() => _selectedShopId = null);
               },
-              child: Image.asset(
-                'assets/images/sample_map.png',
-                fit: BoxFit.cover,
-              ),
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
             ),
           ),
 
-
-          // 📍 Mock Pinler
-          Positioned(
-            left: 60,
-            top: 220,
-            child: GestureDetector(
-              onTap: () => _onPinTap('1'),
-              child: const Icon(
-                Icons.location_on,
-                color: AppColors.primaryDarkGreen,
-                size: 36,
-              ),
-            ),
-          ),
-          Positioned(
-            left: 180,
-            top: 350,
-            child: GestureDetector(
-              onTap: () => _onPinTap('2'),
-              child: const Icon(
-                Icons.location_on,
-                color: AppColors.primaryDarkGreen,
-                size: 36,
-              ),
-            ),
-          ),
-
-          // 🪧 Alt mini kart
+          // 🪧 Alt mini kart (tasarımına DOKUNMADIM)
           if (_selectedShop != null)
             Positioned(
               left: 16,
@@ -147,11 +141,11 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
               ),
             ),
 
-          // 🟢 Toggle Buton
+          // 🟢 Toggle Buton (tasarım aynı)
           CustomToggleButton(
             label: "Liste",
             icon: Icons.list,
-            onPressed: () => context.push('/explore-list'),
+            onPressed: () => context.push('/explore'),
           ),
         ],
       ),
@@ -159,7 +153,7 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
   }
 }
 
-// ---------------- Mini Kart ----------------
+// ---------------- Mini Kart (SENİN ORİJİNALİN) ----------------
 class _MiniBusinessCard extends StatelessWidget {
   final BusinessModel business;
   const _MiniBusinessCard({required this.business});
@@ -244,7 +238,7 @@ class _MiniBusinessCard extends StatelessWidget {
   }
 }
 
-// ---------------- Yarım Bilgi Kartı ----------------
+// ---------------- Yarım Bilgi Kartı (SENİN ORİJİNALİN) ----------------
 class _HalfBusinessDetailCard extends StatelessWidget {
   final BusinessModel business;
   final VoidCallback onBusinessTap;
@@ -403,7 +397,7 @@ class _HalfBusinessDetailCard extends StatelessWidget {
                             ),
                             Text(
                               "${product.newPrice.toStringAsFixed(0)} ₺",
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppColors.primaryDarkGreen,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,

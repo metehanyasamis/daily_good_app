@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/data/prefs_service.dart';
+import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/email_verification_dialog.dart';
 import '../../domain/providers/user_notifier.dart';
@@ -42,6 +43,8 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
         }
       }
     });
+    print("📄 PROFILE DETAILS SCREEN AÇILDI!");
+
   }
 
   void _populateFields(user) {
@@ -349,7 +352,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(40),
       onTap: () async {
-        if (_snackbarShown) return; // ✅ çift basmayı engelle
+        if (_snackbarShown) return;
         _snackbarShown = true;
 
         final updated = user.copyWith(
@@ -359,35 +362,49 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           gender: _selectedGender,
         );
 
+        // 🔄 Sunucuya profil güncelle
         await notifier.updateUser(updated);
+
+        // 📌 Profil bilgileri tamamlandı (isteğe bağlı storage)
         await PrefsService.setHasSeenProfileDetails(true);
+
+        final app = ref.read(appStateProvider.notifier);
+
+        // 🔥 KRİTİK: Kullanıcı onboarding'i tamamladı
+        app.setOnboardingSeen(true);
+
+        // 🔥 Profil tamamlandı
+        app.setProfileCompleted(true);
 
         if (!mounted) return;
 
-        // ✅ 1. önce yönlendirme yap
-        if (widget.fromOnboarding) {
-          final seenOnb = await PrefsService.getHasSeenOnboarding();
-          if (!seenOnb) {
-            context.go('/onboarding');
-          } else {
-            context.go('/home');
-          }
-        } else {
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.go('/account');
-          }
+        final appState = ref.read(appStateProvider);
+
+        // 🧭 Konum seçilmemişse → locationInfo
+        if (!appState.hasSelectedLocation) {
+          context.go('/locationInfo');
+        }
+        // 🎉 Konum zaten varsa → home
+        else {
+          context.go('/home');
         }
 
-        // ✅ 2. sonra 300ms sonra SnackBar göster
+        // 🎉 Snackbar 300ms sonra
         Future.delayed(const Duration(milliseconds: 300), () {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Profil bilgileri kaydedildi")),
+            SnackBar(
+              content: const Text("Profil bilgileri kaydedildi"),
+              duration: const Duration(milliseconds: 1500),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           );
         });
 
-        // ✅ 3. 2 sn sonra tekrar aktif hale gelsin
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) _snackbarShown = false;
         });
@@ -400,7 +417,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           gradient: const LinearGradient(
             colors: [
               AppColors.primaryDarkGreen,
-              AppColors.primaryLightGreen
+              AppColors.primaryLightGreen,
             ],
           ),
         ),

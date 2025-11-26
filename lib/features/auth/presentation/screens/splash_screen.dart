@@ -68,23 +68,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (!mounted) return;
 
       // 🔹 300ms gecikme → GoRouter hazır olana kadar beklet
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (!mounted) return;
-
-        if (token == null) {
-          debugPrint('➡️ Gidiyor: /login');
-          context.go('/login');
-        } else if (!seenProfile) {
-          debugPrint('➡️ Gidiyor: /profileDetail');
-          context.go('/profileDetail', extra: {'fromOnboarding': true});
-        } else if (!seenOnboarding) {
-          debugPrint('➡️ Gidiyor: /onboarding');
-          context.go('/onboarding');
-        } else {
-          debugPrint('➡️ Gidiyor: /home');
-          context.go('/home');
-        }
+      Future.delayed(const Duration(seconds: 2), () {
+        if(mounted) context.go('/home'); // dummy, router redirect gerçek yeri bulur
       });
+
     } catch (e, s) {
       debugPrint('❌ Splash init error: $e');
       debugPrint('$s');

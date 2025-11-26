@@ -2,121 +2,161 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-// 🔹 Feature imports
-import '../../features/account/presentation/screens/account_screen.dart';
+// Screens
+import '../../features/account/presentation/screens/profile_details_screen.dart';
+import '../../features/auth/presentation/screens/splash_screen.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/intro_screen.dart';
-import '../../features/businessShop/data/model/businessShop_model.dart';
-import '../../features/businessShop/presentation/screens/businessShop_details_screen.dart';
-import '../../features/cart/presentation/screens/cart_screen.dart';
-import '../../features/checkout/presentation/screens/payment_screen.dart';
+import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
+
+import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/explore/presentation/screens/explore_list_screen.dart';
 import '../../features/explore/presentation/screens/explore_map_screen.dart';
+import '../../features/favorites/presentation/screens/favorites_screen.dart';
+import '../../features/account/presentation/screens/account_screen.dart';
+
+import '../../features/location/presentation/screens/location_info_screen.dart';
+import '../../features/location/presentation/screens/location_map_screen.dart';
+
+import '../../features/businessShop/presentation/screens/businessShop_details_screen.dart';
+import '../../features/businessShop/data/model/businessShop_model.dart';
+
+import '../../features/product/presentation/screens/product_detail_screen.dart';
+import '../../features/product/data/models/product_model.dart';
+
+import '../../features/support/presentation/support_screen.dart';
+import '../../features/support/presentation/support_success_screen.dart';
+
 import '../../features/notification/presentation/screens/notification_screen.dart';
 import '../../features/orders/presentation/screens/order_history_screen.dart';
 import '../../features/orders/presentation/screens/order_success_screen.dart';
 import '../../features/orders/presentation/screens/order_tracking_screen.dart';
 import '../../features/orders/presentation/screens/thank_you_screen.dart';
-import '../../features/product/data/models/product_model.dart';
-import '../../features/auth/presentation/screens/splash_screen.dart';
-import '../../features/auth/presentation/screens/login_screen.dart';
-import '../../features/account/presentation/screens/profile_details_screen.dart';
-import '../../features/location/presentation/screens/location_info_screen.dart';
-import '../../features/location/presentation/screens/location_map_screen.dart';
-import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
-import '../../features/home/presentation/screens/home_screen.dart';
-import '../../features/explore/presentation/screens/explore_list_screen.dart';
-import '../../features/favorites/presentation/screens/favorites_screen.dart';
-import '../../features/product/presentation/screens/product_detail_screen.dart';
-import 'app_shell.dart';
 
+import '../../features/checkout/presentation/screens/payment_screen.dart';
+import '../../features/cart/presentation/screens/cart_screen.dart';
+
+import '../providers/app_state_provider.dart';
+import 'app_shell.dart';
+import '../../features/explore/presentation/widgets/category_filter_option.dart';
+
+
+// --------------------------------------------------------------
+// 🔥 CUSTOM PAGE TRANSITION
+// --------------------------------------------------------------
 CustomTransitionPage buildAnimatedPage({
   required Widget child,
   required LocalKey key,
 }) {
   return CustomTransitionPage(
     key: key,
-    transitionDuration: const Duration(milliseconds: 600),
-    reverseTransitionDuration: const Duration(milliseconds: 600),
+    transitionDuration: const Duration(milliseconds: 450),
     child: child,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const beginOffset = Offset(0.0, 0.08);
-      const endOffset = Offset.zero;
-
-      // 🌙 Fade yavaşça başlar
-      final fade = CurvedAnimation(
-        parent: animation,
-        curve: const Interval(0.0, 0.8, curve: Curves.easeInOutCubic),
-      );
-
-      // 🌊 Slide biraz gecikmeli başlar (daha “soft” his)
-      final slide = CurvedAnimation(
-        parent: animation,
-        curve: const Interval(0.2, 1.0, curve: Curves.easeInOutCubic),
-      );
-
-      final slideTween = Tween(begin: beginOffset, end: endOffset)
-          .chain(CurveTween(curve: Curves.easeOutCubic));
-
+    transitionsBuilder: (context, animation, sec, child) {
       return FadeTransition(
-        opacity: fade,
-        child: SlideTransition(
-          position: slide.drive(slideTween),
-          child: child,
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
         ),
+        child: child,
       );
     },
   );
 }
 
+
+// --------------------------------------------------------------
+// 🔥 FINAL — DOĞRU ROUTER YAPISI
+// --------------------------------------------------------------
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/splash', // ✅ uygulama artık SplashScreen ile açılır
+    initialLocation: '/splash',
+
+    // ----------------------------------------------------------
+    // 🚦 Redirect Kuralları
+    // ----------------------------------------------------------
+    redirect: (context, state) {
+      final app = ref.read(appStateProvider);
+      final loc = state.uri.toString();
+
+      if (loc == '/splash') return null;
+
+      // 1) Not logged in → login
+      if (!app.isLoggedIn) {
+        if (loc != '/login') return '/login';
+        return null;
+      }
+
+      // 2) Onboarding yapılmamış → profileDetail
+      if (!app.hasSeenOnboarding) {
+        if (loc != '/profileDetail') return '/profileDetail';
+        return null;
+      }
+
+      // 3) Konum seçilmemiş → locationInfo
+      final isLocationRoute = loc == '/locationInfo' || loc == '/map';
+      if (!app.hasSelectedLocation && !isLocationRoute) {
+        return '/locationInfo';
+      }
+
+      // 4) Tamamsa login/onboarding/location'a geri dönemez
+      if (app.hasSelectedLocation &&
+          ['/login', '/onboarding', '/locationInfo', '/profileDetail']
+              .contains(loc)) {
+        return '/home';
+      }
+
+      return null;
+    },
+
+    // ----------------------------------------------------------
+    // 🔥 ROUTE TREE
+    // ----------------------------------------------------------
     routes: [
+
+      // ---------------- AUTH ----------------
       GoRoute(
         path: '/splash',
-        pageBuilder: (context, state) =>
+        pageBuilder: (_, state) =>
             buildAnimatedPage(key: state.pageKey, child: const SplashScreen()),
       ),
       GoRoute(
         path: '/intro',
-        pageBuilder: (context, state) =>
+        pageBuilder: (_, state) =>
             buildAnimatedPage(key: state.pageKey, child: const IntroScreen()),
       ),
       GoRoute(
         path: '/login',
-        pageBuilder: (context, state) =>
+        pageBuilder: (_, state) =>
             buildAnimatedPage(key: state.pageKey, child: const LoginScreen()),
       ),
       GoRoute(
-        path: '/profileDetail',
-        pageBuilder: (context, state) {
-          final fromOnboarding =
-              state.extra is Map && (state.extra as Map)['fromOnboarding'] == true;
-
-          return buildAnimatedPage(
-            key: state.pageKey,
-            child: ProfileDetailsScreen(fromOnboarding: fromOnboarding),
-          );
-        },
-      ),
-      GoRoute(
         path: '/onboarding',
-        pageBuilder: (context, state) =>
+        pageBuilder: (_, state) =>
             buildAnimatedPage(key: state.pageKey, child: const OnboardingScreen()),
       ),
+
+      // ---------------- FULLSCREEN (ShellRoute DIŞI) ----------------
       GoRoute(
-        path: '/location',
-        pageBuilder: (context, state) =>
+        path: '/locationInfo',
+        pageBuilder: (_, state) =>
             buildAnimatedPage(key: state.pageKey, child: const LocationInfoScreen()),
       ),
       GoRoute(
         path: '/map',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const LocationMapScreen()),
+        builder: (_, __) => const LocationMapScreen(),
+      ),
+
+      GoRoute(
+        path: '/profileDetail',
+        builder: (_, state) => ProfileDetailsScreen(
+          fromOnboarding: (state.extra as Map?)?['fromOnboarding'] == true,
+        ),
       ),
 
       GoRoute(
         path: '/product-detail',
-        pageBuilder: (context, state) {
+        pageBuilder: (_, state) {
           final product = state.extra as ProductModel;
           return buildAnimatedPage(
             key: state.pageKey,
@@ -124,9 +164,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+
       GoRoute(
         path: '/businessShop-detail',
-        pageBuilder: (context, state) {
+        pageBuilder: (_, state) {
           final business = state.extra as BusinessModel;
           return buildAnimatedPage(
             key: state.pageKey,
@@ -134,62 +175,50 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+
       GoRoute(
         path: '/payment',
-        pageBuilder: (context, state) {
-          final amount = state.extra as double? ?? 0.0;
-          return buildAnimatedPage(
-            key: state.pageKey,
-            child: PaymentScreen(amount: amount),
-          );
-        },
+        builder: (_, state) =>
+            PaymentScreen(amount: state.extra as double? ?? 0.0),
       ),
 
-      GoRoute(
-        path: '/cart',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const CartScreen()),
-      ),
+      GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
+      GoRoute(path: '/notifications', builder: (_, __) => const NotificationScreen()),
+      GoRoute(path: '/order-success', builder: (_, __) => const OrderSuccessScreen()),
+      GoRoute(path: '/order-tracking', builder: (_, __) => const OrderTrackingScreen()),
+      GoRoute(path: '/thank-you', builder: (_, __) => const ThankYouScreen()),
+      GoRoute(path: '/order-history', builder: (_, __) => const OrderHistoryScreen()),
+      GoRoute(path: '/support', builder: (_, __) => const SupportScreen()),
+      GoRoute(path: '/support-success', builder: (_, __) => const SupportSuccessScreen()),
 
 
-      GoRoute(
-        path: '/notifications',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const NotificationScreen()),
-      ),
-
-      GoRoute(
-        path: '/order-success',
-        builder: (context, state) => const OrderSuccessScreen(),
-      ),
-      GoRoute(
-        path: '/order-tracking',
-        builder: (context, state) => const OrderTrackingScreen(),
-      ),
-      GoRoute(
-        path: '/thank-you',
-        builder: (context, state) => const ThankYouScreen(),
-      ),
-
-      GoRoute(
-        path: '/order-history',
-        builder: (context, state) =>  OrderHistoryScreen(),
-      ),
-
-
-      // 🔹 ShellRoute (bottom nav)
+      // ----------------------------------------------------------
+      // 🔥 SHELL ROUTE (BOTTOM NAV) — SADECE NAVBAR EKRANLARI
+      // ----------------------------------------------------------
       ShellRoute(
         builder: (context, state, child) =>
             AppShell(location: state.uri.toString(), child: child),
         routes: [
-          GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
 
-          GoRoute(path: '/explore', builder: (_, _) => const ExploreListScreen()),
-          GoRoute(path: '/explore-list', builder: (_, _) => const ExploreListScreen()),
-          GoRoute(path: '/explore-map', builder: (_, _) => const ExploreMapScreen()),
+          GoRoute(
+            path: '/explore',
+            builder: (_, state) {
+              final extra = (state.extra as Map?)?.cast<String, dynamic>();
 
-          GoRoute(path: '/favorites', builder: (_, _) => const FavoritesScreen()),
-          GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
+              final initialCategory = extra?['category'] as CategoryFilterOption?;
+              final fromHome = extra?['fromHome'] == true;
+
+              return ExploreListScreen(
+                initialCategory: initialCategory,
+                fromHome: fromHome,
+              );
+            },
+          ),
+
+          GoRoute(path: '/explore-map', builder: (_, __) => const ExploreMapScreen()),
+          GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
+          GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
         ],
       ),
     ],

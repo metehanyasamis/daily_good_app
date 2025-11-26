@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/social_button.dart';
 import '../../domain/providers/auth_notifier.dart';
 import '../../domain/states/auth_state.dart';
 import 'otp_screen.dart';
@@ -13,11 +15,11 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen>
-    with SingleTickerProviderStateMixin {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _phoneController = TextEditingController();
+
+  bool isLoginTab = true;
   bool isTermsChecked = false;
-  bool isLoginTab = false;
   bool _isOtpOpen = false;
 
   @override
@@ -26,316 +28,255 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     super.dispose();
   }
 
-  void _onSubmit() async {
+  Future<void> _onSubmit() async {
     if (_isOtpOpen) return;
 
-    if (_phoneController.text.length == 10 && isTermsChecked) {
-      ref.read(authNotifierProvider.notifier).login(_phoneController.text.trim()); // ✅ backend'e trigger
+    final phone = _phoneController.text.trim();
 
-      setState(() => _isOtpOpen = true);
-      await showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => OtpBottomSheet(
-          phoneNumber: _phoneController.text.trim(),
-        ),
-      );
-      if (mounted) setState(() => _isOtpOpen = false);
-    } else if (!isTermsChecked) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Lütfen koşulları kabul edin."),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+    if (phone.length != 10) {
+      return _error("Lütfen geçerli bir telefon numarası girin.");
     }
+
+    if (!isTermsChecked) {
+      return _error("Lütfen koşulları kabul edin.");
+    }
+
+    final auth = ref.read(authNotifierProvider.notifier);
+
+    // 🔍 Telefon kayıtlı mı?
+    final exists = await auth.checkPhoneExists(phone);
+
+    if (isLoginTab) {
+      if (!exists) return _error("Bu numara kayıtlı değil. Lütfen kayıt olun.");
+    } else {
+      if (exists) return _error("Bu numara zaten kayıtlı.");
+    }
+
+    // 📩 OTP gönder
+    await auth.sendOtp(phone);
+
+    setState(() => _isOtpOpen = true);
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => OtpBottomSheet(
+        phoneNumber: phone,
+        isLogin: isLoginTab,
+      ),
+    );
+
+    if (mounted) setState(() => _isOtpOpen = false);
+  }
+
+  void _error(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.redAccent,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+      // OTP doğrulanınca yönlendirme
+    ref.listen<AuthState>(authNotifierProvider, (prev, next) {
+      print("⚡ AUTH STATE → ${next.status}");
 
-    ref.listen<AuthState>(authNotifierProvider, (previous, next) {
       if (next.status == AuthStatus.authenticated) {
+        final app = ref.read(appStateProvider);
+
+        // Eğer yeni kullanıcıysa → onboarding sürecine gitmeden önce profileDetail'e gitmeli
+        if (!app.hasSeenOnboarding) {
+          context.go('/profileDetail', extra: {'fromOnboarding': true});
+          return;
+        }
+
+        // Eski kullanıcı → direkt home
         context.go('/home');
-      } else if (next.status == AuthStatus.error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.errorMessage ?? 'Hata oldu')),
-        );
       }
     });
 
-    // UI: telefon alanı, gönder butonu …
-    // “Gönder” düğmesine basıldığında:
-    // ref.read(authNotifierProvider.notifier).loginWithPhone(phoneNumber);
-
     return Scaffold(
-      backgroundColor: AppColors.primaryLightGreen, // üst logo alanı için açık arka plan
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Üst Logo Alanı
-            Expanded(
-              flex: 4,
-              child: Center(
-                child: Image.asset(
-                  'assets/logos/whiteLogo.png',
-                ),
+      backgroundColor: AppColors.primaryLightGreen,
+      body: Stack(
+        children: [
+          // LOGO - üstte sabit
+          Positioned(
+            top: 80,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Image.asset(
+                'assets/logos/whiteLogo.png',
+                height: 350,
               ),
             ),
+          ),
 
-            // Alt Beyaz Alan
-            Expanded(
-              flex: 6,
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-                child: SafeArea(
-                  top: false,
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      children: [
-                        // Sekmeli Kayıt / Giriş Butonları
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: AppColors.background,
-                            borderRadius: BorderRadius.circular(40),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => setState(() => isLoginTab = false),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 250),
-                                    height: 52,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: !isLoginTab
-                                          ? AppColors.primaryDarkGreen
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(40),
-                                    ),
-                                    child: Text(
-                                      "Kayıt Ol",
-                                      style: !isLoginTab
-                                          ? Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.surface)
-                                          : Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.textPrimary),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => setState(() => isLoginTab = true),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 250),
-                                    height: 52,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: isLoginTab
-                                          ? AppColors.primaryDarkGreen
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(40),
-                                    ),
-                                    child: Text(
-                                      "Giriş Yap",
-                                      style: isLoginTab
-                                          ? Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.surface)
-                                          : Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.textPrimary),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+          // ALT BEYAZ PANEL (%40 yukarıdan başlar)
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.42,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.all(28),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    _buildTabs(),
+                    const SizedBox(height: 28),
+                    _buildPhoneField(),
+                    const SizedBox(height: 12),
+                    _buildTerms(),
+                    const SizedBox(height: 16),
+                    _buildSubmitButton(),
+                    const SizedBox(height: 20),
 
-                        const SizedBox(height: 28),
-
-                        // Telefon Alanı
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            "Cep telefonu",
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: InputDecoration(
-                            prefixText: '+90 ',
-                            hintText: 'Cep telefonu numaranızı girin',
-                            hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.gray),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 1, vertical: 16),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: AppColors.textPrimary.withValues(alpha: 51)),
-                              borderRadius: BorderRadius.circular(40),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: AppColors.primaryDarkGreen, width: 2),
-                              borderRadius: BorderRadius.circular(40),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        // Gizlilik kutucuğu
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: isTermsChecked,
-                              onChanged: (val) => setState(() => isTermsChecked = val!),
-                              activeColor: AppColors.primaryDarkGreen,
-                              checkColor: AppColors.surface,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
-                              ),
-                              side: BorderSide.none,
-                            ),
-                            Expanded(
-                              child: Text(
-                                'Koşulları ve gizlilik politikasını kabul ediyorum.',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        // Dinamik Buton (CustomButton kullanılıyor)
-                        SizedBox(
-                          width: double.infinity,
-                          child: _buildPrimaryLoginButton(
-                            text: isLoginTab ? "Giriş Yap" : "Kayıt Ol",
-                            onTap: _onSubmit,
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // “ya da” Çizgisi
-                        Row(
-                          children: [
-                            Expanded(child: Divider(color: AppColors.gray.withValues(alpha: 102), thickness: 1)),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              child: Text(
-                                "ya da",
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                              ),
-                            ),
-                            Expanded(child: Divider(color: AppColors.gray.withValues(alpha: 102), thickness: 1)),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Apple Butonu
-                        _buildSocialButton(
-                          icon: Icons.apple,
-                          text: "Apple ile devam et",
-                          onTap: () {},
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Google Butonu
-                        _buildSocialButton(
-                          asset: 'assets/logos/google.png',
-                          text: "Google ile devam et",
-                          onTap: () {},
-                        ),
-                        // Demo Butonu
-                        _buildSocialButton(
-                          asset: 'assets/logos/google.png',
-                          text: "Demo ile devam et",
-                          onTap: () {
-                            context.go('/home');
-                            },
-                        ),
-                      ],
+                    // Sosyal Girişler
+                    SocialButton(
+                      assetIcon: 'assets/logos/apple.png',
+                      text: "Apple ile devam et",
+                      onTap: () {},
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    SocialButton(
+                      assetIcon: 'assets/logos/google.png',
+                      text: "Google ile devam et",
+                      onTap: () {},
+                    ),
+
+                    const SizedBox(height: 12),
+                    SocialButton(
+                      assetIcon: 'assets/logos/google.png',
+                      text: "Google ile devam et",
+                      onTap: () {
+                        print("Go Home Tıklandı");
+                        context.go('/home');
+                      },
+                    ),
+
+                    const SizedBox(height: 40),
+                  ],
                 ),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ----------------------------------------------------
+  // Tab Bar
+  // ----------------------------------------------------
+  Widget _buildTabs() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(40),
+      ),
+      child: Row(
+        children: [
+          _tabButton("Giriş Yap", true),
+          _tabButton("Kayıt Ol", false),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabButton(String label, bool loginTab) {
+    final active = isLoginTab == loginTab;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => isLoginTab = loginTab),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          height: 50,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? AppColors.primaryDarkGreen : Colors.transparent,
+            borderRadius: BorderRadius.circular(40),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: active ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildPrimaryLoginButton({
-    required String text,
-    required VoidCallback onTap,
-    bool enabled = true,
-  }) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: Container(
-        height: 52,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(40),
-          color: enabled ? AppColors.primaryDarkGreen : AppColors.gray.withValues(alpha: 120),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              text,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
+  // ----------------------------------------------------
+  // Phone field
+  // ----------------------------------------------------
+  Widget _buildPhoneField() {
+    return TextField(
+      controller: _phoneController,
+      keyboardType: TextInputType.phone,
+      decoration: InputDecoration(
+        prefixText: "+90 ",
+        hintText: "Telefon numarası",
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(40)),
       ),
     );
   }
 
+  // ----------------------------------------------------
+  // Terms
+  // ----------------------------------------------------
+  Widget _buildTerms() {
+    return Row(
+      children: [
+        Checkbox(
+          value: isTermsChecked,
+          side: BorderSide.none,
+          onChanged: (v) => setState(() => isTermsChecked = v!),
+          activeColor: AppColors.primaryDarkGreen,
+        ),
+        Expanded(
+          child: Text(
+            "Koşulları kabul ediyorum",
+            style: TextStyle(color: Colors.grey[700]),
+          ),
+        ),
+      ],
+    );
+  }
 
-  Widget _buildSocialButton({IconData? icon, String? asset, required String text, required VoidCallback onTap}) {
+  // ----------------------------------------------------
+  // Button
+  // ----------------------------------------------------
+  Widget _buildSubmitButton() {
     return GestureDetector(
-      onTap: onTap,
+      onTap: _onSubmit,
       child: Container(
         height: 52,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(40),
-          border: Border.all(color: AppColors.textPrimary.withValues(alpha: 77)), // %30
-          color: AppColors.surface,
+          color: AppColors.primaryDarkGreen,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (icon != null)
-              Icon(icon, size: 28, color: AppColors.textPrimary)
-            else if (asset != null)
-              Image.asset(asset, height: 24),
-            const SizedBox(width: 12),
-            Text(
-              text,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+        child: Text(
+          isLoginTab ? "Giriş Yap" : "Kayıt Ol",
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

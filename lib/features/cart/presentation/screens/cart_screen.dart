@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/navigation_utils.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
+
 import '../../../businessShop/data/model/businessShop_model.dart';
-import '../../../product/data/mock/mock_product_model.dart';
+import '../../../product/data/mock/mock_product_model.dart' as mock;   // 🔥 ALIASLI IMPORT
 import '../../domain/models/cart_item.dart';
 import '../../domain/providers/cart_provider.dart';
 
@@ -35,18 +37,17 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final business = ref.watch(cartBusinessProvider);
 
     return GestureDetector(
-      onTap: () {
-        if (_focusNode.hasFocus) _focusNode.unfocus();
-      },
+      onTap: () => _focusNode.unfocus(),
       child: Scaffold(
         backgroundColor: AppColors.background,
+
         appBar: AppBar(
           backgroundColor: AppColors.primaryDarkGreen,
           title: const Text('Sepetim', style: TextStyle(color: Colors.white)),
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
           ),
           actions: [
             IconButton(
@@ -60,6 +61,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ),
           ],
         ),
+
         body: items.isEmpty
             ? const Center(child: Text("Sepetiniz boş"))
             : CustomScrollView(
@@ -70,39 +72,49 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 child: _CartCard(business: business!, items: items, ref: ref),
               ),
             ),
+
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: KnowMoreFull(forceBoxMode: true),
               ),
             ),
+
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: _NoteField(controller: _noteController, focusNode: _focusNode),
+                child: _NoteField(
+                  controller: _noteController,
+                  focusNode: _focusNode,
+                ),
               ),
             ),
+
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _TotalBox(total: total, items: items),
               ),
             ),
+
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
 
-        // 🔹 CustomConfirmBar yerine artık CustomButton kullanılıyor
-        bottomNavigationBar: items.isNotEmpty
-            ? Padding(
+        bottomNavigationBar: items.isEmpty
+            ? null
+            : Padding(
           padding: const EdgeInsets.all(16),
           child: CustomButton(
             text: "Sepeti Onayla",
             price: total,
+            showPrice: true,
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Ödeme ekranına yönlendiriliyor • ${total.toStringAsFixed(2)} ₺'),
+                  content: Text(
+                    'Ödeme ekranına yönlendiriliyor • ${total.toStringAsFixed(2)} ₺',
+                  ),
                   duration: const Duration(seconds: 1),
                 ),
               );
@@ -111,10 +123,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 context.push('/payment', extra: total);
               });
             },
-            showPrice: true,
           ),
-        )
-            : null,
+        ),
       ),
     );
   }
@@ -140,13 +150,12 @@ class _CartCard extends StatelessWidget {
         border: Border.all(color: AppColors.primaryDarkGreen.withOpacity(0.3)),
       ),
       padding: const EdgeInsets.all(16),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Teslim alma bilgileri",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+          const Text("Teslim alma bilgileri",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 8),
 
           Row(
@@ -156,15 +165,7 @@ class _CartCard extends StatelessWidget {
                 height: 50,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white,
-                  border: Border.all(color: AppColors.primaryDarkGreen, width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  border: Border.all(color: AppColors.primaryDarkGreen),
                 ),
                 child: ClipOval(
                   child: Image.asset(
@@ -173,17 +174,22 @@ class _CartCard extends StatelessWidget {
                   ),
                 ),
               ),
+
               const SizedBox(width: 10),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(business.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text(business.address, style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                    Text(business.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text(business.address,
+                        style: const TextStyle(fontSize: 13)),
                     InkWell(
                       onTap: () => openBusinessMap(business),
                       child: const Text(
-                        "Navigasyon yönlendirmesi için tıklayınız 📍",
+                        "Navigasyon için tıklayın 📍",
                         style: TextStyle(
                           color: AppColors.primaryDarkGreen,
                           decoration: TextDecoration.underline,
@@ -197,9 +203,9 @@ class _CartCard extends StatelessWidget {
             ],
           ),
 
-          const Divider(height: 24, thickness: 1),
-
-          const Text("Sepet özeti", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Divider(height: 24),
+          const Text("Sepet özeti",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 10),
 
           ...items.map((item) => _CartItemRow(item: item)),
@@ -216,46 +222,53 @@ class _CartItemRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(cartProvider.notifier);
-    final product = findProductByName(item.name);
-    int maxQty = 99;
 
+    // 🔥 artık alias kullanılıyor!
+    final product = mock.findProductByName(item.name);
+
+    int maxQty = 99;
     if (product != null) {
-      final match = RegExp(r'\d+').firstMatch(product.stockLabel);
-      if (match != null) maxQty = int.parse(match.group(0)!);
+      final m = RegExp(r'\d+').firstMatch(product.stockLabel);
+      if (m != null) maxQty = int.parse(m.group(0)!);
     }
 
-    final double oldUnitPrice = product?.oldPrice ?? item.price;
-    final double newUnitPrice = item.price;
-    final double total = newUnitPrice * item.quantity;
+    final oldUnit = product?.oldPrice ?? item.price;
+    final newUnit = item.price;
+    final double total = newUnit * item.quantity;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
+
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // -------------------------
+          // SOL TARAF — Ürün adı + fiyatlar
+          // -------------------------
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                Text(item.name,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 15)),
                 const SizedBox(height: 2),
                 Row(
                   children: [
                     Text(
-                      "${oldUnitPrice.toStringAsFixed(2)} ₺",
+                      "${oldUnit.toStringAsFixed(2)} ₺",
                       style: const TextStyle(
                         fontSize: 13,
                         color: Colors.grey,
                         decoration: TextDecoration.lineThrough,
                       ),
                     ),
-                    const Text(" / "),
+                    const Text("  "),
                     Text(
-                      "${newUnitPrice.toStringAsFixed(2)} ₺",
+                      "${newUnit.toStringAsFixed(2)} ₺",
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
                       ),
                     ),
                   ],
@@ -263,22 +276,31 @@ class _CartItemRow extends ConsumerWidget {
               ],
             ),
           ),
+
+          // -------------------------
+          // ADET KONTROLÜ
+          // -------------------------
           _QtyControl(
             quantity: item.quantity,
+            maxReached: item.quantity >= maxQty,
             onDecrement: () => ctrl.decrement(item.id),
             onIncrement: () {
               if (item.quantity < maxQty) {
                 ctrl.increment(item.id, maxQty: maxQty);
               }
             },
-            maxReached: item.quantity >= maxQty,
           ),
+
+          // -------------------------
+          // TOPLAM TUTAR
+          // -------------------------
           SizedBox(
             width: 70,
             child: Text(
               "${total.toStringAsFixed(2)} ₺",
               textAlign: TextAlign.end,
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.black87),
             ),
           ),
         ],
@@ -307,24 +329,28 @@ class _QtyControl extends StatelessWidget {
       height: 30,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: AppColors.primaryDarkGreen, width: 1),
+        border: Border.all(color: AppColors.primaryDarkGreen),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildIcon(Icons.remove, onDecrement, false),
-          Text('$quantity', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-          _buildIcon(Icons.add, onIncrement, maxReached),
+          _icon(Icons.remove, onDecrement, false),
+          Text('$quantity',
+              style:
+              const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          _icon(Icons.add, onIncrement, maxReached),
         ],
       ),
     );
   }
 
-  Widget _buildIcon(IconData icon, VoidCallback onTap, bool disabled) {
+  Widget _icon(IconData icon, VoidCallback onTap, bool disabled) {
     return InkWell(
-      borderRadius: BorderRadius.circular(30),
       onTap: disabled ? null : onTap,
-      child: Icon(icon, size: 18, color: disabled ? Colors.grey.shade400 : AppColors.primaryDarkGreen),
+      child: Icon(icon,
+          size: 18,
+          color:
+          disabled ? Colors.grey.shade400 : AppColors.primaryDarkGreen),
     );
   }
 }
@@ -332,6 +358,7 @@ class _QtyControl extends StatelessWidget {
 class _NoteField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
+
   const _NoteField({required this.controller, required this.focusNode});
 
   @override
@@ -339,13 +366,15 @@ class _NoteField extends StatelessWidget {
     return TextField(
       controller: controller,
       focusNode: focusNode,
-      keyboardType: TextInputType.multiline,
       maxLines: null,
       decoration: InputDecoration(
-        hintText: 'Sipariş notunuzu buraya ekleyebilirsiniz',
+        hintText: 'Sipariş notunuzu buraya yazabilirsiniz…',
         filled: true,
         fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
         contentPadding: const EdgeInsets.all(12),
       ),
     );
@@ -355,13 +384,17 @@ class _NoteField extends StatelessWidget {
 class _TotalBox extends StatelessWidget {
   final double total;
   final List<CartItem> items;
+
   const _TotalBox({required this.total, required this.items});
 
   @override
   Widget build(BuildContext context) {
     final double original = items.fold(
       0,
-          (sum, e) => sum + ((findProductByName(e.name)?.oldPrice ?? e.price) * e.quantity),
+          (sum, e) =>
+      sum +
+          ((mock.findProductByName(e.name)?.oldPrice ?? e.price) *
+              e.quantity),
     );
 
     return Container(
@@ -371,37 +404,44 @@ class _TotalBox extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300),
       ),
       padding: const EdgeInsets.all(14),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "Toplam (ücretler ve vergi dahil)",
+            "Toplam (vergiler dahil)",
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
+
           const Divider(height: 12),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text("Toplam"),
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text("${total.toStringAsFixed(2)} ₺",
-                      style: const TextStyle(
+                  Text(
+                    "${total.toStringAsFixed(2)} ₺",
+                    style: const TextStyle(
                         color: AppColors.primaryDarkGreen,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      )),
-                  Text("${original.toStringAsFixed(2)} ₺",
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey,
-                        decoration: TextDecoration.lineThrough,
-                      )),
+                        fontSize: 16),
+                  ),
+                  Text(
+                    "${original.toStringAsFixed(2)} ₺",
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
                 ],
-              )
+              ),
             ],
-          ),
+          )
         ],
       ),
     );
@@ -412,12 +452,19 @@ Future<bool?> _showConfirmDialog(BuildContext context) {
   return showDialog<bool>(
     context: context,
     builder: (_) => AlertDialog(
-      title: const Text('Emin misin?'),
+      title: const Text("Emin misiniz?"),
       content: const Text(
-          'Sepeti boşaltmak üzeresin. Bu seçim, kurtarılabilecek bir yemeğin çöpe gitmesi anlamına gelebilir.'),
+        "Sepeti boşaltmak üzeresiniz. Bu seçim kurtarılabilecek bir yemeğin çöpe gitmesi anlamına gelebilir.",
+      ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Vazgeç')),
-        ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Evet, İptal Et')),
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text("Vazgeç"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text("Evet, boşalt"),
+        ),
       ],
     ),
   );

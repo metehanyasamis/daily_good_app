@@ -62,12 +62,32 @@ class PrefsService {
     final p = await _prefs;
     final jsonStr = p.getString(_kUserData);
     if (jsonStr == null) return null;
-    return jsonDecode(jsonStr) as Map<String, dynamic>;
-  }
 
+    try {
+      return jsonDecode(jsonStr) as Map<String, dynamic>;
+    } catch (e) {
+      return null;
+    }
+  }
   static Future<void> clearUserData() async {
     final p = await _prefs;
     await p.remove(_kUserData);
+  }
+
+  // 🔹 GENEL (Saving, Theme, vs her şey için)
+  static Future<void> setString(String key, String value) async {
+    final p = await _prefs;
+    await p.setString(key, value);
+  }
+
+  static Future<String?> getString(String key) async {
+    final p = await _prefs;
+    return p.getString(key);
+  }
+
+  static Future<void> remove(String key) async {
+    final p = await _prefs;
+    await p.remove(key);
   }
 
 }

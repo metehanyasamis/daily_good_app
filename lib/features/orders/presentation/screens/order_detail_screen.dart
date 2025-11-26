@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
@@ -38,7 +39,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           TextButton(
-            onPressed: () {},
+            onPressed: () {
+              context.push('/support');
+            },
             child: const Text('Yardım', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -241,29 +244,39 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Widget _ratingRow(String label) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(width: 110, child: Text(label, style: const TextStyle(fontSize: 14))),
-          Row(
-            children: List.generate(5, (index) {
-              final isFilled = index < _ratings[label]!;
-              return IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                icon: Icon(
-                  isFilled ? Icons.star : Icons.star_border,
-                  color: AppColors.primaryDarkGreen,
-                  size: 24,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _ratings[label] = index + 1;
-                  });
-                },
-              );
-            }),
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 14),
+            ),
           ),
+
+          // ⭐ Yıldızlar — sıkı dizilim
+          Expanded(
+            child: Wrap(
+              spacing: 15,   // yıldız arası mesafe — daha da sıkı istersen 8 yap
+              children: List.generate(5, (index) {
+                final isFilled = index < _ratings[label]!;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _ratings[label] = index + 1;
+                    });
+                  },
+                  child: Icon(
+                    isFilled ? Icons.star : Icons.star_border,
+                    size: 22, // biraz daha küçük görünüm için optimize edildi
+                    color: AppColors.primaryDarkGreen,
+                  ),
+                );
+              }),
+            ),
+          )
         ],
       ),
     );

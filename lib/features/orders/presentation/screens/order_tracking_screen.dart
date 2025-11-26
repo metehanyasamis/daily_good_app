@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
+import '../../../businessShop/data/mock/mock_businessShop_model.dart';
 import '../../data/order_model.dart';
 import '../../providers/order_provider.dart';
 
@@ -13,7 +14,8 @@ class OrderTrackingScreen extends ConsumerStatefulWidget {
   const OrderTrackingScreen({super.key});
 
   @override
-  ConsumerState<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
+  ConsumerState<OrderTrackingScreen> createState() =>
+      _OrderTrackingScreenState();
 }
 
 class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
@@ -44,7 +46,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.primaryDarkGreen,
           iconTheme: const IconThemeData(color: Colors.white),
-          title: const Text("Sipariş Takibi", style: TextStyle(color: Colors.white)),
+          title: const Text(
+              "Sipariş Takibi", style: TextStyle(color: Colors.white)),
           centerTitle: true,
           actions: [
             IconButton(
@@ -64,7 +67,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.primaryDarkGreen,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text("Sipariş Takibi", style: theme.textTheme.titleLarge?.copyWith(color: Colors.white)),
+        title: Text("Sipariş Takibi",
+            style: theme.textTheme.titleLarge?.copyWith(color: Colors.white)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -113,6 +117,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
 
   Widget _buildBusinessCard(BuildContext context, OrderItem order) {
     final theme = Theme.of(context);
+    final business = findBusinessById(order.businessId);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
@@ -132,112 +137,111 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🟢 Başlık
-            Text(
-              "Teslim alma bilgileri",
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              height: 1,
-              width: double.infinity,
-              color: AppColors.primaryDarkGreen.withOpacity(0.3),
-            ),
-            const SizedBox(height: 12),
+          // 🟢 Başlık
+          Text(
+          "Teslim alma bilgileri",
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 1,
+          width: double.infinity,
+          color: AppColors.primaryDarkGreen.withOpacity(0.3),
+        ),
+        const SizedBox(height: 12),
 
-            // 🏪 İşletme Bilgisi
-            InkWell(
-              onTap: () {
-                // BusinessShopDetail'e yönlendirme
-                context.push('/businessShop-detail', extra: {
-                  'name': order.businessName,
-                  'address': order.businessAddress,
-                  'logo': order.businessLogo,
-                });
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Image.asset(
-                    order.businessLogo,
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
+        // 🏪 İşletme Bilgisi
+        InkWell(
+        onTap: () {
+          if (business != null) {
+            context.push('/businessShop-detail', extra: business);
+          }
+        },
+        child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Image.asset(
+            order.businessLogo,
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+          ),
+          const SizedBox(width: 10),
+
+          // 🔹 Metinler
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // İşletme Adı
+                Text(
+                  order.businessName,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
                   ),
-                  const SizedBox(width: 10),
+                ),
+                const SizedBox(height: 4),
 
-                  // 🔹 Metinler
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // İşletme Adı
-                        Text(
-                          order.businessName,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
+                // Adres Bilgisi
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      color: AppColors.primaryDarkGreen,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        order.businessAddress,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
                         ),
-                        const SizedBox(height: 4),
+                      ),
+                    ),
+                  ],
+                ),
 
-                        // Adres Bilgisi
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.location_on_outlined,
-                              color: AppColors.primaryDarkGreen,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                order.businessAddress,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                const SizedBox(height: 4),
 
-                        const SizedBox(height: 4),
-
-                        InkWell(
-                          onTap: () => _launchMaps(order.businessAddress),
-                          child: Text(
-                            "Navigasyon yönlendirmesi için tıklayınız 📍",
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[700],
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ],
+                InkWell(
+                  onTap: () => _launchMaps(order.businessAddress),
+                  child: Text(
+                    "Navigasyon yönlendirmesi için tıklayınız 📍",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[700],
+                      decoration: TextDecoration.underline,
                     ),
                   ),
-
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.primaryDarkGreen,
-                    size: 22,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.primaryDarkGreen,
+            size: 22,
+          ),
+        ],
       ),
+    ),]
+    ,
+    )
+    ,
+    )
+    ,
     );
   }
 
-  Widget _buildOrderSummaryCard(BuildContext context, List<OrderItem> activeOrders, dynamic order) {
+  Widget _buildOrderSummaryCard(BuildContext context,
+      List<OrderItem> activeOrders, dynamic order) {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
@@ -281,7 +285,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
 
           for (final order in activeOrders) ...[
             _buildSingleProduct(context, order),
-            if (order != activeOrders.last) const Divider(height: 20, thickness: 0.7),
+            if (order != activeOrders.last) const Divider(
+                height: 20, thickness: 0.7),
           ],
         ],
       ),
@@ -293,8 +298,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     final remaining = order.remainingTime;
     final remainingMinutes = remaining.inMinutes.clamp(0, 9999);
     final progress = 1 - order.progress;
-    final start = "${order.pickupStart.hour.toString().padLeft(2, '0')}:${order.pickupStart.minute.toString().padLeft(2, '0')}";
-    final end = "${order.pickupEnd.hour.toString().padLeft(2, '0')}:${order.pickupEnd.minute.toString().padLeft(2, '0')}";
+    final start = "${order.pickupStart.hour.toString().padLeft(2, '0')}:${order
+        .pickupStart.minute.toString().padLeft(2, '0')}";
+    final end = "${order.pickupEnd.hour.toString().padLeft(2, '0')}:${order
+        .pickupEnd.minute.toString().padLeft(2, '0')}";
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,14 +309,18 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(order.productName, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
-            Text("${order.newPrice.toStringAsFixed(2)} ₺", style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700)),
+            Text(order.productName, style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600)),
+            Text("${order.newPrice.toStringAsFixed(2)} ₺",
+                style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700)),
           ],
         ),
         const SizedBox(height: 4),
         Text(
           "Teslim alma zamanı: Bugün $start - $end",
-          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          style: theme.textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary),
         ),
         const SizedBox(height: 6),
         ClipRRect(
@@ -323,7 +334,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
         ),
         const SizedBox(height: 6),
         Text(
-          "Teslim süresine kalan: ${remainingMinutes ~/ 60} sa ${(remainingMinutes % 60)} dk",
+          "Teslim süresine kalan: ${remainingMinutes ~/
+              60} sa ${(remainingMinutes % 60)} dk",
           style: theme.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w500,
             color: AppColors.textPrimary,
@@ -352,7 +364,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
 
   Future<void> _launchMaps(String address) async {
     final encoded = Uri.encodeComponent(address);
-    final uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=$encoded");
+    final uri = Uri.parse(
+        "https://www.google.com/maps/search/?api=1&query=$encoded");
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }

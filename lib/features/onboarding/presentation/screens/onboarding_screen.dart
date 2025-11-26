@@ -52,9 +52,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _nextPage() async {
     if (_currentPage == _pages.length - 1) {
+      // Onboarding seen olarak işaretle
       await PrefsService.setHasSeenOnboarding(true);
-      ref.read(appStateProvider.notifier).setSeenOnboarding(true);
-      context.go('/location');
+      ref.read(appStateProvider.notifier).setOnboardingSeen(true);
+
+      // Lokasyon akışına yönlendir
+      context.go('/locationInfo');
     } else {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
@@ -91,8 +94,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             child: TextButton(
               onPressed: () async {
                 await PrefsService.setHasSeenOnboarding(true);
-                ref.read(appStateProvider.notifier).setSeenOnboarding(true);
-                context.go('/location');
+                ref.read(appStateProvider.notifier).setOnboardingSeen(true);
+                context.go('/locationInfo');
               },
               child: Text(
                 'Atla',

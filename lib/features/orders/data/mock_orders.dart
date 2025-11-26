@@ -1,4 +1,5 @@
 import 'order_model.dart';
+import '../../businessShop/data/mock/mock_businessShop_model.dart'; // 🆕 EKLENDİ
 
 final mockOrders = [
   OrderItem(
@@ -10,11 +11,15 @@ final mockOrders = [
     pickupStart: DateTime.now().add(const Duration(hours: 5)),
     pickupEnd: DateTime.now().add(const Duration(hours: 6)),
     pickupCode: generatePickupCode(),
-    businessName: "Sandwich City",
-    businessAddress: "Terzi Bey Sokak No:46 Kadıköy",
-    businessLogo: "assets/images/sample_food.jpg",
-    carbonSaved: 0.4, // ✅ eklendi
+
+    businessId: mockBusinessList[0].id,                     // 🆕 EKLENDİ
+    businessName: mockBusinessList[0].name,
+    businessAddress: mockBusinessList[0].address,
+    businessLogo: mockBusinessList[0].businessShopLogoImage,
+
+    carbonSaved: 0.4,
   ),
+
   OrderItem(
     id: generateOrderNumber(),
     productName: "Sürpriz Paket 2",
@@ -24,9 +29,12 @@ final mockOrders = [
     pickupStart: DateTime.now().add(const Duration(hours: 3)),
     pickupEnd: DateTime.now().add(const Duration(hours: 4)),
     pickupCode: generatePickupCode(),
-    businessName: "Sandwich City",
-    businessAddress: "Terzi Bey Sokak No:46 Kadıköy",
-    businessLogo: "assets/images/sample_food2.jpg",
-    carbonSaved: 0.5, // ✅ eklendi
+
+    businessId: mockBusinessList[0].id,                     // 🆕 EKLENDİ (aynı işletme)
+    businessName: mockBusinessList[0].name,
+    businessAddress: mockBusinessList[0].address,
+    businessLogo: mockBusinessList[0].businessShopLogoImage,
+
+    carbonSaved: 0.5,
   ),
 ];

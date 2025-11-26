@@ -12,20 +12,20 @@ enum CategoryFilterOption {
 String categoryLabel(CategoryFilterOption c) {
   switch (c) {
     case CategoryFilterOption.all:
-      return 'Tümü';
+      return "Tümü";
     case CategoryFilterOption.food:
-      return 'Yemek';
+      return "Yemek";
     case CategoryFilterOption.bakery:
-      return 'Fırın & Pastane';
+      return "Fırın & Pastane";
     case CategoryFilterOption.breakfast:
-      return 'Kahvaltı';
+      return "Kahvaltı";
     case CategoryFilterOption.market:
-      return 'Market & Manav';
+      return "Market & Manav";
     case CategoryFilterOption.vegetarian:
-      return 'Vejetaryen';
+      return "Vejetaryen";
     case CategoryFilterOption.vegan:
-      return 'Vegan';
+      return "Vegan";
     case CategoryFilterOption.glutenFree:
-      return 'Glutensiz';
+      return "Glutensiz";
   }
 }

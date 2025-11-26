@@ -3,7 +3,8 @@ import '../../../account/data/repositories/user_repository.dart';
 
 /// Kullanıcı kimlik doğrulama işlemleri için temel arayüz
 abstract class AuthRepository {
-  Future<UserModel> loginWithPhone(String phoneNumber);
+  Future<bool> checkPhoneExists(String phoneNumber);
+  Future<void> sendOtp(String phoneNumber);
   Future<UserModel> verifyOtp(String phoneNumber, String otp);
   Future<void> logout();
 }
@@ -15,46 +16,55 @@ class MockAuthRepository implements AuthRepository {
   MockAuthRepository(this._userRepository);
 
   @override
-  Future<UserModel> loginWithPhone(String phoneNumber) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    final user = UserModel(
-      id: '1',
-      phoneNumber: phoneNumber,
-      token: 'mock_token',
-      isPhoneVerified: true,
-      isEmailVerified: false,
-    );
-
-    // Kullanıcıyı kaydet
-    _userRepository.setMockUser(user);
-    return user;
+  Future<bool> checkPhoneExists(String phone) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final user = _userRepository.getMockUser();
+    return user != null && user.phoneNumber == phone;
   }
 
   @override
-  Future<UserModel> verifyOtp(String phoneNumber, String otp) async {
+  Future<void> sendOtp(String phone) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    // Mock'ta sadece bekliyoruz
+  }
+
+  @override
+  Future<UserModel> verifyOtp(String phone, String otp) async {
     await Future.delayed(const Duration(milliseconds: 500));
 
-    if (otp == '12345') {
-      final verifiedUser = _userRepository.getMockUser().copyWith(
-        phoneNumber: phoneNumber,
-        isPhoneVerified: true,
-        token: 'mock_token_verified',
-      );
-
-      // ✅ Telefon doğrulandıktan sonra repository'yi güncelle
-      _userRepository.setMockUser(verifiedUser);
-
-      // ✅ loadUser() çağrılarında güncel user dönecek
-      return _userRepository.getMockUser();
-    } else {
-      throw Exception('Geçersiz doğrulama kodu');
+    // ❗ OTP yanlış → direkt HATA
+    if (otp != "12345") {
+      throw Exception("Geçersiz doğrulama kodu");
     }
+
+    // 📌 OTP doğruysa buradan sonrası çalışır
+    final existing = _userRepository.getMockUser();
+
+    // 🔥 1) Kullanıcı önceden varsa → LOGIN
+    if (existing != null && existing.phoneNumber == phone) {
+      final updated = existing.copyWith(
+        token: "mock_token_verified",
+        isPhoneVerified: true,
+      );
+      _userRepository.setMockUser(updated);
+      return updated;
+    }
+
+    // 🔥 2) Kullanıcı yoksa → REGISTER
+    final newUser = UserModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      phoneNumber: phone,
+      isPhoneVerified: true,
+      token: "mock_token_new_user",
+      isEmailVerified: false,
+    );
+
+    _userRepository.setMockUser(newUser);
+    return newUser;
   }
 
   @override
   Future<void> logout() async {
     await Future.delayed(const Duration(milliseconds: 300));
-    // Mock ortamında logout yalnızca gecikme simülasyonu yapar
   }
 }

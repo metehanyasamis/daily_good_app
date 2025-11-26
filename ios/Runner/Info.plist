@@ -46,6 +46,12 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 
+    <key>io.flutter.embedded_views_preview</key>
+    <true/>
+
+    <key>GMSApiKey</key>
+    <string>AIzaSyC1TEUj1BieHUu0dWs5hWCaYVzX_gdoE04</string>
+
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 
