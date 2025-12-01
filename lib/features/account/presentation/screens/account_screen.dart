@@ -6,6 +6,7 @@ import '../../../../core/data/prefs_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/email_verification_dialog.dart';
 import '../../../../core/widgets/info_row_widget.dart';
+
 import '../../../auth/domain/providers/auth_notifier.dart';
 import '../../../saving/model/saving_model.dart';
 import '../../../saving/providers/saving_provider.dart';
@@ -20,32 +21,39 @@ class AccountScreen extends ConsumerStatefulWidget {
 
 class _AccountScreenState extends ConsumerState<AccountScreen> {
 
-  // ----------------------------------------------------------
-  // LOGOUT — CLASS LEVEL → CRASH YOK
-  // ----------------------------------------------------------
-  Future<void> _logout() async {
-    debugPrint("🚪 Logout dialog opened");
+  String _formatBirthDate(String raw) {
+    try {
+      final dt = DateTime.parse(raw);
+      return "${dt.day.toString().padLeft(2, '0')}"
+          ".${dt.month.toString().padLeft(2, '0')}"
+          ".${dt.year}";
+    } catch (_) {
+      return "-";
+    }
+  }
 
+
+  // -------------------------------------------------------------
+  Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
       useRootNavigator: true,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Oturumu Kapat'),
-          content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Vazgeç'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Evet, Çıkış Yap'),
-            ),
-          ],
-        );
-      },
+      builder: (_) => AlertDialog(
+        title: const Text('Oturumu Kapat'),
+        content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            style:
+            ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Evet, Çıkış Yap'),
+          ),
+        ],
+      ),
     );
 
     if (confirm != true) return;
@@ -53,25 +61,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     await ref.read(authNotifierProvider.notifier).logout();
     await PrefsService.clearAll();
 
-    if (!mounted) return;
-
-    // 🔥 ShellRoute içinde olduğun için router'ı resetlemek zorundasın!
-    Future.microtask(() {
-      GoRouter.of(context).go('/login');
-    });
+    if (mounted) context.go('/login');
   }
 
-
-
-  // ----------------------------------------------------------
-  // DELETE ACCOUNT — CLASS LEVEL
-  // ----------------------------------------------------------
+  // -------------------------------------------------------------
   Future<void> _deleteAccount() async {
-    final userNotifier = ref.read(userNotifierProvider.notifier);
-
     final confirm = await showDialog<bool>(
       context: context,
-      useRootNavigator: true,
       builder: (_) => AlertDialog(
         title: const Text('Hesabı Sil'),
         content: const Text('Hesabınızı kalıcı olarak silmek istediğinize emin misiniz?'),
@@ -81,7 +77,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             child: const Text('İptal'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style:
+            ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Evet, Sil'),
           ),
@@ -91,70 +88,61 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
     if (confirm != true) return;
 
-    await userNotifier.deleteUserAccount();
+    final userNotifier = ref.read(userNotifierProvider.notifier);
 
+    await userNotifier.deleteUserAccount();
     await ref.read(authNotifierProvider.notifier).logout();
     await PrefsService.clearAll();
 
     if (mounted) context.go('/login');
   }
 
-  // ----------------------------------------------------------
-  // EMAIL VERIFY — CLASS LEVEL
-  // ----------------------------------------------------------
+  // -------------------------------------------------------------
   Future<void> _verifyEmail(String email) async {
-    final userNotifier = ref.read(userNotifierProvider.notifier);
+    final notifier = ref.read(userNotifierProvider.notifier);
 
-    await userNotifier.sendEmailVerification(email);
+    await notifier.sendEmailVerification(email);
 
     final otp = await showDialog<String>(
       context: context,
-      useRootNavigator: true,
       builder: (_) => EmailVerificationDialog(email: email),
     );
 
     if (otp == null || otp.isEmpty) return;
 
     try {
-      await userNotifier.verifyEmailOtp(otp);
+      await notifier.verifyEmailOtp(otp);
+
       final refreshedUser = ref.read(userNotifierProvider).user;
 
       if (refreshedUser?.isEmailVerified == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('E-posta doğrulandı')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("E-posta doğrulandı")));
       }
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kod geçersiz')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Kod geçersiz')));
     }
   }
 
-  // ----------------------------------------------------------
-  // INIT
-  // ----------------------------------------------------------
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      ref.read(userNotifierProvider.notifier).loadUser(forceRefresh: false);
-    });
+    Future.microtask(
+          () => ref.read(userNotifierProvider.notifier).loadUser(),
+    );
   }
 
-  // ----------------------------------------------------------
-  // BUILD — ARTIK SADECE UI, NAVIGATION YOK
-  // ----------------------------------------------------------
+  // -------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final userState = ref.watch(userNotifierProvider);
     final user = userState.user;
+
     final saving = ref.watch(savingProvider);
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -172,98 +160,101 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
           child: Column(
             children: [
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
 
               const CircleAvatar(
-                radius: 35,
+                radius: 34,
                 backgroundColor: Color(0xFFE6F4EA),
-                child: Icon(Icons.person, size: 48, color: AppColors.primaryDarkGreen),
+                child: Icon(Icons.person, size: 40, color: AppColors.primaryDarkGreen),
               ),
-              const SizedBox(height: 8),
 
+              const SizedBox(height: 12),
               Text(
-                "${user.name ?? ''} ${user.surname ?? ''}".trim().isEmpty
+                "${user.firstName ?? ''} ${user.lastName ?? ''}".trim().isEmpty
                     ? "Profil Bilgileri Eksik"
-                    : "${user.name ?? ''} ${user.surname ?? ''}",
+                    : "${user.firstName ?? ''} ${user.lastName ?? ''}",
                 style:
                 const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 20),
 
-              // ---------------- PROFILE ----------------
+              // -------------------------------------------------- PROFILE CARD
               _buildCard(
                 title: "Profil",
-                onEdit: () => context.push(
-                  '/profileDetail',
-                  extra: {'fromOnboarding': false},
-                ),
+                onEdit: () => context.push('/profileDetail'),
                 children: [
                   InfoRowWidget(
-                    icon: Icons.person_outline,
+                    icon: Icons.person,
                     label: "Ad Soyad",
-                    value: "${user.name ?? ''} ${user.surname ?? ''}".trim().isEmpty
+                    value:
+                    "${user.firstName ?? ''} ${user.lastName ?? ''}".trim().isEmpty
                         ? "-"
-                        : "${user.name ?? ''} ${user.surname ?? ''}",
+                        : "${user.firstName ?? ''} ${user.lastName ?? ''}",
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   InfoRowWidget(
                     icon: Icons.mail_outline,
                     label: "E-posta",
                     value: user.email ?? "-",
                     isVerified: user.isEmailVerified,
-                    onVerify: user.email != null && !user.isEmailVerified
+                    onVerify: (user.email != null && !user.isEmailVerified)
                         ? () => _verifyEmail(user.email!)
                         : null,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   InfoRowWidget(
-                    icon: Icons.phone_outlined,
+                    icon: Icons.phone_android,
                     label: "Telefon",
-                    value: user.phoneNumber,
+                    value: user.phone,
                     isVerified: user.isPhoneVerified,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   InfoRowWidget(
-                    icon: Icons.person_2_outlined,
-                    label: "Cinsiyet",
-                    value: user.gender ?? "-",
+                    icon: Icons.cake,
+                    label: "Doğum Tarihi",
+                    value: (user.birthDate != null && user.birthDate!.isNotEmpty)
+                        ? _formatBirthDate(user.birthDate!)
+                        : "-",
                   ),
                 ],
               ),
 
               const SizedBox(height: 10),
 
-              // ---------------- SAVING CARD ----------------
+              // -------------------------------------------------- SAVING card
               _buildSavingCard(saving),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              // ---------------- SETTINGS ----------------
+              // -------------------------------------------------- SETTINGS
               _buildCard(
                 title: "Hesap Ayarları",
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.description_outlined, color: Colors.black54),
+                    leading: const Icon(Icons.description_outlined),
                     title: const Text("Yasal Bilgiler"),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {},
                   ),
                   ListTile(
-                    leading: const Icon(Icons.email_outlined, color: Colors.black54),
+                    leading: const Icon(Icons.mail_outline),
                     title: const Text("Bize Ulaşın"),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/support'),
                   ),
                   ListTile(
-                    leading: const Icon(Icons.logout_outlined, color: Colors.black54),
+                    leading: const Icon(Icons.logout),
                     title: const Text("Oturumu Kapat"),
                     onTap: _logout,
                   ),
                   ListTile(
-                    leading: const Icon(Icons.person_off_outlined, color: Colors.red),
-                    title: const Text("Hesabımı Kapat",
-                        style: TextStyle(color: Colors.red)),
+                    leading:
+                    const Icon(Icons.delete_forever, color: Colors.red),
+                    title: const Text(
+                      "Hesabımı Kapat",
+                      style: TextStyle(color: Colors.red),
+                    ),
                     onTap: _deleteAccount,
                   ),
                 ],
@@ -275,9 +266,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     );
   }
 
-  // ----------------------------------------------------------
-  // CARD UI
-  // ----------------------------------------------------------
+  // -------------------------------------------------------------
   Widget _buildCard({
     required String title,
     required List<Widget> children,
@@ -324,9 +313,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     );
   }
 
-  // ----------------------------------------------------------
-  // SAVING CARD
-  // ----------------------------------------------------------
+  // -------------------------------------------------------------
   Widget _buildSavingCard(SavingModel saving) {
     return _buildCard(
       title: "Kurtardığın Paketler & Kazançların",
@@ -335,30 +322,29 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _StatBox(
-              icon: Icons.shopping_bag_outlined,
+              icon: Icons.local_mall_outlined,
               value: "${saving.packagesSaved}",
-              label: "Paket Kurtardın",
+              label: "Paket",
             ),
             _StatBox(
-              icon: Icons.savings_outlined,
+              icon: Icons.savings,
               value: "${saving.moneySaved.toStringAsFixed(0)} TL",
-              label: "Tasarruf Ettin",
+              label: "Tasarruf",
             ),
             _StatBox(
               icon: Icons.eco_outlined,
               value: "${saving.carbonSavedKg.toStringAsFixed(1)} kg",
-              label: "CO₂ Önledin",
+              label: "CO₂",
             ),
           ],
         ),
-        const Divider(height: 22),
+        const Divider(height: 24),
         ListTile(
-          leading:
-          const Icon(Icons.history_outlined, color: Colors.black54),
-          title: const Text("Geçmiş Siparişlerim"),
+          leading: const Icon(Icons.history),
+          title: const Text("Geçmiş Siparişler"),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/order-history'),
-        ),
+        )
       ],
     );
   }
@@ -382,17 +368,17 @@ class _StatBox extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.primaryDarkGreen.withOpacity(0.12),
+            color: AppColors.primaryDarkGreen.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 26, color: AppColors.primaryDarkGreen),
+          child: Icon(icon, color: AppColors.primaryDarkGreen),
         ),
         const SizedBox(height: 6),
         Text(
           value,
           style: const TextStyle(
+            fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontSize: 17,
             color: AppColors.primaryDarkGreen,
           ),
         ),
@@ -400,7 +386,7 @@ class _StatBox extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade800,
+            color: Colors.grey.shade700,
           ),
         )
       ],

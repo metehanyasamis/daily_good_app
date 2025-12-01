@@ -1,70 +1,113 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../account/data/models/user_model.dart';
-import '../../../account/data/repositories/user_repository.dart';
+import '../../../../core/data/prefs_service.dart';
 
-/// Kullanıcı kimlik doğrulama işlemleri için temel arayüz
-abstract class AuthRepository {
-  Future<bool> checkPhoneExists(String phoneNumber);
-  Future<void> sendOtp(String phoneNumber);
-  Future<UserModel> verifyOtp(String phoneNumber, String otp);
-  Future<void> logout();
-}
+class AuthRepository {
+  final Dio _dio;
 
-/// MockAuthRepository — yalnızca test / local geliştirme ortamı için
-class MockAuthRepository implements AuthRepository {
-  final MockUserRepository _userRepository;
+  AuthRepository({Dio? dio})
+      : _dio = dio ??
+      Dio(BaseOptions(
+        baseUrl: "https://dailygood.dijicrea.net/api/v1",
+        headers: {"Accept": "application/json"},
+      ));
 
-  MockAuthRepository(this._userRepository);
-
-  @override
-  Future<bool> checkPhoneExists(String phone) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final user = _userRepository.getMockUser();
-    return user != null && user.phoneNumber == phone;
-  }
-
-  @override
   Future<void> sendOtp(String phone) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    // Mock'ta sadece bekliyoruz
+    debugPrint("🌐 [API] POST /customer/auth/send-otp");
+    debugPrint("➡️ phone: $phone");
+
+    try {
+      final res = await _dio.post("/customer/auth/send-otp", data: {
+        "phone": phone,
+      });
+
+      debugPrint("📩 [OTP] Response STATUS: ${res.statusCode}");
+      debugPrint("📩 [OTP] Response DATA: ${res.data}");
+    } on DioException catch (e) {
+      debugPrint("❌ [OTP] sendOtp ERROR STATUS: ${e.response?.statusCode}");
+      debugPrint("❌ [OTP] sendOtp ERROR DATA: ${e.response?.data}");
+      rethrow;
+    }
   }
 
-  @override
-  Future<UserModel> verifyOtp(String phone, String otp) async {
-    await Future.delayed(const Duration(milliseconds: 500));
+  Future<bool> verifyOtp(String phone, String code) async {
+    debugPrint("🌐 [API] POST /customer/auth/verify-otp");
+    debugPrint("➡️ Gönderilen: { phone: $phone, code: $code }");
 
-    // ❗ OTP yanlış → direkt HATA
-    if (otp != "12345") {
-      throw Exception("Geçersiz doğrulama kodu");
+    try {
+      final res = await _dio.post("/customer/auth/verify-otp", data: {
+        "phone": phone,
+        "code": code,
+      });
+
+      debugPrint("📩 [API] Response STATUS: ${res.statusCode}");
+      debugPrint("📩 [API] Response DATA: ${res.data}");
+
+      return res.data["success"] == true;
+
+    } on DioException catch (e) {
+      debugPrint("❌ [API] verifyOtp ERROR STATUS: ${e.response?.statusCode}");
+      debugPrint("❌ [API] verifyOtp ERROR DATA: ${e.response?.data}");
+      return false;
     }
-
-    // 📌 OTP doğruysa buradan sonrası çalışır
-    final existing = _userRepository.getMockUser();
-
-    // 🔥 1) Kullanıcı önceden varsa → LOGIN
-    if (existing != null && existing.phoneNumber == phone) {
-      final updated = existing.copyWith(
-        token: "mock_token_verified",
-        isPhoneVerified: true,
-      );
-      _userRepository.setMockUser(updated);
-      return updated;
-    }
-
-    // 🔥 2) Kullanıcı yoksa → REGISTER
-    final newUser = UserModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      phoneNumber: phone,
-      isPhoneVerified: true,
-      token: "mock_token_new_user",
-      isEmailVerified: false,
-    );
-
-    _userRepository.setMockUser(newUser);
-    return newUser;
   }
 
-  @override
+
+  Future<UserModel?> login(String phone, String code) async {
+    try {
+      final res = await _dio.post("/customer/auth/login", data: {
+        "phone": phone,
+        "code": code,
+      });
+
+      // Başarılı → giriş yaptı
+      final user = UserModel.fromJson(res.data["data"]);
+
+      if (user.token != null && user.token!.isNotEmpty) {
+        await PrefsService.saveToken(user.token!);
+        _dio.options.headers["Authorization"] = "Bearer ${user.token}";
+      }
+
+      return user; // eski kullanıcı
+
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        // ❗ KULLANICI KAYITLI DEĞİL → yeni kullanıcı
+        return null;
+      }
+
+      // Diğer tüm hatalar
+      rethrow;
+    }
+  }
+
+
+
+  Future<UserModel?> me() async {
+    try {
+      final token = await PrefsService.readToken();
+      if (token == null) return null;
+
+      _dio.options.headers["Authorization"] = "Bearer $token";
+      final res = await _dio.get("/customer/auth/me");
+
+      return UserModel.fromJson(res.data["data"]);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> logout() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      await _dio.post("/customer/auth/logout");
+    } catch (_) {}
+    await PrefsService.clearToken();
   }
 }
+
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return AuthRepository();
+});

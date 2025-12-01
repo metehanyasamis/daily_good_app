@@ -8,15 +8,13 @@ import 'package:firebase_core/firebase_core.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🟢 Firebase başlat
+  // Firebase
   await Firebase.initializeApp();
 
-  // 🟢 Bildirim sistemi başlatılıyor
- // await NotificationService.init();
-
-  // 🟢 Türkçe tarih formatlarını yükle
+  // Türkçe tarih formatları
   await initializeDateFormatting('tr_TR');
 
+  // Riverpod çalıştır
   runApp(const ProviderScope(child: Bootstrap()));
 }
 

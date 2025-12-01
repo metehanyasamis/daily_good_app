@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/data/prefs_service.dart';
 import '../../../../core/providers/app_state_provider.dart';
-import '../../../account/domain/providers/user_notifier.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../domain/providers/auth_notifier.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -16,74 +18,82 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
 
+    // ---------------------------
+    // LOGO ANIMASYONU
+    // ---------------------------
     _controller = AnimationController(
-      duration: const Duration(seconds: 2),
       vsync: this,
+      duration: const Duration(seconds: 2),
     );
+
     _fadeAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOut,
     );
+
     _controller.forward();
 
-    // ✅ user restore işlemi — asenkron ama beklemeden başlat
-    Future.microtask(() async {
-      final userNotifier = ref.read(userNotifierProvider.notifier);
-      await userNotifier.init(); // local user yükleniyor
-    });
-
-    // ✅ küçük gecikmeyle splash yönlendirmeyi başlat
-    Future.delayed(const Duration(milliseconds: 300), _initState);
-  }
-
-  Future<void> _initState() async {
-    if (_initialized) return;
-    _initialized = true;
-
-    // logo animasyon süresi
-    await Future.delayed(const Duration(seconds: 2));
-
-    try {
-      // 🔹 Prefs’ten verileri oku
-      final token = await PrefsService.readToken();
-      final seenProfile = await PrefsService.getHasSeenProfileDetails();
-      final seenOnboarding = await PrefsService.getHasSeenOnboarding();
-
-      debugPrint(
-        '✅ SplashCheck → token=$token | seenProfile=$seenProfile | seenOnboarding=$seenOnboarding',
-      );
-
-      // 🔹 app state güncelle
-      final appStateNotifier = ref.read(appStateProvider.notifier);
-      if (token != null) appStateNotifier.setLoggedIn(true);
-      if (seenProfile) appStateNotifier.setProfileCompleted(true);
-      if (seenOnboarding) appStateNotifier.setOnboardingSeen(true);
-
-      if (!mounted) return;
-
-      // 🔹 300ms gecikme → GoRouter hazır olana kadar beklet
-      Future.delayed(const Duration(seconds: 2), () {
-        if(mounted) context.go('/home'); // dummy, router redirect gerçek yeri bulur
-      });
-
-    } catch (e, s) {
-      debugPrint('❌ Splash init error: $e');
-      debugPrint('$s');
-      if (mounted) context.go('/login'); // fallback
-    }
+    // Splash flow'u başlat
+    Future.microtask(_handleStartup);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.dispose();   // 🔥 ANİMASYON TİCKER'INI YOK EDİYOR
     super.dispose();
   }
+
+  // ----------------------------------------------------------
+  // SPLASH FLOW
+  // ----------------------------------------------------------
+  Future<void> _handleStartup() async {
+    debugPrint("🚀 [Splash] Başlatılıyor...");
+
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    final app = ref.read(appStateProvider);
+    final token = await PrefsService.readToken();
+
+    debugPrint("🔍 [Splash] isLoggedIn=${app.isLoggedIn}");
+    debugPrint("🔑 [Splash] Token=$token");
+
+    // 1) Hiç login olmamış → login ekranı
+    if (!app.isLoggedIn) {
+      debugPrint("❌ [Splash] isLoggedIn=false → login");
+      context.go('/login');
+      return;
+    }
+
+    // 2) Login olmuş ama token yok → YENİ KULLANICI
+    if (app.isLoggedIn && (token == null || token.isEmpty)) {
+      debugPrint("🆕 [Splash] Yeni kullanıcı → profil doldurma akışına gidiyor");
+      context.go('/profileDetail');
+      return;
+    }
+
+    // 3) Eski kullanıcı → /me kontrolü
+    debugPrint("🔐 [Splash] isLoggedIn=true → /me ile kullanıcı yükleniyor");
+
+    final auth = ref.read(authNotifierProvider.notifier);
+    final ok = await auth.loadUserFromToken();
+
+    if (!ok) {
+      debugPrint("⚠️ [Splash] /me başarısız → login");
+      context.go('/login');
+      return;
+    }
+
+    debugPrint("🎉 [Splash] /me başarılı → home");
+    context.go('/home');
+  }
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -93,11 +103,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF7EDC8A), Color(0xFF3E8D4E)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+          gradient: AppGradients.dark, // Theme’den gradient
         ),
         child: Center(
           child: FadeTransition(
@@ -105,7 +111,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             child: Image.asset(
               'assets/logos/whiteLogo.png',
               height: size.height * 0.35,
-              fit: BoxFit.contain,
             ),
           ),
         ),

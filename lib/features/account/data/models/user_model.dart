@@ -1,102 +1,143 @@
-import 'dart:convert';
 
 class UserModel {
   final String id;
-  final String phoneNumber;
-  final String token;
-  final bool isPhoneVerified;
-  final bool isEmailVerified;
-
-  final String? name;
-  final String? surname;
+  final String? firstName;
+  final String? lastName;
+  final String? fullName;
   final String? email;
-  final String? gender;
+  final String phone;
 
-  // 🔥 Yeni eklenen onboarding alanları
-  final bool hasCompletedProfile;
-  final bool hasCompletedOnboarding;
-  final bool hasLocationAccess;
+  final bool isEmailVerified;
+  final bool isPhoneVerified;
+
+  final String? birthDate;
+  final double? latitude;
+  final double? longitude;
+
+  final double? locationLat;
+  final double? locationLng;
+
+  final String? fcmToken;
+  final String? createdAt;
+  final String? updatedAt;
+
+  // Token sadece login sırasında gelir
+  final String? token;
 
   UserModel({
     required this.id,
-    required this.phoneNumber,
-    required this.token,
-    required this.isPhoneVerified,
-    required this.isEmailVerified,
-    this.name,
-    this.surname,
+    required this.phone,
+    this.firstName,
+    this.lastName,
+    this.fullName,
     this.email,
-    this.gender,
-    this.hasCompletedProfile = false,
-    this.hasCompletedOnboarding = false,
-    this.hasLocationAccess = false,
+    this.isEmailVerified = false,
+    this.isPhoneVerified = false,
+    this.birthDate,
+    this.latitude,
+    this.longitude,
+    this.locationLat,
+    this.locationLng,
+    this.fcmToken,
+    this.createdAt,
+    this.updatedAt,
+    this.token,
   });
+
+  factory UserModel.fromJson(Map<String, dynamic> json, {String? token}) {
+    final location = json["location"];
+
+    return UserModel(
+      id: json["id"] ?? "",
+      phone: json["phone"] ?? "",
+      firstName: json["first_name"],
+      lastName: json["last_name"],
+      fullName: json["full_name"],
+      email: json["email"],
+      birthDate: json["birth_date"],
+
+      // verified fields: null değilse true
+      isEmailVerified: json["email_verified_at"] != null,
+      isPhoneVerified: json["phone_verified_at"] != null,
+
+      latitude: json["latitude"] != null
+          ? double.tryParse(json["latitude"].toString())
+          : null,
+      longitude: json["longitude"] != null
+          ? double.tryParse(json["longitude"].toString())
+          : null,
+
+      locationLat: location != null ? (location["lat"]?.toDouble()) : null,
+      locationLng: location != null ? (location["lng"]?.toDouble()) : null,
+
+      fcmToken: json["fcm_token"],
+      createdAt: json["created_at"],
+      updatedAt: json["updated_at"],
+
+      // login sırasında token geçilir
+      token: token,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    "id": id,
+    "first_name": firstName,
+    "last_name": lastName,
+    "full_name": fullName,
+    "email": email,
+    "phone": phone,
+    "birth_date": birthDate,
+    "isEmailVerified": isEmailVerified,
+    "isPhoneVerified": isPhoneVerified,
+    "latitude": latitude,
+    "longitude": longitude,
+    "location": {
+      "lat": locationLat,
+      "lng": locationLng,
+    },
+    "fcm_token": fcmToken,
+    "created_at": createdAt,
+    "updated_at": updatedAt,
+    "token": token,
+  };
 
   UserModel copyWith({
     String? id,
-    String? phoneNumber,
-    String? token,
-    bool? isPhoneVerified,
-    bool? isEmailVerified,
-    String? name,
-    String? surname,
+    String? firstName,
+    String? lastName,
+    String? fullName,
     String? email,
-    String? gender,
-    bool? hasCompletedProfile,
-    bool? hasCompletedOnboarding,
-    bool? hasLocationAccess,
+    String? phone,
+    bool? isEmailVerified,
+    bool? isPhoneVerified,
+    String? birthDate,
+    double? latitude,
+    double? longitude,
+    double? locationLat,
+    double? locationLng,
+    String? fcmToken,
+    String? createdAt,
+    String? updatedAt,
+    String? token,
   }) {
     return UserModel(
       id: id ?? this.id,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
-      token: token ?? this.token,
-      isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
-      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
-      name: name ?? this.name,
-      surname: surname ?? this.surname,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      fullName: fullName ?? this.fullName,
       email: email ?? this.email,
-      gender: gender ?? this.gender,
-      hasCompletedProfile: hasCompletedProfile ?? this.hasCompletedProfile,
-      hasCompletedOnboarding: hasCompletedOnboarding ?? this.hasCompletedOnboarding,
-      hasLocationAccess: hasLocationAccess ?? this.hasLocationAccess,
+      phone: phone ?? this.phone,
+      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
+      isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
+      birthDate: birthDate ?? this.birthDate,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      locationLat: locationLat ?? this.locationLat,
+      locationLng: locationLng ?? this.locationLng,
+      fcmToken: fcmToken ?? this.fcmToken,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      token: token ?? this.token,
     );
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'phoneNumber': phoneNumber,
-      'token': token,
-      'isPhoneVerified': isPhoneVerified,
-      'isEmailVerified': isEmailVerified,
-      'name': name,
-      'surname': surname,
-      'email': email,
-      'gender': gender,
-      'hasCompletedProfile': hasCompletedProfile,
-      'hasCompletedOnboarding': hasCompletedOnboarding,
-      'hasLocationAccess': hasLocationAccess,
-    };
-  }
-
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      id: json['id'] ?? '',
-      phoneNumber: json['phoneNumber'] ?? '',
-      token: json['token'] ?? '',
-      isPhoneVerified: json['isPhoneVerified'] ?? false,
-      isEmailVerified: json['isEmailVerified'] ?? false,
-      name: json['name'],
-      surname: json['surname'],
-      email: json['email'],
-      gender: json['gender'],
-      hasCompletedProfile: json['hasCompletedProfile'] ?? false,
-      hasCompletedOnboarding: json['hasCompletedOnboarding'] ?? false,
-      hasLocationAccess: json['hasLocationAccess'] ?? false,
-    );
-  }
-
-  String toRawJson() => jsonEncode(toJson());
-  factory UserModel.fromRawJson(String str) =>
-      UserModel.fromJson(jsonDecode(str));
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/social_button.dart';
@@ -28,12 +29,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  // ---------------------------------------------------------------------------
+  // SEND OTP & OPEN SHEET
+  // ---------------------------------------------------------------------------
   Future<void> _onSubmit() async {
     if (_isOtpOpen) return;
 
-    final phone = _phoneController.text.trim();
+    final rawPhone = _phoneController.text.trim();
+    final phone = _normalizePhone(rawPhone);
 
-    if (phone.length != 10) {
+    if (rawPhone.length != 10 && phone.length != 11) {
       return _error("Lütfen geçerli bir telefon numarası girin.");
     }
 
@@ -43,16 +48,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final auth = ref.read(authNotifierProvider.notifier);
 
-    // 🔍 Telefon kayıtlı mı?
-    final exists = await auth.checkPhoneExists(phone);
-
-    if (isLoginTab) {
-      if (!exists) return _error("Bu numara kayıtlı değil. Lütfen kayıt olun.");
-    } else {
-      if (exists) return _error("Bu numara zaten kayıtlı.");
-    }
-
-    // 📩 OTP gönder
     await auth.sendOtp(phone);
 
     setState(() => _isOtpOpen = true);
@@ -62,7 +57,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => OtpBottomSheet(
-        phoneNumber: phone,
+        phone: phone,
         isLogin: isLoginTab,
       ),
     );
@@ -70,32 +65,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (mounted) setState(() => _isOtpOpen = false);
   }
 
+  // ---------------------------------------------------------------------------
+  // ERROR
+  // ---------------------------------------------------------------------------
   void _error(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.redAccent,
-      ),
+      SnackBar(content: Text(msg), backgroundColor: Colors.redAccent),
     );
   }
 
+  // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-      // OTP doğrulanınca yönlendirme
     ref.listen<AuthState>(authNotifierProvider, (prev, next) {
-      print("⚡ AUTH STATE → ${next.status}");
-
       if (next.status == AuthStatus.authenticated) {
         final app = ref.read(appStateProvider);
 
-        // Eğer yeni kullanıcıysa → onboarding sürecine gitmeden önce profileDetail'e gitmeli
         if (!app.hasSeenOnboarding) {
           context.go('/profileDetail', extra: {'fromOnboarding': true});
-          return;
+        } else {
+          context.go('/home');
         }
-
-        // Eski kullanıcı → direkt home
-        context.go('/home');
       }
     });
 
@@ -103,7 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: AppColors.primaryLightGreen,
       body: Stack(
         children: [
-          // LOGO - üstte sabit
+          // --- LOGO ---
           Positioned(
             top: 80,
             left: 0,
@@ -116,7 +106,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
 
-          // ALT BEYAZ PANEL (%40 yukarıdan başlar)
+          // --- WHITE PANEL ---
           Positioned(
             top: MediaQuery.of(context).size.height * 0.42,
             left: 0,
@@ -129,7 +119,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
               ),
               child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
                 child: Column(
                   children: [
                     _buildTabs(),
@@ -139,22 +128,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     _buildTerms(),
                     const SizedBox(height: 16),
                     _buildSubmitButton(),
+
                     const SizedBox(height: 20),
 
-                    // Sosyal Girişler
                     SocialButton(
                       assetIcon: 'assets/logos/apple.png',
                       text: "Apple ile devam et",
-                      onTap: () {},
+                      onTap: _onAppleLogin,
                     ),
                     const SizedBox(height: 12),
+
                     SocialButton(
                       assetIcon: 'assets/logos/google.png',
                       text: "Google ile devam et",
-                      onTap: () {},
+                      onTap: _onGoogleLogin,
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
@@ -165,9 +155,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ----------------------------------------------------
-  // Tab Bar
-  // ----------------------------------------------------
+  // ---------------------------------------------------------------------------
   Widget _buildTabs() {
     return Container(
       padding: const EdgeInsets.all(4),
@@ -210,9 +198,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ----------------------------------------------------
-  // Phone field
-  // ----------------------------------------------------
+  // ---------------------------------------------------------------------------
   Widget _buildPhoneField() {
     return TextField(
       controller: _phoneController,
@@ -225,15 +211,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ----------------------------------------------------
-  // Terms
-  // ----------------------------------------------------
+  String _normalizePhone(String input) {
+    if (input.length == 10) return "0$input";
+    if (input.startsWith("0") && input.length == 11) return input;
+    if (input.startsWith("+90")) return "0${input.substring(3)}";
+    return input;
+  }
+
+  // ---------------------------------------------------------------------------
   Widget _buildTerms() {
     return Row(
       children: [
         Checkbox(
           value: isTermsChecked,
-          side: BorderSide.none,
           onChanged: (v) => setState(() => isTermsChecked = v!),
           activeColor: AppColors.primaryDarkGreen,
         ),
@@ -247,9 +237,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ----------------------------------------------------
-  // Button
-  // ----------------------------------------------------
+  // ---------------------------------------------------------------------------
+  Future<void> _onAppleLogin() async {
+    print("🍎 Apple login...");
+  }
+
+  Future<void> _onGoogleLogin() async {
+    print("🔵 Google login...");
+  }
+
+  // ---------------------------------------------------------------------------
   Widget _buildSubmitButton() {
     return GestureDetector(
       onTap: _onSubmit,

@@ -43,8 +43,8 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     if (userState.user != null) {
       final user = userState.user!;
 
-      nameController.text = "${user.name ?? ''} ${user.surname ?? ''}".trim();
-      phoneController.text = user.phoneNumber;
+      nameController.text = "${user.firstName ?? ''} ${user.lastName ?? ''}".trim();
+      phoneController.text = user.phone;
       emailController.text = user.email ?? '';
     }
   }

@@ -6,7 +6,7 @@ class ProductBottomBar extends StatelessWidget {
   final double price;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
-  final Future<bool> Function() onSubmit; // <-- değişti
+  final Future<bool> Function() onSubmit;
   final bool isDisabled;
 
   const ProductBottomBar({

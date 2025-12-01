@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 // Screens
+import '../../features/account/domain/providers/user_notifier.dart';
 import '../../features/account/presentation/screens/profile_details_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -77,37 +78,57 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     // ----------------------------------------------------------
     redirect: (context, state) {
       final app = ref.read(appStateProvider);
+      final user = ref.read(userNotifierProvider).user;
       final loc = state.uri.toString();
 
+      debugPrint("🔍 [ROUTER] loc=$loc, isLoggedIn=${app.isLoggedIn}, user=$user");
+
+      // Splash serbest
       if (loc == '/splash') return null;
 
-      // 1) Not logged in → login
+      // 1) Login olmamış
       if (!app.isLoggedIn) {
-        if (loc != '/login') return '/login';
+        if (loc == '/login' || loc == '/profileDetail' || loc == '/onboarding') {
+          return null;
+        }
+        return '/login';
+      }
+
+      // 2) Yeni kullanıcı → user=null → profil ve onboarding SERBEST
+      if (user == null) {
+        if (loc == '/profileDetail' || loc == '/onboarding') {
+          return null;
+        }
+
+        // Yeni kullanıcı login sonrası default hedef → profileDetail
+        return '/profileDetail';
+      }
+
+      // 3) Eski kullanıcı → location zorunlu
+      if (!app.hasSelectedLocation ||
+          app.latitude == null ||
+          app.longitude == null) {
+        if (loc != '/locationInfo') return '/locationInfo';
         return null;
       }
 
-      // 2) Onboarding yapılmamış → profileDetail
-      if (!app.hasSeenOnboarding) {
-        if (loc != '/profileDetail') return '/profileDetail';
-        return null;
-      }
-
-      // 3) Konum seçilmemiş → locationInfo
-      final isLocationRoute = loc == '/locationInfo' || loc == '/map';
-      if (!app.hasSelectedLocation && !isLocationRoute) {
-        return '/locationInfo';
-      }
-
-      // 4) Tamamsa login/onboarding/location'a geri dönemez
-      if (app.hasSelectedLocation &&
-          ['/login', '/onboarding', '/locationInfo', '/profileDetail']
-              .contains(loc)) {
+      // 4) Geri dönüş engelleme
+      if ([
+        '/login',
+        '/profileDetail',
+        '/onboarding',
+        '/locationInfo',
+        '/intro'
+      ].contains(loc)) {
         return '/home';
       }
 
       return null;
     },
+
+
+
+
 
     // ----------------------------------------------------------
     // 🔥 ROUTE TREE
@@ -144,7 +165,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/map',
-        builder: (_, __) => const LocationMapScreen(),
+        builder: (_, _) => const LocationMapScreen(),
       ),
 
       GoRoute(
@@ -182,14 +203,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             PaymentScreen(amount: state.extra as double? ?? 0.0),
       ),
 
-      GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
-      GoRoute(path: '/notifications', builder: (_, __) => const NotificationScreen()),
-      GoRoute(path: '/order-success', builder: (_, __) => const OrderSuccessScreen()),
-      GoRoute(path: '/order-tracking', builder: (_, __) => const OrderTrackingScreen()),
-      GoRoute(path: '/thank-you', builder: (_, __) => const ThankYouScreen()),
-      GoRoute(path: '/order-history', builder: (_, __) => const OrderHistoryScreen()),
-      GoRoute(path: '/support', builder: (_, __) => const SupportScreen()),
-      GoRoute(path: '/support-success', builder: (_, __) => const SupportSuccessScreen()),
+      GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
+      GoRoute(path: '/notifications', builder: (_, _) => const NotificationScreen()),
+      GoRoute(path: '/order-success', builder: (_, _) => const OrderSuccessScreen()),
+      GoRoute(path: '/order-tracking', builder: (_, _) => const OrderTrackingScreen()),
+      GoRoute(path: '/thank-you', builder: (_, _) => const ThankYouScreen()),
+      GoRoute(path: '/order-history', builder: (_, _) => const OrderHistoryScreen()),
+      GoRoute(path: '/support', builder: (_, _) => const SupportScreen()),
+      GoRoute(path: '/support-success', builder: (_, _) => const SupportSuccessScreen()),
 
 
       // ----------------------------------------------------------
@@ -199,7 +220,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) =>
             AppShell(location: state.uri.toString(), child: child),
         routes: [
-          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+          GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
 
           GoRoute(
             path: '/explore',
@@ -216,9 +237,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
 
-          GoRoute(path: '/explore-map', builder: (_, __) => const ExploreMapScreen()),
-          GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
-          GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
+          GoRoute(path: '/explore-map', builder: (_, _) => const ExploreMapScreen()),
+          GoRoute(path: '/favorites', builder: (_, _) => const FavoritesScreen()),
+          GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
         ],
       ),
     ],
