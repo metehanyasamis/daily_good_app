@@ -138,22 +138,28 @@ class HomeCategoryBar extends SliverPersistentHeaderDelegate {
 
                         SizedBox(height: lerpDouble(4, 1, shrinkFactor)),
 
-                        AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 200),
-                          style: TextStyle(
-                            fontSize: lerpDouble(13, 11, shrinkFactor),
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                            color: isSelected
-                                ? Colors.white
-                                : Colors.black.withOpacity(0.9),
-                          ),
-                          child: Text(
-                            categoryLabelText,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
+                          AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 200),
+                            style: TextStyle(
+                              fontSize: lerpDouble(13, 11, shrinkFactor),
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.black.withOpacity(0.9),
+                              height: 1.15,
+                            ),
+                            child: SizedBox(
+                              width: 70,         // sabit genişlik
+                              height: 30,        // SABİT YÜKSEKLİK → tüm sorun çözüldü
+                              child: Text(
+                                categoryLabelText,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,      // uzun metinler eşitlenir
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: true,
+                              ),
+                            ),
+                          )
                       ],
                     ),
                   ),

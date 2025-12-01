@@ -154,16 +154,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onTap: () {},
                     ),
 
-                    const SizedBox(height: 12),
-                    SocialButton(
-                      assetIcon: 'assets/logos/google.png',
-                      text: "Google ile devam et",
-                      onTap: () {
-                        print("Go Home Tıklandı");
-                        context.go('/home');
-                      },
-                    ),
-
                     const SizedBox(height: 40),
                   ],
                 ),

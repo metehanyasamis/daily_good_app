@@ -16,12 +16,18 @@ class FavoriteShopsTab extends ConsumerWidget {
     if (favoriteShops.isEmpty) return _buildEmptyState(context);
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        MediaQuery.of(context).padding.bottom + 80,
+      ),
       itemCount: favoriteShops.length,
       itemBuilder: (context, index) {
         final shop = favoriteShops[index];
+
         return GestureDetector(
-          onTap: () => context.push('/business-detail', extra: shop),
+          onTap: () => context.push('/businessShop-detail', extra: shop),
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
@@ -44,43 +50,74 @@ class FavoriteShopsTab extends ConsumerWidget {
                         topLeft: Radius.circular(16),
                         bottomLeft: Radius.circular(16),
                       ),
-                      child: Image.asset(
-                        shop.businessShopLogoImage,
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Container(
+                          width: 70,
+                          height: 70,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              shop.businessShopLogoImage,
+                              fit: shop.businessShopLogoImage
+                                  .toLowerCase()
+                                  .contains("logo")
+                                  ? BoxFit.contain      // LOGO İÇİN
+                                  : BoxFit.cover,       // FOTOĞRAF İÇİN
+                            ),
+                          ),
+                        ),
                       ),
                     ),
+
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(shop.name,
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold)),
+                            Text(
+                              shop.name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             const SizedBox(height: 6),
-                            Text(shop.address,
-                                style: const TextStyle(
-                                    color: Colors.grey, fontSize: 13)),
-                            const SizedBox(height: 8),
+                            Text(
+                              shop.address,
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
                             Row(
                               children: [
-                                Icon(Icons.star,
-                                    size: 14,
-                                    color: AppColors.primaryDarkGreen),
+                                Icon(
+                                  Icons.star,
+                                  size: 14,
+                                  color: AppColors.primaryDarkGreen,
+                                ),
                                 const SizedBox(width: 4),
-                                Text(shop.rating.toStringAsFixed(1),
-                                    style: const TextStyle(fontSize: 13)),
+                                Text(
+                                  shop.rating.toStringAsFixed(1),
+                                  style: const TextStyle(fontSize: 13),
+                                ),
                                 const SizedBox(width: 10),
-                                Icon(Icons.place,
-                                    size: 14,
-                                    color: AppColors.primaryDarkGreen),
+                                Icon(
+                                  Icons.place,
+                                  size: 14,
+                                  color: AppColors.primaryDarkGreen,
+                                ),
                                 const SizedBox(width: 4),
-                                Text('${shop.distance.toStringAsFixed(1)} km',
-                                    style: const TextStyle(fontSize: 13)),
+                                Text(
+                                  '${shop.distance.toStringAsFixed(1)} km',
+                                  style: const TextStyle(fontSize: 13),
+                                ),
                               ],
                             ),
                           ],
@@ -94,10 +131,7 @@ class FavoriteShopsTab extends ConsumerWidget {
                 Positioned(
                   top: 6,
                   right: 6,
-                  child: FavButton(
-                    item: shop,
-                    size: 34,
-                  ),
+                  child: FavButton(item: shop, size: 34),
                 ),
               ],
             ),
@@ -114,16 +148,18 @@ class FavoriteShopsTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.store_mall_directory_outlined,
-                size: 64, color: AppColors.primaryDarkGreen),
+            const Icon(
+              Icons.store_mall_directory_outlined,
+              size: 64,
+              color: AppColors.primaryDarkGreen,
+            ),
             const SizedBox(height: 16),
             Text(
               'Henüz favori işletmen yok 🍽️\nHemen keşfetmeye başla!',
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(height: 1.5),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(height: 1.5),
             ),
           ],
         ),

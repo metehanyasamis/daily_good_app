@@ -1,3 +1,4 @@
+import 'package:daily_good/core/widgets/circular_shop_image.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/fav_button.dart';
@@ -106,19 +107,10 @@ class _ProductCardState extends State<ProductCard> {
                       bottom: 10,
                       left: 10,
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.white,
-                            child: ClipOval(
-                              child: Image.asset(
-                                logoPath,
-                                width: 40,
-                                height: 40,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
+                          BusinessLogo(
+                            imagePath: business.businessShopLogoImage,
+                            size: 46,
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -129,10 +121,9 @@ class _ProductCardState extends State<ProductCard> {
                               fontSize: 16,
                               shadows: [
                                 Shadow(
-                                  offset: Offset(0, 0),
                                   blurRadius: 4,
                                   color: Colors.black87,
-                                ),
+                                )
                               ],
                             ),
                           ),
