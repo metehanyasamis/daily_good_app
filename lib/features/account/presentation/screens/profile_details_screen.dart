@@ -107,14 +107,34 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     final userState = ref.watch(userNotifierProvider);
     final user = userState.user;
     final notifier = ref.read(userNotifierProvider.notifier);
+    final isNewUser = ref.read(userNotifierProvider).user == null;
 
-    if (user != null && !_initialized) {
-      _populateFields(user);
-      _initialized = true;
+    debugPrint("📍 build() çağrıldı - userState: $userState");
+    debugPrint("👤 user = ${user?.toJson()}");
+    debugPrint("🆕 isNewUser = $isNewUser");
+
+    // Yükleniyor durumu
+    if (userState.status == UserStatus.loading) {
+      debugPrint("⏳ UserStatus → loading");
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
-    if (user == null || userState.status == UserStatus.loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    // Hata durumu
+    if (userState.status == UserStatus.error) {
+      debugPrint("❌ UserStatus → error: ${userState.errorMessage}");
+      return Scaffold(
+        body: Center(
+          child: Text("Bir hata oluştu: ${userState.errorMessage}"),
+        ),
+      );
+    }
+
+    // Eğer user null değilse ve henüz alanlar doldurulmadıysa
+    if (user != null && !_initialized) {
+      _populateFields(user); // user! değil çünkü yukarıda null check yaptık
+      _initialized = true;
     }
 
     return Scaffold(
@@ -151,6 +171,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     );
   }
 
+
   // ---------------------------------------------------------------------------
   // TEXT FIELD
   // ---------------------------------------------------------------------------
@@ -180,13 +201,18 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   // ---------------------------------------------------------------------------
   Widget _buildEmailField(user, UserNotifier notifier) {
     final hasEmail = _emailController.text.trim().isNotEmpty;
+    final isVerified = user?.isEmailVerified ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("E-posta Adresi",
-            style:
-            Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.textPrimary)),
+        Text(
+          "E-posta Adresi",
+          style: Theme.of(context)
+              .textTheme
+              .labelLarge
+              ?.copyWith(color: AppColors.textPrimary),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: _emailController,
@@ -197,8 +223,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
             fillColor: AppColors.surface,
             contentPadding:
             const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-            border:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
           ),
         ),
         const SizedBox(height: 6),
@@ -207,19 +232,20 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           Row(
             children: [
               Icon(
-                user.isEmailVerified ? Icons.check_circle : Icons.info_outline,
-                color: user.isEmailVerified ? Colors.green : Colors.orange,
+                isVerified ? Icons.check_circle : Icons.info_outline,
+                color: isVerified ? Colors.green : Colors.orange,
                 size: 20,
               ),
               const SizedBox(width: 6),
               Text(
-                user.isEmailVerified ? "Doğrulandı" : "Doğrulanmadı",
+                isVerified ? "Doğrulandı" : "Doğrulanmadı",
                 style: TextStyle(
-                  color: user.isEmailVerified ? Colors.green : Colors.orange,
+                  color: isVerified ? Colors.green : Colors.orange,
                   fontSize: 13,
                 ),
               ),
-              if (!user.isEmailVerified && _isEmailFieldValid)
+
+              if (!isVerified && _isEmailFieldValid)
                 TextButton(
                   onPressed: () async {
                     await _startEmailVerification(

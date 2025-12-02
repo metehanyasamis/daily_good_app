@@ -7,6 +7,7 @@ class AppState {
   final bool hasSelectedLocation;  // kullanıcı konum seçti mi?
   final double? latitude;          // seçilen konum
   final double? longitude;
+  final bool isNewUser;
 
   const AppState({
     this.isLoggedIn = false,
@@ -14,6 +15,7 @@ class AppState {
     this.hasSelectedLocation = false,
     this.latitude,
     this.longitude,
+    this.isNewUser = false,
   });
 
   AppState copyWith({
@@ -22,6 +24,7 @@ class AppState {
     bool? hasSelectedLocation,
     double? latitude,
     double? longitude,
+    bool? isNewUser,
   }) {
     return AppState(
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
@@ -29,6 +32,7 @@ class AppState {
       hasSelectedLocation: hasSelectedLocation ?? this.hasSelectedLocation,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      isNewUser: isNewUser ?? this.isNewUser,
     );
   }
 }
@@ -67,6 +71,11 @@ class AppStateNotifier extends StateNotifier<AppState> {
 
     state = state.copyWith(isLoggedIn: v);
   }
+
+  void setNewUser(bool val) {
+    state = state.copyWith(isNewUser: val);
+  }
+
 
   /// ---------------------------------------------------------
   /// ONBOARDING

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../../../../core/providers/app_state_provider.dart';
 import '../../../account/domain/providers/user_notifier.dart';
+import '../../../../core/providers/app_state_provider.dart';
 import '../states/auth_state.dart';
 
-final authNotifierProvider =
-StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(
     ref: ref,
     repo: ref.read(authRepositoryProvider),
@@ -17,136 +16,121 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final Ref ref;
   final AuthRepository repo;
 
-  AuthNotifier({required this.ref, required this.repo})
-      : super(const AuthState.initial());
+  AuthNotifier({required this.ref, required this.repo}) : super(const AuthState.initial());
 
-  // OTP gönder
+  /// OTP Gönder
   Future<void> sendOtp(String phone) async {
     state = const AuthState.loading();
     try {
       await repo.sendOtp(phone);
       state = const AuthState.otpSent();
     } catch (e) {
+      debugPrint("❌ OTP Gönderme hatası: $e");
       state = AuthState.error(e.toString());
     }
   }
 
-// OTP doğrulama + detaylı debug
+  /// OTP Doğrula (Sadece kontrol – login yapmaz)
   Future<bool> verifyOtp(String phone, String code) async {
-    debugPrint("📨 [OTP] VerifyOtp() çağrıldı");
-    debugPrint("➡️ phone: $phone");
-    debugPrint("➡️ code: $code");
-
+    debugPrint("🔑 OTP doğrulama başlıyor → $phone, $code");
     try {
       state = const AuthState.loading();
-
-      // Backend cevabını aldık (bool veya response olabilir)
-      final ok = await repo.verifyOtp(phone, code);
-
-      debugPrint("📥 [OTP] Backend verifyOtp RESULT → $ok");
-
-      // Hatalı ise:
-      if (!ok) {
-        debugPrint("❌ [OTP] Doğrulama başarısız → state.invalidOtp()");
+      final success = await repo.verifyOtp(phone, code);
+      if (!success) {
+        debugPrint("❌ OTP hatalı");
         state = const AuthState.invalidOtp();
         return false;
       }
-
-      // Başarılı ise:
-      debugPrint("✅ [OTP] Kod doğru → login'e devam edilebilir");
+      debugPrint("✅ OTP doğru");
       return true;
-
     } catch (e, s) {
-      debugPrint("🔥 [OTP] verifyOtp HATA → $e");
-      debugPrint("🔥 Stacktrace → $s");
-
+      debugPrint("🔥 OTP Doğrulama HATA: $e");
+      debugPrint("🔥 Stack: $s");
       state = AuthState.error(e.toString());
       return false;
     }
   }
 
-  // Login
-// Login
+  /// Giriş (Login) – Hem eski hem yeni kullanıcıyı kapsar
   Future<String> login(String phone, String code) async {
-    debugPrint("🌐 [API] /login çağrılıyor...");
+    debugPrint("🌍 Login başlıyor...");
 
     try {
-      final user = await repo.login(phone, code);
+      final loginResponse = await repo.login(phone, code);
 
-      // YENİ KULLANICI
+      debugPrint("📦 Login Response: $loginResponse");
+      debugPrint("📦 Token: ${loginResponse?.token}");
+
+      if (loginResponse == null) {
+        debugPrint("❌ loginResponse kendisi null → login başarısız");
+        return "ERROR";
+      }
+
+      if (loginResponse.token == null || loginResponse.token!.isEmpty) {
+        debugPrint("❌ Login başarısız → token null veya boş");
+        return "ERROR";
+      }
+
+      // Giriş başarılıysa → Şimdi kullanıcı bilgisini alalım
+      final user = await repo.me();
+
       if (user == null) {
-        debugPrint("🟡 Login → kullanıcı bulunamadı (NEW USER)");
-
-        // ✔ GİRİŞİ BAŞARILI SAY – MUTLAKA!
-        await ref.read(appStateProvider.notifier).setLoggedIn(true);
-
-        // ✔ User temizle
+        debugPrint("🟡 /me null → yeni kullanıcı olabilir");
         ref.read(userNotifierProvider.notifier).clearUser();
 
-        // ✔ Onboarding flag'i
+        await ref.read(appStateProvider.notifier).setLoggedIn(true);
         await ref.read(appStateProvider.notifier).setOnboardingSeen(false);
 
         return "NEW";
       }
 
-      // MEVCUT KULLANICI
+      // Kullanıcı bulundu → kaydet
       await ref.read(userNotifierProvider.notifier).saveUser(user);
       await ref.read(appStateProvider.notifier).setLoggedIn(true);
 
       state = AuthState.authenticated(user);
-
-      debugPrint("🟢 Login → eski kullanıcı");
+      debugPrint("🟢 Giriş başarılı, mevcut kullanıcı.");
       return "EXISTING";
 
-    } catch (e) {
-      debugPrint("🔴 Login ERROR: $e");
+    } catch (e, s) {
+      debugPrint("🔥 Login HATA: $e");
+      debugPrint("🔥 Stacktrace: $s");
       state = AuthState.error(e.toString());
       return "ERROR";
     }
   }
 
-
-
-
-  // Token ile login (/me)
+  /// Token ile kullanıcıyı yeniden yükle (/me)
   Future<bool> loadUserFromToken() async {
-    debugPrint("🔐 [Auth] loadUserFromToken() çağrıldı");
-
+    debugPrint("🔐 Token ile kullanıcı yükleniyor...");
     try {
       final user = await repo.me();
-
       if (user == null) {
-        debugPrint("❌ [Auth] /me başarısız → user null döndü");
+        debugPrint("🚫 /me null → kullanıcı yok");
         state = const AuthState.unauthenticated();
         return false;
       }
 
-      debugPrint("✅ [Auth] /me başarılı → User ID: ${user.id}");
-
       await ref.read(userNotifierProvider.notifier).saveUser(user);
-
-      debugPrint("📦 [Auth] User global state içine kaydedildi");
-
       state = AuthState.authenticated(user);
-
-      debugPrint("🎉 [Auth] Kullanıcı login kabul edildi");
+      debugPrint("✅ Token ile giriş başarılı.");
       return true;
 
     } catch (e) {
-      debugPrint("🔥 [Auth] loadUserFromToken ERROR: $e");
+      debugPrint("❌ Token ile yükleme hatası: $e");
       state = const AuthState.unauthenticated();
       return false;
     }
   }
 
-
-  // Logout
+  /// Çıkış
   Future<void> logout() async {
+    debugPrint("👋 Logout işlemi başladı");
     await repo.logout();
 
-    ref.read(appStateProvider.notifier).setLoggedIn(false);
+    await ref.read(appStateProvider.notifier).setLoggedIn(false);
     ref.read(userNotifierProvider.notifier).clearUser();
-
     state = const AuthState.unauthenticated();
+    debugPrint("👋 Logout tamamlandı");
   }
 }

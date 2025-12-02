@@ -83,6 +83,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       debugPrint("🔍 [ROUTER] loc=$loc, isLoggedIn=${app.isLoggedIn}, user=$user");
 
+      // 🔍 Ekstra loglar
+      debugPrint("🧭 [ROUTER] loc=$loc");
+      debugPrint("🔐 isLoggedIn=${app.isLoggedIn}");
+      debugPrint("👤 user=$user");
+      debugPrint("🆕 isNewUser=${app.isNewUser}");
+      debugPrint("📍 hasSelectedLocation=${app.hasSelectedLocation} | lat=${app.latitude} lng=${app.longitude}");
+
+
       // Splash serbest
       if (loc == '/splash') return null;
 
@@ -94,14 +102,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
 
-      // 2) Yeni kullanıcı → user=null → profil ve onboarding SERBEST
-      if (user == null) {
-        if (loc == '/profileDetail' || loc == '/onboarding') {
-          return null;
-        }
-
-        // Yeni kullanıcı login sonrası default hedef → profileDetail
-        return '/profileDetail';
+      // 2) YENİ KULLANICI PROFIL AKIŞI (user = null ama giriş yapılmışsa)
+      if (app.isLoggedIn && user == null) {
+        ref.read(appStateProvider.notifier).setNewUser(true); // 👈
+        if (loc != '/profileDetail') return '/profileDetail';
+        return null;
       }
 
       // 3) Eski kullanıcı → location zorunlu
