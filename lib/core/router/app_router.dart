@@ -94,9 +94,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Splash serbest
       if (loc == '/splash') return null;
 
-      // 1) Login olmamış
+// 1) Login olmamış
       if (!app.isLoggedIn) {
-        if (loc == '/login' || loc == '/profileDetail' || loc == '/onboarding') {
+        // 👇 DİKKAT: Yeni kullanıcı akışı için '/profileDetail' da serbest bırakılmalı
+        if (loc == '/login' || loc == '/profileDetail' || loc == '/onboarding' || loc == '/intro') {
           return null;
         }
         return '/login';

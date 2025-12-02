@@ -26,8 +26,9 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
 
   DateTime? _selectedBirthDate;
   bool _initialized = false;
-  bool _isEmailFieldValid = false;
-  bool _snackbarShown = false;
+  bool _isEmailValid = false;
+
+// ProfileDetailsScreen.dart (initState)
 
   @override
   void initState() {
@@ -38,21 +39,24 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       final current = ref.read(userNotifierProvider).user;
 
       if (current == null) {
+        // YENİ KULLANICI İÇİN: /me ÇAĞRMAK YERİNE,
+        // EĞER SADECE /me hatası alıyorsanız, bu bloktaki kodları çıkarın:
+        /*
         try {
           await notifier.loadUser();
         } catch (e) {
-          debugPrint("❌ loadUser error: $e");
+          debugPrint("❌ loadUser hata: $e");
         }
+        */
+
+        // VEYA EĞER YENİ KULLANICI İÇİN HATA ALIYORSANIZ,
+        // YENİ KULLANICILARIN loadUser() fonksiyonunu atlaması gerekir.
+        // Ama bunu yapmak için Login/OTP sırasında bir şekilde "yeni kullanıcı"
+        // bilgisini UserNotifier'a aktarmalısınız.
+
+        // Şimdilik, sadece hatanın kaynağını devre dışı bırakalım:
       }
     });
-  }
-
-  void _populateFields(user) {
-    _nameController.text = user.firstName ?? "";
-    _surnameController.text = user.lastName ?? "";
-    _emailController.text = user.email ?? "";
-    _selectedBirthDate =
-    user.birthDate != null ? DateTime.tryParse(user.birthDate!) : null;
   }
 
   @override
@@ -64,11 +68,21 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // DATE PICKER (Cupertino Modern Modal)
+  // Kullanıcı bilgilerini UI alanlarına doldur
   // ---------------------------------------------------------------------------
-  Future<void> _openDatePicker() async {
-    DateTime initial = _selectedBirthDate ?? DateTime(2000, 1, 1);
+  void _populate(UserState state) {
+    final u = state.user!;
+    _nameController.text = u.firstName ?? "";
+    _surnameController.text = u.lastName ?? "";
+    _emailController.text = u.email ?? "";
+    _selectedBirthDate =
+    u.birthDate != null ? DateTime.tryParse(u.birthDate!) : null;
+  }
 
+  // ---------------------------------------------------------------------------
+  // Doğum Tarihi
+  // ---------------------------------------------------------------------------
+  Future<void> _pickDate() async {
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -86,10 +100,9 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
               Expanded(
                 child: CupertinoDatePicker(
                   mode: CupertinoDatePickerMode.date,
-                  initialDateTime: initial,
+                  initialDateTime: _selectedBirthDate ?? DateTime.now(),
                   maximumDate: DateTime.now(),
                   minimumYear: 1950,
-                  maximumYear: DateTime.now().year,
                   onDateTimeChanged: (value) {
                     setState(() => _selectedBirthDate = value);
                   },
@@ -102,40 +115,91 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final userState = ref.watch(userNotifierProvider);
-    final user = userState.user;
-    final notifier = ref.read(userNotifierProvider.notifier);
-    final isNewUser = ref.read(userNotifierProvider).user == null;
+  // ---------------------------------------------------------------------------
+  // EMAIL VALIDATION
+  // ---------------------------------------------------------------------------
+  void _validateEmail() {
+    final text = _emailController.text.trim();
+    final ok =
+        text.isNotEmpty && RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(text);
 
-    debugPrint("📍 build() çağrıldı - userState: $userState");
-    debugPrint("👤 user = ${user?.toJson()}");
-    debugPrint("🆕 isNewUser = $isNewUser");
-
-    // Yükleniyor durumu
-    if (userState.status == UserStatus.loading) {
-      debugPrint("⏳ UserStatus → loading");
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+    if (_isEmailValid != ok) {
+      setState(() => _isEmailValid = ok);
     }
+  }
 
-    // Hata durumu
-    if (userState.status == UserStatus.error) {
-      debugPrint("❌ UserStatus → error: ${userState.errorMessage}");
-      return Scaffold(
-        body: Center(
-          child: Text("Bir hata oluştu: ${userState.errorMessage}"),
+  // ---------------------------------------------------------------------------
+  // SAVE
+  // ---------------------------------------------------------------------------
+  Future<void> _save(UserNotifier notifier, UserState state) async {
+    final u = state.user!;
+    final first = _nameController.text.trim();
+    final last = _surnameController.text.trim();
+
+    if (first.isEmpty || last.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Lütfen ad ve soyad alanlarını doldurunuz."),
+          backgroundColor: Colors.redAccent,
         ),
       );
+      return;
     }
 
-    // Eğer user null değilse ve henüz alanlar doldurulmadıysa
-    if (user != null && !_initialized) {
-      _populateFields(user); // user! değil çünkü yukarıda null check yaptık
+    final updated = u.copyWith(
+      firstName: first,
+      lastName: last,
+      email: _emailController.text.trim(),
+      birthDate: _selectedBirthDate != null
+          ? _selectedBirthDate!.toIso8601String().split("T").first
+          : null,
+    );
+
+    await notifier.updateUser(updated);
+    await PrefsService.setHasSeenProfileDetails(true);
+
+    final app = ref.read(appStateProvider);
+
+    if (!mounted) return;
+
+    if (!app.hasSelectedLocation) {
+      context.go("/locationInfo");
+    } else {
+      context.go("/home");
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Profil bilgileri kaydedildi."),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------------------
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(userNotifierProvider);
+    final notifier = ref.read(userNotifierProvider.notifier);
+
+    if (state.status == UserStatus.loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (state.status == UserStatus.error) {
+      return Scaffold(
+        body: Center(child: Text("Bir hata oluştu: ${state.errorMessage}")),
+      );
+    }
+
+    // İlk kez açılıyorsa user bilgilerini doldur
+    if (!_initialized && state.user != null) {
+      _populate(state);
       _initialized = true;
     }
+
+    final user = state.user;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -147,22 +211,36 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(context),
+                _header(context),
                 const SizedBox(height: 24),
 
-                _buildTextField("Ad", _nameController),
+                // ---------------- AD ----------------
+                _label("Ad *"),
+                _input(_nameController),
                 const SizedBox(height: 20),
 
-                _buildTextField("Soyad", _surnameController),
+                // ---------------- SOYAD ----------------
+                _label("Soyad *"),
+                _input(_surnameController),
                 const SizedBox(height: 20),
 
-                _buildEmailField(user, notifier),
+                // ---------------- TELEFON (readonly) ----------------
+                _label("Telefon"),
+                _readonlyBox(user?.phone ?? ""),
                 const SizedBox(height: 20),
 
-                _buildBirthDateField(),
+                // ---------------- EMAIL ----------------
+                _label("E-posta (opsiyonel)"),
+                _emailField(user, notifier),
+                const SizedBox(height: 20),
+
+                // ---------------- DOGUM TARIHI ----------------
+                _label("Doğum Tarihi (opsiyonel)"),
+                _birthDateTile(),
                 const SizedBox(height: 32),
 
-                _buildSaveButton(notifier, user),
+                // ---------------- KAYDET ----------------
+                _saveButton(() => _save(notifier, state)),
               ],
             ),
           ),
@@ -171,59 +249,58 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Widget Helpers
+  // ---------------------------------------------------------------------------
+  Widget _label(String text) {
+    return Text(text,
+        style: Theme.of(context)
+            .textTheme
+            .labelLarge
+            ?.copyWith(color: AppColors.textPrimary));
+  }
 
-  // ---------------------------------------------------------------------------
-  // TEXT FIELD
-  // ---------------------------------------------------------------------------
-  Widget _buildTextField(String label, TextEditingController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surface,
-            contentPadding:
-            const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-            border:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
-          ),
-        ),
-      ],
+  Widget _input(TextEditingController c) {
+    return TextField(
+      controller: c,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: AppColors.surface,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // EMAIL FIELD + OTP STATUS
-  // ---------------------------------------------------------------------------
-  Widget _buildEmailField(user, UserNotifier notifier) {
+  Widget _readonlyBox(String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Text(value, style: const TextStyle(fontSize: 16)),
+    );
+  }
+
+  Widget _emailField(user, UserNotifier notifier) {
     final hasEmail = _emailController.text.trim().isNotEmpty;
-    final isVerified = user?.isEmailVerified ?? false;
+    final verified = user?.isEmailVerified ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "E-posta Adresi",
-          style: Theme.of(context)
-              .textTheme
-              .labelLarge
-              ?.copyWith(color: AppColors.textPrimary),
-        ),
-        const SizedBox(height: 6),
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
-          onChanged: (_) => _validateEmailField(),
+          onChanged: (_) => _validateEmail(),
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.surface,
-            contentPadding:
-            const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           ),
         ),
         const SizedBox(height: 6),
@@ -232,32 +309,27 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           Row(
             children: [
               Icon(
-                isVerified ? Icons.check_circle : Icons.info_outline,
-                color: isVerified ? Colors.green : Colors.orange,
+                verified ? Icons.check_circle : Icons.info_outline,
+                color: verified ? Colors.green : Colors.orange,
                 size: 20,
               ),
               const SizedBox(width: 6),
               Text(
-                isVerified ? "Doğrulandı" : "Doğrulanmadı",
+                verified ? "Doğrulandı" : "Doğrulanmadı",
                 style: TextStyle(
-                  color: isVerified ? Colors.green : Colors.orange,
-                  fontSize: 13,
-                ),
+                    fontSize: 13, color: verified ? Colors.green : Colors.orange),
               ),
-
-              if (!isVerified && _isEmailFieldValid)
+              if (!verified && _isEmailValid)
                 TextButton(
                   onPressed: () async {
                     await _startEmailVerification(
                         _emailController.text.trim(), notifier);
-                    setState(() {});
                   },
                   child: const Text(
-                    "Şimdi Doğrula",
+                    "Doğrula",
                     style: TextStyle(
-                      color: AppColors.primaryDarkGreen,
-                      fontWeight: FontWeight.w600,
-                    ),
+                        color: AppColors.primaryDarkGreen,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
             ],
@@ -266,18 +338,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     );
   }
 
-  void _validateEmailField() {
-    final text = _emailController.text.trim();
-    final valid =
-        text.isNotEmpty && RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(text);
-
-    if (_isEmailFieldValid != valid) {
-      setState(() => _isEmailFieldValid = valid);
-    }
-  }
-
-  Future<void> _startEmailVerification(
-      String email, UserNotifier notifier) async {
+  Future<void> _startEmailVerification(String email, UserNotifier notifier) async {
     await notifier.sendEmailVerification(email);
 
     final otp = await showDialog<String>(
@@ -299,88 +360,36 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // BIRTH DATE FIELD
-  // ---------------------------------------------------------------------------
-  Widget _buildBirthDateField() {
-    final display = _selectedBirthDate != null
-        ? "${_selectedBirthDate!.day}.${_selectedBirthDate!.month}.${_selectedBirthDate!.year}"
-        : "01.01.2000";
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("Doğum Tarihi", style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 6),
-        GestureDetector(
-          onTap: _openDatePicker,
-          child: Container(
-            padding:
-            const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Row(
-              children: [
-                Text(display, style: const TextStyle(fontSize: 16)),
-                const Spacer(),
-                const Icon(Icons.calendar_month,
-                    color: AppColors.primaryDarkGreen),
-              ],
-            ),
-          ),
+  Widget _birthDateTile() {
+    final text = _selectedBirthDate != null
+        ? "${_selectedBirthDate!.day}.${_selectedBirthDate!.month}.${_selectedBirthDate!.year}"
+        : "Seçilmedi";
+
+    return GestureDetector(
+      onTap: _pickDate,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(30),
         ),
-      ],
+        child: Row(
+          children: [
+            Text(text, style: const TextStyle(fontSize: 16)),
+            const Spacer(),
+            const Icon(Icons.calendar_month,
+                color: AppColors.primaryDarkGreen),
+          ],
+        ),
+      ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // SAVE BUTTON
-  // ---------------------------------------------------------------------------
-  Widget _buildSaveButton(UserNotifier notifier, user) {
+  Widget _saveButton(VoidCallback onTap) {
     return InkWell(
       borderRadius: BorderRadius.circular(40),
-      onTap: () async {
-        if (_snackbarShown) return;
-        _snackbarShown = true;
-
-        final updated = user.copyWith(
-          firstName: _nameController.text.trim(),
-          lastName: _surnameController.text.trim(),
-          email: _emailController.text.trim(),
-          birthDate: _selectedBirthDate != null
-              ? _selectedBirthDate!.toIso8601String().split("T").first
-              : null,
-        );
-
-        await notifier.updateUser(updated);
-        await PrefsService.setHasSeenProfileDetails(true);
-
-        final app = ref.read(appStateProvider.notifier);
-
-
-        if (!mounted) return;
-
-        final appState = ref.read(appStateProvider);
-
-        if (!appState.hasSelectedLocation) {
-          context.go("/locationInfo");
-        } else {
-          context.go("/home");
-        }
-
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Profil bilgileri kaydedildi")),
-          );
-        });
-
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) _snackbarShown = false;
-        });
-      },
+      onTap: onTap,
       child: Container(
         height: 56,
         alignment: Alignment.center,
@@ -396,19 +405,13 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
         child: const Text(
           "Kaydet",
           style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // HEADER
-  // ---------------------------------------------------------------------------
-  Widget _buildHeader(BuildContext context) {
+  Widget _header(BuildContext context) {
     return Row(
       children: [
         GestureDetector(

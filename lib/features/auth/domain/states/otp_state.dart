@@ -1,4 +1,6 @@
+/*
 class OtpState {
+
   final bool isVerifying;
   final bool isVerified;
   final String? errorMessage;
@@ -21,3 +23,5 @@ class OtpState {
     );
   }
 }
+
+ */

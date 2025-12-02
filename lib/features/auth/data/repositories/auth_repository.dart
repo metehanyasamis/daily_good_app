@@ -64,6 +64,7 @@ class AuthRepository {
 
       // Başarılı → giriş yaptı
       final user = UserModel.fromJson(res.data["data"]);
+      debugPrint("📦 Login Response raw: ${res.data}");
 
       if (user.token != null && user.token!.isNotEmpty) {
         await PrefsService.saveToken(user.token!);
@@ -83,6 +84,21 @@ class AuthRepository {
     }
   }
 
+/// Yeni kayıtlı kullanıcı olup olmadığını kontrol eder. henüz backend endpoint olmadığı için simülasyon kullanılır.
+  /// final res = await _dio.post("/customer/auth/check-phone", data: {
+  //   "phone": phone,
+  // });
+  // return res.statusCode == 200;
+  Future<bool> checkPhone(String phone) async {
+    debugPrint("🌐 [API] POST /customer/auth/check-phone (Simulated)");
+
+    // Simülasyon: 05001112233 kayıtlı, diğerleri değil
+    if (phone == "05001112233") {
+      return true; // kayıtlı kullanıcı
+    } else {
+      return false; // yeni kullanıcı
+    }
+  }
 
 
   Future<UserModel?> me() async {

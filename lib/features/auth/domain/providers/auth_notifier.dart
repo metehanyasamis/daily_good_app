@@ -1,9 +1,14 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../../core/data/prefs_service.dart';
+import '../../../account/data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../../account/domain/providers/user_notifier.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../states/auth_state.dart';
+
 
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(
@@ -56,40 +61,44 @@ class AuthNotifier extends StateNotifier<AuthState> {
     debugPrint("🌍 Login başlıyor...");
 
     try {
-      final loginResponse = await repo.login(phone, code);
-
-      debugPrint("📦 Login Response: $loginResponse");
-      debugPrint("📦 Token: ${loginResponse?.token}");
-
-      if (loginResponse == null) {
-        debugPrint("❌ loginResponse kendisi null → login başarısız");
-        return "ERROR";
-      }
-
-      if (loginResponse.token == null || loginResponse.token!.isEmpty) {
-        debugPrint("❌ Login başarısız → token null veya boş");
-        return "ERROR";
-      }
-
-      // Giriş başarılıysa → Şimdi kullanıcı bilgisini alalım
-      final user = await repo.me();
+      final user = await repo.login(phone, code);
 
       if (user == null) {
-        debugPrint("🟡 /me null → yeni kullanıcı olabilir");
-        ref.read(userNotifierProvider.notifier).clearUser();
+        debugPrint("❌ loginResponse null → kullanıcı kayıtlı değil (YENİ KULLANICI)");
 
-        await ref.read(appStateProvider.notifier).setLoggedIn(true);
-        await ref.read(appStateProvider.notifier).setOnboardingSeen(false);
+        // YENİ KULLANICI MODELİ OLUŞTURMA:
+        // Yeni kullanıcı için token almadığımızı varsayarsak,
+        // sadece zorunlu alan olan 'phone' ile bir UserModel oluşturmalıyız.
+        // ID alanı backend tarafından atanacağı için, ID'yi geçici olarak boş bırakıyoruz.
+        final newUserModel = UserModel(
+          id: '', // Geçici ID
+          phone: phone,
+          token: null, // Token yok
+        );
+
+        // Sadece telefon bilgisi olan modeli UserNotifier'a kaydedelim
+        // Ancak bu, appStateProvider'ı isLoggedIn=true yapmayabilir.
+        // Bu yüzden, ProfileDetailsScreen'da kullanabilmek için manuel olarak kaydedelim.
+        ref.read(userNotifierProvider.notifier).saveUserLocally(newUserModel); // Yeni metot
+        await ref.read(appStateProvider.notifier).setLoggedIn(true); // Token olmasa da giriş yaptı sayıyoruz.
 
         return "NEW";
       }
 
-      // Kullanıcı bulundu → kaydet
-      await ref.read(userNotifierProvider.notifier).saveUser(user);
-      await ref.read(appStateProvider.notifier).setLoggedIn(true);
+      debugPrint("📦 Login UserModel: $user");
+      debugPrint("📦 Token: ${user.token}");
 
+      if (user.token == null || user.token!.isEmpty) {
+        debugPrint("❌ Token null veya boş → login başarısız");
+        return "ERROR";
+      }
+
+      await PrefsService.saveToken(user.token!);
+      ref.read(userNotifierProvider.notifier).saveUser(user);
+      await ref.read(appStateProvider.notifier).setLoggedIn(true);
       state = AuthState.authenticated(user);
-      debugPrint("🟢 Giriş başarılı, mevcut kullanıcı.");
+
+      debugPrint("🟢 Giriş başarılı → mevcut kullanıcı");
       return "EXISTING";
 
     } catch (e, s) {
@@ -99,6 +108,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return "ERROR";
     }
   }
+
+
+  /// Telefon kontrolü (Yeni kullanıcı olup olmadığını kontrol eder)
+  Future<bool> isPhoneRegistered(String phone) async {
+    try {
+      return await repo.checkPhone(phone);
+    } catch (e) {
+      debugPrint("❌ Telefon kontrol hatası: $e");
+      return false; // hata varsa kayıtlı değilmiş gibi davran
+    }
+  }
+
 
   /// Token ile kullanıcıyı yeniden yükle (/me)
   Future<bool> loadUserFromToken() async {
@@ -122,6 +143,38 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     }
   }
+
+  final secureStorage = FlutterSecureStorage();
+
+  Future<String> verifyOtpAndLogin(String phone, String code, WidgetRef ref) async {
+    try {
+      debugPrint("🔑 OTP doğrulama başlıyor → $phone, $code");
+
+      final otpResponse = await repo.verifyOtp(phone, code);
+      if (!otpResponse) {
+        state = const AuthState.invalidOtp();
+        return "INVALID_OTP"; // OTP başarısız olursa
+      }
+
+      debugPrint("✅ OTP doğru");
+      debugPrint("🟢 [OTP] Kod doğru → login çağrılıyor...");
+
+      // Login ile devam et
+      final result = await login(phone, code);
+
+      debugPrint("✨ [OTP] Login Sonucu → $result");
+      return result; // "EXISTING" veya "NEW_USER" veya "ERROR" dönecek
+
+    } on DioException catch (e) {
+      debugPrint("🔥 DioException (verifyOtpAndLogin): ${e.message}");
+      return "ERROR";
+    } catch (e, s) {
+      debugPrint("🔥 verifyOtpAndLogin() genel hata: $e");
+      debugPrint("🔥 Stacktrace: $s");
+      return "ERROR";
+    }
+  }
+
 
   /// Çıkış
   Future<void> logout() async {

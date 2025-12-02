@@ -25,9 +25,21 @@ class UserNotifier extends StateNotifier<UserState> {
   // LOCAL USER SAVE (login veya /me sonrası)
   // ------------------------------------------------------------------
   Future<void> saveUser(UserModel user) async {
-    await PrefsService.saveToken(user.token ?? "");
+    // Sadece token varsa kaydediyoruz (Existing user)
+    if (user.token != null && user.token!.isNotEmpty) {
+      await PrefsService.saveToken(user.token!);
+    }
     state = UserState.ready(user);
   }
+
+
+// ------------------------------------------------------------------
+// YENİ METOT: Sadece objeyi kaydet, token yoksa zorlama
+// ------------------------------------------------------------------
+  void saveUserLocally(UserModel user) {
+    state = UserState.ready(user);
+  }
+
 
   // ------------------------------------------------------------------
   // LOCAL CLEAR — logout

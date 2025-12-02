@@ -47,6 +47,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     final auth = ref.read(authNotifierProvider.notifier);
+    final isRegistered = await auth.isPhoneRegistered(phone);
+
+    if (isLoginTab) {
+      if (!isRegistered) {
+        return _error("Bu telefon numarasıyla kayıtlı bir hesap bulunamadı.");
+      }
+    } else {
+      if (isRegistered) {
+        return _error("Bu telefon numarası zaten kayıtlı. Giriş yap sekmesine geçiniz.");
+      }
+    }
 
     await auth.sendOtp(phone);
 
