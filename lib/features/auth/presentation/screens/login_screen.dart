@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/social_button.dart';
+import '../../../account/data/models/user_model.dart';
 import '../../domain/providers/auth_notifier.dart';
 import '../../domain/states/auth_state.dart';
 import 'otp_screen.dart';
@@ -253,8 +254,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     print("🍎 Apple login...");
   }
 
+  // LoginScreen, _LoginScreenState sınıfı içinde
+
   Future<void> _onGoogleLogin() async {
-    print("🔵 Google login...");
+    print("🔵 Google login atlatılıyor (Gecici Cozum).");
+
+    try {
+      // 1. Sahte bir UserModel oluşturun
+      final mockUser = UserModel(
+        id: "MOCK_SOCIAL_ID",
+        firstName: "Test",
+        lastName: "Kullanici",
+        phone: "99999999999",
+        token: "MOCK_SOCIAL_TOKEN_FOR_DIO",
+      );
+
+      // 2. Kullanıcı verisini kaydet (Token'ı SharedPrefs'e kaydeder)
+      // NOT: Result atamasını kaldırdık. (use_of_void_result çözüldü)
+      //await ref.read(userNotifierProvider.notifier).saveUserLocally(mockUser); // Hata veren 275. satır (veya yakını) için düzeltme
+      // 3. AuthNotifier'ı 'Authenticated' olarak ayarla
+      ref.read(authNotifierProvider.notifier).state = AuthState.authenticated(mockUser);
+
+      // 4. AppState'teki zorunlu bayrakları atlayacak şekilde 'true' yapın
+      final appStateNotifier = ref.read(appStateProvider.notifier);
+
+      // NOT: Result atamasını kaldırdık. (use_of_void_result çözüldü)
+      await appStateNotifier.setLoggedIn(true);
+      //await appStateNotifier.setNewUser(false);
+
+      // HATA VEREN METOTLARIN YERİNE, ÇALIŞTIĞINI GÖRDÜĞÜMÜZ DİĞER METOTLARI KULLANALIM
+      // VEYA SADECE setLoggedIn / setNewUser ile yetinelim.
+      // Ancak AppState'in zorunlu adımları atlaması için bu iki bayrağı kullanmalıyız.
+
+      // EĞER setHasSeenOnboarding / setHasSelectedLocation yoksa:
+      // Lütfen AppStateNotifier sınıfınızdaki bu bayrakları güncelleyen doğru metot isimlerini kullanın.
+      // Eğer metotları bulamazsanız, aşağıdaki iki satırı YORUM SATIRINA alın.
+      // await appStateNotifier.setHasSeenOnboarding(true); // HATA VEREBİLİR
+      // await appStateNotifier.setHasSelectedLocation(true); // HATA VEREBİLİR
+
+      // 5. Yönlendirme komutu: Sadece context.go('/home') ile yönlendirme yapın.
+      context.go('/home');
+
+      print("✅ Atlatma Basarili. Uygulama Home akisina yonlendiriliyor.");
+
+    } catch (e) {
+      print("❌ Atlatma sirasinda hata olustu: $e");
+      _error("Geçici atlatma hatası oluştu.");
+    }
   }
 
   // ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@ import '../../features/account/presentation/screens/profile_details_screen.dart'
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/intro_screen.dart';
+import '../../features/location/presentation/screens/location_picker_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -17,13 +18,11 @@ import '../../features/favorites/presentation/screens/favorites_screen.dart';
 import '../../features/account/presentation/screens/account_screen.dart';
 
 import '../../features/location/presentation/screens/location_info_screen.dart';
-import '../../features/location/presentation/screens/location_map_screen.dart';
 
 import '../../features/businessShop/presentation/screens/businessShop_details_screen.dart';
 import '../../features/businessShop/data/model/businessShop_model.dart';
 
 import '../../features/product/presentation/screens/product_detail_screen.dart';
-import '../../features/product/data/models/product_model.dart';
 
 import '../../features/support/presentation/support_screen.dart';
 import '../../features/support/presentation/support_success_screen.dart';
@@ -43,7 +42,24 @@ import '../../features/explore/presentation/widgets/category_filter_option.dart'
 
 
 // --------------------------------------------------------------
-// 🔥 CUSTOM PAGE TRANSITION
+// 🔥 EKSİK TANIMLAR EKLENDİ
+// --------------------------------------------------------------
+abstract class AppRoutes {
+  static const String home = 'home';
+  static const String productDetail = 'product-detail';
+// İhtiyaç duyulan diğer rota isimleri buraya eklenebilir.
+}
+
+Widget fadeTransition(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
+  return FadeTransition( // <-- Burası direkt Widget dönüyor
+    opacity: animation,
+    child: child,
+  );
+}
+
+
+// --------------------------------------------------------------
+// 🔥 CUSTOM PAGE TRANSITION (buildAnimatedPage fonksiyonunuz korundu)
 // --------------------------------------------------------------
 CustomTransitionPage buildAnimatedPage({
   required Widget child,
@@ -165,13 +181,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // ---------------- FULLSCREEN (ShellRoute DIŞI) ----------------
       GoRoute(
-        path: '/locationInfo',
-        pageBuilder: (_, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const LocationInfoScreen()),
+        path: '/location-info',
+        builder: (context, state) => const LocationInfoScreen(),
       ),
       GoRoute(
-        path: '/map',
-        builder: (_, _) => const LocationMapScreen(),
+        // Harita rotasını LocationPickerScreen'a yönlendiriyoruz
+        path: '/location-picker',
+        builder: (context, state) => const LocationPickerScreen(),
       ),
 
       GoRoute(
@@ -182,12 +198,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(
-        path: '/product-detail',
-        pageBuilder: (_, state) {
-          final product = state.extra as ProductModel;
-          return buildAnimatedPage(
+        path: 'product-detail/:productId', // 👈 Route'u /product-detail/urun-id şeklinde güncelledik
+        name: AppRoutes.productDetail,
+        pageBuilder: (context, state) {
+          final productId = state.pathParameters['productId']!; // 👈 productId'yi path'ten alıyoruz
+          return CustomTransitionPage(
             key: state.pageKey,
-            child: ProductDetailScreen(product: product),
+            child: ProductDetailScreen(
+              productId: productId, // 👈 ProductModel yerine productId gönderiyoruz
+            ),
+            transitionsBuilder: fadeTransition, // 🔥 Hata burada çözüldü
           );
         },
       ),

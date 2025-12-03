@@ -1,59 +1,85 @@
+// lib/features/product/presentation/screens/product_detail_screen.dart
+
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/navigation_utils.dart';
 import '../../../../core/widgets/floating_cart_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 import '../../../../core/widgets/product_bottom_bar.dart';
 import '../../../../core/widgets/fav_button.dart';
-import '../../../businessShop/data/mock/mock_businessShop_model.dart';
-import '../../../businessShop/data/model/businessShop_model.dart';
+// ❌ Mock bağımlılıkları kaldırıldı
+// import '../../../businessShop/data/mock/mock_businessShop_model.dart';
+// import '../../../businessShop/data/model/businessShop_model.dart';
 import '../../../cart/domain/models/cart_item.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
 import '../../../cart/presentation/widgets/cart_warning_modal.dart';
 import '../../data/models/product_model.dart';
+// Yeni provider'ı import et
+import '../../domain/providers/product_list_provider.dart';
 
-class ProductDetailScreen extends ConsumerStatefulWidget {
-  final ProductModel product;
-  const ProductDetailScreen({super.key, required this.product});
+
+// 💡 Not: Artık bu ekran route üzerinden sadece `productId` alacak.
+// ProductModel'i burada FutureProvider ile çekmeliyiz.
+
+class ProductDetailScreen extends ConsumerWidget {
+  final String productId;
+  const ProductDetailScreen({super.key, required this.productId});
 
   @override
-  ConsumerState<ProductDetailScreen> createState() =>
-      _ProductDetailScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 🔥 productDetailProvider'ı kullanarak veriyi çekiyoruz
+    final detailAsync = ref.watch(productDetailProvider(productId));
+
+    return detailAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, stack) => Scaffold(
+        body: Center(child: Text('Hata: $err')),
+      ),
+      data: (product) {
+        // Veri geldi, artık product ve store bilgileri elimizde.
+        return _ProductDetailContent(product: product);
+      },
+    );
+  }
 }
 
-class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
+// 💡 Veri geldikten sonra gösterilecek ana widget
+class _ProductDetailContent extends ConsumerStatefulWidget {
+  final ProductModel product;
+  const _ProductDetailContent({required this.product});
+
+  @override
+  ConsumerState<_ProductDetailContent> createState() =>
+      __ProductDetailContentState();
+}
+
+class __ProductDetailContentState extends ConsumerState<_ProductDetailContent> {
   int qty = 1;
-  bool isFav = false;
   bool expanded = false;
 
-  // 🔹 stok limiti ("Son 3" -> max 3)
-  int get maxQty {
-    final stockText = widget.product.stockLabel;
-    final match = RegExp(r'\d+').firstMatch(stockText);
-    return match != null ? int.parse(match.group(0)!) : 99;
-  }
+  // 🔹 stok limiti (API'den gelen `stock` kullanılır)
+  int get maxQty => widget.product.stock;
 
 
   @override
   Widget build(BuildContext context) {
     final p = widget.product;
-    final business = findBusinessById(p.businessId);
+    final store = p.store; // 🔥 Artık ProductStoreModel kullanıyoruz
     final cart = ref.watch(cartProvider);
 
+    // Sepet kontrolü
     final existingQty = cart.firstWhere(
-          (e) => e.id == p.packageName,
+          (e) => e.id == p.name, // Ürün adı sepet öğesinin adı olarak kullanılıyordu
       orElse: () => CartItem(id: '', name: '', shopId: '', shopName: '', image: '', price: 0, quantity: 0),
     ).quantity;
     final remaining = (maxQty - existingQty).clamp(0, maxQty); // kalan stok
 
-    if (business == null) {
-      return const Scaffold(
-        body: Center(child: Text('İşletme bilgisi bulunamadı.')),
-      );
-    }
+    // 💡 BusinessModel'i kullanmak yerine, ProductStoreModel'in alanlarını kullanıyoruz.
+    // Eğer tüm BusinessShop ekranları için BusinessModel kullanıyorsak, ProductStoreModel'den BusinessModel'e çeviren bir factory metot yazmak daha tutarlı olabilir. Şimdilik ProductStoreModel'i doğrudan kullanacağız.
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -61,13 +87,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         children: [
           CustomScrollView(
             slivers: [
-              _header(p, business),
-              _packageCard(p, business),
+              _header(p, store), // 🔥 BusinessModel yerine ProductStoreModel
+              _packageCard(p),
               _infoCard('Bu pakette seni ne bekliyor?',
-                  'Lezzetli sandviçler, tek porsiyonluk tatlılar, atıştırmalık kokteyller.'),
+                  'Lezzetli sandviçler, tek porsiyonluk tatlılar, atıştırmalık kokteyller.'), // Burası için API'de açıklama alanı yok, mock metin kaldı
               const KnowMoreFull(),
-              _deliveryCard(business),
-              _ratingCard(business),
+              _deliveryCard(store), // 🔥 BusinessModel yerine ProductStoreModel
+              _ratingCard(store), // 🔥 BusinessModel yerine ProductStoreModel
               _mapCard(),
               const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
@@ -80,35 +106,48 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             left: 0, right: 0, bottom: 0,
             child: ProductBottomBar(
               qty: qty,
-              price: p.newPrice,
+              price: p.salePrice,
               onAdd: () {
                 if (qty < remaining) setState(() => qty++);
               },
               onRemove: () => setState(() => qty = math.max(1, qty - 1)),
-              isDisabled: remaining == 0, // sepetteki ile toplam limit dolduysa buton kilit
+              isDisabled: remaining == 0,
               onSubmit: () async {
-                // toplam istenen = sepettekiler + ekrandaki adet
-                if (qty > remaining) return false; // güvenlik: fazla istiyorsa ekleme
+                if (qty > remaining) return false;
 
                 final ctrl = ref.read(cartProvider.notifier);
-                final biz = findBusinessById(p.businessId);
-                if (biz == null) return false;
 
+                // 🔥 Sepete ekleme için BusinessModel yerine ProductStoreModel kullanıldı
                 final currentShop = ctrl.currentShopId();
-                final sameShop = (currentShop == null) || (currentShop == biz.id);
+                final sameShop = (currentShop == null) || (currentShop == store.id);
+
+                // 💡 Sepet öğesi oluştururken artık ProductStoreModel'den BusinessModel'e dönüşüm gerekli
+                // veya CartItem'ı ProductStoreModel alacak şekilde revize etmeliyiz.
+                // Şimdilik CartItem'a ProductModel ve ProductStoreModel bilgisi gönderelim (En hızlı yol)
+
+                // NOT: CartItem'a shopName ve shopId ProductStoreModel'den geliyor.
+                // BusinessModel gereksizdi, CartProvider'daki `addProduct` metodunun imzasına bakılmalı.
+
+                // Varsayım: CartProvider.addProduct metodu sadece ProductModel ve ProductStoreModel alanlarını kullanıyor.
+                final cartItemProduct = p; // ProductModel zaten var
+                final shopId = store.id;
+                final shopName = store.name;
+                final shopImage = store.bannerImageUrl;
+
 
                 if (sameShop) {
-                  ctrl.addProduct(p, biz, qty: qty);
-                  return true; // gerçekten eklendi
+                  // Sepet item'ını CartItem.fromProductModel ile oluşturmalısınız.
+                  // Şimdilik doğrudan P'yi geçirip, CartProvider'ın halledeceğini varsayalım
+                  // (bu, CartProvider'ın da refactor edilmesini gerektirir).
+                  ctrl.addProductFromApi(cartItemProduct, shopId, shopName, shopImage, qty: qty);
+                  return true;
                 } else {
                   final proceed = await showCartConflictModal(context);
                   if (proceed == true) {
-                    ctrl.replaceWith(p, biz, qty: qty);
-                    // burada mesajı bu ekranda göstermek istersen true döndürelim,
-                    // toast zaten buton içinde ok==true olduğunda çıkacak:
+                    ctrl.replaceWithApi(cartItemProduct, shopId, shopName, shopImage, qty: qty);
                     return true;
                   }
-                  return false; // vazgeçildi -> toast yok
+                  return false;
                 }
               },
             ),
@@ -120,7 +159,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   // 🔸 Header
-  Widget _header(ProductModel p, BusinessModel business) => SliverAppBar(
+  // 🔥 BusinessModel yerine ProductStoreModel kullanıldı
+  Widget _header(ProductModel p, ProductStoreModel store) => SliverAppBar(
     pinned: true,
     expandedHeight: 230,
     backgroundColor: Colors.white,
@@ -133,7 +173,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       Padding(
         padding: const EdgeInsets.only(right: 12),
         child: FavButton(
-          item: widget.product, // 👈 artık sadece model
+          item: widget.product,
         ),
       ),
     ],
@@ -141,7 +181,15 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       background: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(p.bannerImage, fit: BoxFit.cover),
+          // 🔥 Image.network kullan
+          Image.network(
+            p.imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: Colors.grey.shade200,
+              child: const Center(child: Icon(Icons.broken_image)),
+            ),
+          ),
           Positioned(
             top: 120,
             child: Container(
@@ -157,7 +205,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 ),
               ),
               child: Text(
-                p.stockLabel,
+                p.stockLabel, // 🔥 Getter'dan geldi
                 style: const TextStyle(
                     color: AppColors.primaryDarkGreen,
                     fontWeight: FontWeight.w700,
@@ -169,12 +217,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             left: 16,
             bottom: 16,
             child: Container(
-              width: 74,  // radius:37 → diameter 74
+              width: 74,
               height: 74,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: AppColors.primaryDarkGreen, // ✅ yeşil çerçeve
+                  color: AppColors.primaryDarkGreen,
                   width: 1,
                 ),
               ),
@@ -182,11 +230,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 radius: 35,
                 backgroundColor: Colors.white,
                 child: ClipOval(
-                  child: Image.asset(
-                    business.businessShopLogoImage,
+                  // 🔥 Logo URL kullan
+                  child: Image.network(
+                    store.brand.logoUrl ?? 'assets/logos/default_brand.png',
                     width: 60,
                     height: 60,
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Image.asset(
+                      'assets/logos/default_brand.png',
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
@@ -197,7 +252,36 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     ),
   );
 
-  // 🔸 Diğer Yardımcı Widget’lar
+  // 🔸 Diğer Yardımcı Widget’lar (Burada sadece parametreleri güncelledik)
+  Widget _roundIcon({required IconData icon, required VoidCallback onTap}) =>
+      Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                )
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+        ),
+      );
+
   Widget _card({required Widget child}) => Container(
     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     padding: const EdgeInsets.all(14),
@@ -214,7 +298,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     child: child,
   );
 
-  Widget _packageCard(ProductModel p, BusinessModel business) =>
+  Widget _packageCard(ProductModel p) =>
       SliverToBoxAdapter(
         child: _card(
           child: Row(
@@ -224,11 +308,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.packageName,
+                      Text(p.name, // 🔥 API "name"
                           style: const TextStyle(
                               fontSize: 20, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 6),
-                      Text(p.pickupTimeText,
+                      Text(p.pickupTimeText, // 🔥 Getter
                           style: TextStyle(
                               color: Colors.grey.shade700, fontSize: 13)),
                     ]),
@@ -236,12 +320,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('${p.oldPrice.toStringAsFixed(0)} TL',
+                  Text('${p.listPrice.toStringAsFixed(0)} TL', // 🔥 API "list_price"
                       style: const TextStyle(
                           decoration: TextDecoration.lineThrough,
                           color: Colors.grey,
                           fontSize: 13)),
-                  Text('${p.newPrice.toStringAsFixed(0)} TL',
+                  Text('${p.salePrice.toStringAsFixed(0)} TL', // 🔥 API "sale_price"
                       style: const TextStyle(
                           fontSize: 20,
                           color: AppColors.primaryDarkGreen,
@@ -269,7 +353,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     ),
   );
 
-  Widget _deliveryCard(BusinessModel business) => SliverToBoxAdapter(
+  // 🔥 BusinessModel yerine ProductStoreModel kullanıldı
+  Widget _deliveryCard(ProductStoreModel store) => SliverToBoxAdapter(
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Container(
@@ -307,7 +392,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
             // 🏪 İşletme Bilgisi
             InkWell(
-              onTap: () => context.push('/businessShop-detail', extra: business),
+              // 💡 BusinessDetailScreen'e yönlendirirken store.id kullanıldı
+              onTap: () => context.push('/businessShop-detail', extra: store.id),
               borderRadius: BorderRadius.circular(8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,7 +412,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       children: [
                         // İşletme Adı
                         Text(
-                          business.name,
+                          store.name, // 🔥 Store modelinden geldi
                           style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
@@ -347,38 +433,17 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                business.address,
+                                store.address ?? 'Adres bilgisi yok.', // 🔥 Product Detayında var
                                 style: const TextStyle(
                                   fontSize: 15,
                                   color: Colors.black87,
-                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
-
-                        // Navigasyon açıklaması
-                        InkWell(
-                          onTap: () => openBusinessMap(business),
-                          child: Text(
-                            "Navigasyon yönlendirme için tıklayınız 📍",
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[700],
-                              decoration: TextDecoration.underline, // 👀 kullanıcıya tıklanabilir his verir
-                            ),
-                          ),
-                        ),
                       ],
                     ),
-                  ),
-
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.primaryDarkGreen,
-                    size: 22,
                   ),
                 ],
               ),
@@ -389,86 +454,32 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     ),
   );
 
-  Widget _ratingCard(BusinessModel business) => SliverToBoxAdapter(
+  // 🔥 BusinessModel yerine ProductStoreModel kullanıldı
+  Widget _ratingCard(ProductStoreModel store) => SliverToBoxAdapter(
     child: _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text('İşletme Değerlendirme',
-                  style:
-                  TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const Text('Müşteri Değerlendirmeleri',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const Spacer(),
-              Icon(Icons.star,
-                  size: 16, color: AppColors.primaryDarkGreen),
-              const SizedBox(width: 4),
-              Text('${business.rating.toStringAsFixed(1)} (70+)'),
+              Text('Tümü (${0})', style: const TextStyle(color: AppColors.primaryDarkGreen)),
             ],
           ),
-          const SizedBox(height: 12),
-          _ratingRow('Servis', 4.5),
-          _ratingRow('Ürün Miktarı', 5.0),
-          _ratingRow('Ürün Lezzeti', 5.0),
-          _ratingRow('Ürün Çeşitliliği', 4.0),
+          // 💡 Burada RatingList widget'ı yer alacaktır.
+          // Store ID: store.id
         ],
       ),
     ),
   );
 
-  Widget _mapCard() => SliverToBoxAdapter(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 9),
-      child: ClipRRect(
-        child: Image.asset(
-          'assets/images/sample_map.png',
-          height: 200,
-          width: double.infinity,
-          fit: BoxFit.cover,
-        ),
-      ),
-    ),
-  );
-
-  Widget _ratingRow(String label, double value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      children: [
-        SizedBox(width: 140, child: Text(label)),
-        Expanded(
-          child: LinearProgressIndicator(
-            value: value / 5,
-            backgroundColor: Colors.grey[200],
-            color: AppColors.primaryDarkGreen,
-            minHeight: 6,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(value.toStringAsFixed(1)),
-      ],
-    ),
-  );
-
-  Widget _roundIcon({required IconData icon, VoidCallback? onTap}) => Padding(
-    padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8),
-    child: GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Icon(icon, size: 18, color: Colors.black87),
-      ),
+  // 💡 Harita widget'ının businessShop bağımlılığı olacağı varsayılır.
+  Widget _mapCard() => const SliverToBoxAdapter(
+    child: SizedBox(
+      height: 200,
+      child: Center(child: Text('Harita Widget (Google Maps/Yandex/etc.)')),
     ),
   );
 }

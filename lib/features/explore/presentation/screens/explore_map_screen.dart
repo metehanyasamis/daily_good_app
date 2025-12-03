@@ -6,9 +6,20 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_toggle_button.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
-import '../../../businessShop/data/mock/mock_businessShop_model.dart';
+// import '../../../businessShop/data/mock/mock_businessShop_model.dart'; // ❌ MOCK SİLİNDİ
 import '../../../businessShop/data/model/businessShop_model.dart';
 import '../../../product/data/models/product_model.dart';
+
+// -------------------------------------------------------------
+// 🔥 YENİ: Harita verisini çekecek dummy Provider
+// Normalde bu BusinessShopRepository'den gelmelidir.
+final exploreBusinessListProvider = FutureProvider<List<BusinessModel>>((ref) async {
+  // Şimdilik boş bir liste döndürerek mock verisini siliyoruz
+  await Future.delayed(const Duration(milliseconds: 500));
+  return [];
+});
+// -------------------------------------------------------------
+
 
 class ExploreMapScreen extends ConsumerStatefulWidget {
   const ExploreMapScreen({super.key});
@@ -18,14 +29,15 @@ class ExploreMapScreen extends ConsumerStatefulWidget {
 }
 
 class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
-  final List<BusinessModel> _sampleBusinessShop = mockBusinessList;
+  // ⚠️ Mock kaldırıldı, listeyi provider'dan gelen veriye göre güncelleyeceğiz
+  List<BusinessModel> _allBusinessShops = [];
   String? _selectedShopId;
   GoogleMapController? _mapController;
 
   BusinessModel? get _selectedShop {
     if (_selectedShopId == null) return null;
     try {
-      return _sampleBusinessShop.firstWhere((s) => s.id == _selectedShopId);
+      return _allBusinessShops.firstWhere((s) => s.id == _selectedShopId);
     } catch (_) {
       return null;
     }
@@ -33,9 +45,10 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
 
   /// 📍 Marker’ları işletmelerden üret
   Set<Marker> _buildMarkers() {
-    return _sampleBusinessShop.map((shop) {
+    return _allBusinessShops.map((shop) {
       return Marker(
         markerId: MarkerId(shop.id),
+        // BusinessModel'deki latitude/longitude double tipinde olmalı
         position: LatLng(shop.latitude, shop.longitude),
         icon: BitmapDescriptor.defaultMarkerWithHue(
           BitmapDescriptor.hueGreen,
@@ -48,9 +61,18 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
   void _onPinTap(String shopId) {
     setState(() {
       if (_selectedShopId == shopId) {
+        // Aynı pine tekrar tıklanırsa kartı aç
         _onCardTap();
       } else {
         _selectedShopId = shopId;
+      }
+
+      // Haritayı seçilen pine ortalamak
+      final shop = _selectedShop;
+      if (shop != null && _mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLng(LatLng(shop.latitude, shop.longitude)),
+        );
       }
     });
   }
@@ -59,6 +81,8 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
     final business = _selectedShop;
     if (business == null) return;
 
+    // Mini kartı kapatıp Detay sayfasına gitmek için.
+    // Ancak burada modal'ı gösteriyoruz. Modal gösterilirken ID'yi sıfırlamıyoruz.
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -85,75 +109,93 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
           ),
         ),
       ),
-    );
+    ).whenComplete(() {
+      // Modal kapandığında seçimi sıfırla (opsiyonel)
+      setState(() => _selectedShopId = null);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Riverpod ile veriyi dinle
+    final businessListAsyncValue = ref.watch(exploreBusinessListProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       extendBody: true,
 
-      // ✅ Üstte Custom App Bar (şimdilik sabit adres, sonra HomeState’e bağlarız)
       appBar: CustomHomeAppBar(
         address: 'Nail Bey Sok.',
         onLocationTap: () async {
           // 📍 İleride buradan location_picker_screen'e gideceğiz
-          // final result = await context.push('/location-picker');
         },
         onNotificationsTap: () {
           // 🔔 Bildirim ekranı
         },
       ),
 
-      body: Stack(
-        children: [
-          // 🗺️ GERÇEK Google Map
-          Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition: const CameraPosition(
-                target: LatLng(41.0082, 28.9784), // İstanbul genel
-                zoom: 12,
-              ),
-              markers: _buildMarkers(),
-              onMapCreated: (c) => _mapController = c,
-              onTap: (_) {
-                // Haritada boş alana tıklayınca mini kartı kapat
-                setState(() => _selectedShopId = null);
-              },
-              myLocationEnabled: true,
-              myLocationButtonEnabled: true,
-            ),
-          ),
+      body: businessListAsyncValue.when(
+        // ⏳ Yükleniyor
+        loading: () => const Center(child: CircularProgressIndicator()),
+        // ❌ Hata
+        error: (err, stack) => Center(child: Text('Hata: $err')),
+        // ✅ Veri geldi
+        data: (businesses) {
+          // Veri ilk geldiğinde state'i ayarla
+          if (businesses.isNotEmpty && _allBusinessShops.isEmpty) {
+            _allBusinessShops = businesses;
+          }
 
-          // 🪧 Alt mini kart (tasarımına DOKUNMADIM)
-          if (_selectedShop != null)
-            Positioned(
-              left: 16,
-              right: MediaQuery.of(context).size.width * 0.27,
-              bottom: (MediaQuery.of(context).padding.bottom > 0
-                  ? MediaQuery.of(context).padding.bottom
-                  : 20) +
-                  80, // toggle alt seviyesi
-              child: GestureDetector(
-                onTap: _onCardTap,
-                child: _MiniBusinessCard(business: _selectedShop!),
+          return Stack(
+            children: [
+              // 🗺️ GERÇEK Google Map
+              Positioned.fill(
+                child: GoogleMap(
+                  initialCameraPosition: const CameraPosition(
+                    target: LatLng(41.0082, 28.9784), // İstanbul genel
+                    zoom: 12,
+                  ),
+                  markers: _buildMarkers(),
+                  onMapCreated: (c) => _mapController = c,
+                  onTap: (_) {
+                    // Haritada boş alana tıklayınca mini kartı kapat
+                    setState(() => _selectedShopId = null);
+                  },
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                ),
               ),
-            ),
 
-          // 🟢 Toggle Buton (tasarım aynı)
-          CustomToggleButton(
-            label: "Liste",
-            icon: Icons.list,
-            onPressed: () => context.push('/explore'),
-          ),
-        ],
+              // 🪧 Alt mini kart
+              if (_selectedShop != null)
+                Positioned(
+                  left: 16,
+                  right: MediaQuery.of(context).size.width * 0.27,
+                  bottom: (MediaQuery.of(context).padding.bottom > 0
+                      ? MediaQuery.of(context).padding.bottom
+                      : 20) +
+                      80, // toggle alt seviyesi
+                  child: GestureDetector(
+                    onTap: _onCardTap,
+                    child: _MiniBusinessCard(business: _selectedShop!),
+                  ),
+                ),
+
+              // 🟢 Toggle Buton
+              CustomToggleButton(
+                label: "Liste",
+                icon: Icons.list,
+                onPressed: () => context.push('/explore'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-// ---------------- Mini Kart (SENİN ORİJİNALİN) ----------------
+// ---------------- Mini Kart ----------------
 class _MiniBusinessCard extends StatelessWidget {
   final BusinessModel business;
   const _MiniBusinessCard({required this.business});
@@ -183,6 +225,8 @@ class _MiniBusinessCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 18,
+              // Hata Çözümü: businessShopLogoImage'ın AssetImage olduğunu varsayıyoruz.
+              // Eğer bu bir URL ise Image.network() kullanılmalıdır.
               backgroundImage: AssetImage(business.businessShopLogoImage),
             ),
             const SizedBox(width: 10),
@@ -207,6 +251,7 @@ class _MiniBusinessCard extends StatelessWidget {
                       const Icon(Icons.star,
                           color: Colors.amber, size: 15),
                       Text(
+                        // Hata Çözümü: rating double olduğu için güvenli çağrıldı
                         business.rating.toStringAsFixed(1),
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
@@ -238,7 +283,7 @@ class _MiniBusinessCard extends StatelessWidget {
   }
 }
 
-// ---------------- Yarım Bilgi Kartı (SENİN ORİJİNALİN) ----------------
+// ---------------- Yarım Bilgi Kartı ----------------
 class _HalfBusinessDetailCard extends StatelessWidget {
   final BusinessModel business;
   final VoidCallback onBusinessTap;
@@ -304,6 +349,7 @@ class _HalfBusinessDetailCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
+                        // Hata Çözümü: BusinessModel'deki alanlar kullanıldı
                         "${business.distance.toStringAsFixed(1)} km • ${business.address}",
                         style: const TextStyle(
                           color: Colors.grey,
@@ -334,6 +380,7 @@ class _HalfBusinessDetailCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
+          // ⚠️ Hata Çözümü: ProductModel'deki eski alanları (bannerImage, packageName) yeni alanlarla eşleştiriyoruz
           ...business.products.map((product) {
             return GestureDetector(
               onTap: () => onProductTap(product),
@@ -352,7 +399,7 @@ class _HalfBusinessDetailCard extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.asset(
-                        product.bannerImage,
+                        product.imageUrl, // 🔥 Düzeltme: bannerImage -> imageUrl
                         width: 48,
                         height: 48,
                         fit: BoxFit.cover,
@@ -364,7 +411,7 @@ class _HalfBusinessDetailCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            product.packageName,
+                            product.name, // 🔥 Düzeltme: packageName -> name
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
@@ -388,7 +435,7 @@ class _HalfBusinessDetailCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              "${product.oldPrice.toStringAsFixed(0)} ₺",
+                              "${product.listPrice.toStringAsFixed(0)} ₺", // 🔥 Düzeltme: oldPrice -> listPrice
                               style: const TextStyle(
                                 decoration: TextDecoration.lineThrough,
                                 fontSize: 12,
@@ -396,7 +443,7 @@ class _HalfBusinessDetailCard extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              "${product.newPrice.toStringAsFixed(0)} ₺",
+                              "${product.salePrice.toStringAsFixed(0)} ₺", // 🔥 Düzeltme: newPrice -> salePrice
                               style: const TextStyle(
                                 color: AppColors.primaryDarkGreen,
                                 fontWeight: FontWeight.bold,

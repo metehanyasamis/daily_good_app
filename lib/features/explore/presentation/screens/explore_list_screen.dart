@@ -1,9 +1,6 @@
-// ignore_for_file: prefer_const_constructors
-
-import 'package:daily_good/core/widgets/custom_toggle_button.dart';
-import 'package:daily_good/features/product/data/mock/mock_product_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // ✅ Riverpod eklendi
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../product/data/models/product_model.dart';
@@ -11,10 +8,29 @@ import '../../../product/presentation/widgets/product_card.dart';
 import '../widgets/category_filter_option.dart';
 import '../widgets/explore_filter_sheet.dart';
 import '../widgets/category_filter_sheet.dart';
+import 'package:daily_good/core/widgets/custom_toggle_button.dart';
+
+
+// ⚠️ MOCK VERİLERİ SİLİNDİ
+// final List<ProductModel> mockProducts = ... (Kaldırıldı)
+
+// -------------------------------------------------------------
+// 🔥 YENİ: Asenkron Veriyi Yönetecek Basit Bir Provider Tanımı
+// Normalde bu Repository/Notifier katmanında olur, ama derleme için burada dummy oluşturuyoruz.
+final exploreProductListProvider = FutureProvider<List<ProductModel>>((ref) async {
+  // 💡 Gerçek projede: ref.watch(productRepositoryProvider).getExploreProducts();
+
+  // Şimdilik boş bir liste döndürerek mock verisini siliyoruz
+  await Future.delayed(const Duration(milliseconds: 500));
+  return [];
+});
+// -------------------------------------------------------------
+
 
 enum SortDirection { ascending, descending }
 
-class ExploreListScreen extends StatefulWidget {
+// ✅ StatefulWidget -> ConsumerStatefulWidget
+class ExploreListScreen extends ConsumerStatefulWidget {
   final CategoryFilterOption? initialCategory;
   final bool fromHome;
 
@@ -24,18 +40,19 @@ class ExploreListScreen extends StatefulWidget {
     this.fromHome = false,
   });
   @override
-  State<ExploreListScreen> createState() => _ExploreListScreenState();
+  ConsumerState<ExploreListScreen> createState() => _ExploreListScreenState();
 }
 
 
-class _ExploreListScreenState extends State<ExploreListScreen> {
+class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
   String selectedAddress = 'Nail Bey Sok.';
 
   ExploreFilterOption selectedFilter = ExploreFilterOption.recommended;
   SortDirection sortDirection = SortDirection.ascending;
 
-  final List<ProductModel> allProducts = List.from(mockProducts);
-  List<ProductModel> filteredProducts = List.from(mockProducts);
+  // ⚠️ Mock verileri silindi, gerçek veriler ProductModel listesi olarak tutulacak
+  List<ProductModel> _allProducts = [];
+  List<ProductModel> filteredProducts = [];
 
   CategoryFilterOption selectedCategory = CategoryFilterOption.all;
 
@@ -49,47 +66,57 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
       selectedCategory = widget.initialCategory!;
     }
 
-    _applyFilters();
+    // Veri asenkron yükleneceği için _applyFilters() burada çağrılmayacak.
   }
 
   // ============================================================
   // 🔥 TEK FONKSİYON → Arama + Kategori + Sıralama
   // ============================================================
   void _applyFilters() {
-    List<ProductModel> temp = List.from(allProducts);
+    List<ProductModel> temp = List.from(_allProducts);
 
     // 🔍 Arama
     final q = _searchController.text.trim().toLowerCase();
     if (q.length >= 3) {
       temp = temp.where((p) {
-        return p.packageName.toLowerCase().contains(q) ||
-            p.businessName.toLowerCase().contains(q);
+        // Hata Çözümü: Artık p.packageName ve p.businessName yerine p.name ve p.store.name kullanıyoruz
+        return p.name.toLowerCase().contains(q) ||
+            p.store.name.toLowerCase().contains(q);
       }).toList();
     }
 
-    // 🟩 Kategori filtresi (artık direkt model'den gidiyoruz!)
-    if (selectedCategory != CategoryFilterOption.all) {
-      temp = temp.where((p) => p.category == selectedCategory).toList();
-    }
+    // 🟩 Kategori filtresi (⚠️ Kategori filtresini devre dışı bırakıyorum
+    // çünkü ProductModel'de CategoryFilterOption alanı artık yok. API'ya göre yeniden yazılması gerekir)
+    // if (selectedCategory != CategoryFilterOption.all) {
+    //   temp = temp.where((p) => p.category == selectedCategory).toList();
+    // }
 
     // 🔽 Sıralama
     temp.sort((a, b) {
       int result;
+      // Hata Çözümü: Artık p.rating alanı ProductModel'de yok, ProductStoreModel'den geliyor 
+      // veya mock'ta olmadığı için varsayılan değerlerle sıralama yapmalıyız. 
+      // Şimdilik sadece Fiyat ve Mesafeyi bırakıyorum, Puan ve Önerilen'i varsayılan hale getiriyorum.
+
       switch (selectedFilter) {
         case ExploreFilterOption.recommended:
-          result = b.rating.compareTo(a.rating);
+        // Varsayılan sıralama: Satış fiyatı azalan
+          result = b.salePrice.compareTo(a.salePrice);
           break;
         case ExploreFilterOption.price:
-          result = a.newPrice.compareTo(b.newPrice);
+          result = a.salePrice.compareTo(b.salePrice);
           break;
         case ExploreFilterOption.rating:
-          result = a.rating.compareTo(b.rating);
+        // Hata Çözümü: Store'daki rating'i kullanmalıyız.
+          result = a.store.rating.compareTo(b.store.rating);
           break;
         case ExploreFilterOption.distance:
-          result = a.distance.compareTo(b.distance);
+        // Hata Çözümü: Store'daki distance'ı kullanmalıyız.
+          result = a.store.distanceKm.compareTo(b.store.distanceKm);
           break;
       }
 
+      // Sıralama yönünü de dikkate al
       return sortDirection == SortDirection.ascending ? result : -result;
     });
 
@@ -104,7 +131,7 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => CategoryFilterSheet(
@@ -121,17 +148,20 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Riverpod ile veriyi dinle
+    final productListAsyncValue = ref.watch(exploreProductListProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(70),
+        preferredSize: const Size.fromHeight(70),
         child: CustomHomeAppBar(
           address: selectedAddress,
           onLocationTap: () {},
           onNotificationsTap: () {},
           leadingOverride: widget.fromHome
               ? IconButton(
-            icon: Icon(Icons.arrow_back, color: AppColors.primaryDarkGreen),
+            icon: const Icon(Icons.arrow_back, color: AppColors.primaryDarkGreen),
             onPressed: () => context.pop(),
           )
               : null,
@@ -140,29 +170,51 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
 
       body: Stack(
         children: [
-          CustomScrollView(
-            slivers: [
-              _buildHeader(),
+          productListAsyncValue.when(
+            // ⏳ Yükleniyor
+            loading: () => const Center(child: CircularProgressIndicator()),
+            // ❌ Hata
+            error: (err, stack) => Center(child: Text('Hata: $err')),
+            // ✅ Veri geldi
+            data: (products) {
+              // Veri ilk geldiğinde state'i ayarla ve filtrele
+              if (products.isNotEmpty && _allProducts.isEmpty) {
+                // initState'te yapılamayan filtreleme ve ürün atamasını burada yapıyoruz.
+                _allProducts = products;
+                _applyFilters();
+              }
 
-              SliverPadding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                        (context, i) {
-                      final p = filteredProducts[i];
-                      return ProductCard(
-                        product: p,
-                        onTap: () => context.push('/product-detail', extra: p),
-                      );
-                    },
-                    childCount: filteredProducts.length,
+              if (filteredProducts.isEmpty) {
+                // Eğer filtreleme sonucunda liste boşsa veya henüz yüklenmediyse
+                return const Center(child: Text("Filtrelerinize uygun ürün bulunamadı."));
+              }
+
+              return CustomScrollView(
+                slivers: [
+                  _buildHeader(),
+
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                            (context, i) {
+                          final p = filteredProducts[i];
+                          return ProductCard(
+                            product: p,
+                            onTap: () => context.push('/product-detail', extra: p),
+                          );
+                        },
+                        childCount: filteredProducts.length,
+                      ),
+                    ),
                   ),
-                ),
-              ),
 
-              SliverToBoxAdapter(child: SizedBox(height: 120)),
-            ],
+                  const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                ],
+              );
+            },
           ),
+
 
           CustomToggleButton(
             label: "Harita",
@@ -206,6 +258,7 @@ class _ExploreListScreenState extends State<ExploreListScreen> {
   }
 }
 
+// _HeaderDelegate kısmı değiştirilmedi, sadece `const` eklendi.
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   final TextEditingController controller;
   final ExploreFilterOption selectedSort;
@@ -237,7 +290,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   Widget build(context, shrink, overlap) {
     return Container(
       color: AppColors.background,
-      padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Column(
         children: [
           // 🔍 Arama
@@ -245,7 +298,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
             controller: controller,
             onChanged: onSearchChanged,
             decoration: InputDecoration(
-              prefixIcon: Icon(Icons.search),
+              prefixIcon: const Icon(Icons.search),
               hintText: 'Restoran, paket veya mekan ara (3+ harf)',
               filled: true,
               fillColor: Colors.white,
@@ -256,12 +309,12 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
           ),
 
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
 
           Row(
             children: [
               _sortCapsule(context),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               _categoryButton(),
             ],
           )
@@ -299,11 +352,11 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
           InkWell(
             onTap: () => onSortChanged(selectedSort),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: AnimatedRotation(
                 turns: sortDirection == SortDirection.ascending ? 0 : .5,
-                duration: Duration(milliseconds: 200),
-                child: Icon(Icons.arrow_upward,
+                duration: const Duration(milliseconds: 200),
+                child: const Icon(Icons.arrow_upward,
                     color: AppColors.primaryDarkGreen),
               ),
             ),
@@ -316,7 +369,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
                 useSafeArea: true,
                 isScrollControlled: true,
                 backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
+                shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 builder: (_) => ExploreFilterSheet(
@@ -326,10 +379,10 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
               );
             },
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Text(
                 _sortLabel(selectedSort),
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.black87,
                   fontWeight: FontWeight.w600,
                 ),
@@ -348,7 +401,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
     return InkWell(
       onTap: onCategoryTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(30),
@@ -356,7 +409,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
         ),
         child: Text(
           "Kategori: ${categoryLabel(selectedCategory)}",
-          style: TextStyle(
+          style: const TextStyle(
             color: AppColors.primaryDarkGreen,
             fontWeight: FontWeight.w600,
           ),

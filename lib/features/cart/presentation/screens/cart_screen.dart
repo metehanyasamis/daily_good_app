@@ -1,3 +1,5 @@
+// lib/features/cart/presentation/screens/cart_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +10,6 @@ import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 
 import '../../../businessShop/data/model/businessShop_model.dart';
-import '../../../product/data/mock/mock_product_model.dart' as mock;   // 🔥 ALIASLI IMPORT
 import '../../domain/models/cart_item.dart';
 import '../../domain/providers/cart_provider.dart';
 
@@ -56,7 +57,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ? null
                   : () async {
                 final ok = await _showConfirmDialog(context);
-                if (ok == true) ref.read(cartProvider.notifier).clearCart();
+                if (ok == true) {
+                  // Sepet silme API endpoint'i bekleniyor. Şimdilik sadece UI State'ini temizliyoruz.
+                  ref.read(cartProvider.notifier).clearCart();
+                }
               },
             ),
           ],
@@ -223,16 +227,10 @@ class _CartItemRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(cartProvider.notifier);
 
-    // 🔥 artık alias kullanılıyor!
-    final product = mock.findProductByName(item.name);
+    // Stok/Fiyat kontrolü artık Backend'e bırakıldı.
+    const maxReached = false;
 
-    int maxQty = 99;
-    if (product != null) {
-      final m = RegExp(r'\d+').firstMatch(product.stockLabel);
-      if (m != null) maxQty = int.parse(m.group(0)!);
-    }
-
-    final oldUnit = product?.oldPrice ?? item.price;
+    final oldUnit = item.originalPrice;
     final newUnit = item.price;
     final double total = newUnit * item.quantity;
 
@@ -282,13 +280,9 @@ class _CartItemRow extends ConsumerWidget {
           // -------------------------
           _QtyControl(
             quantity: item.quantity,
-            maxReached: item.quantity >= maxQty,
+            maxReached: maxReached,
             onDecrement: () => ctrl.decrement(item.id),
-            onIncrement: () {
-              if (item.quantity < maxQty) {
-                ctrl.increment(item.id, maxQty: maxQty);
-              }
-            },
+            onIncrement: () => ctrl.increment(item.id),
           ),
 
           // -------------------------
@@ -389,12 +383,10 @@ class _TotalBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Toplam orijinal fiyatı hesaplamak için CartItem modelinden gelen veriyi kullanıyoruz.
     final double original = items.fold(
       0,
-          (sum, e) =>
-      sum +
-          ((mock.findProductByName(e.name)?.oldPrice ?? e.price) *
-              e.quantity),
+          (sum, e) => sum + (e.originalPrice * e.quantity),
     );
 
     return Container(
@@ -469,3 +461,5 @@ Future<bool?> _showConfirmDialog(BuildContext context) {
     ),
   );
 }
+
+// openBusinessMap metodu, muhtemelen core/utils/navigation_utils.dart dosyasından gelmektedir.

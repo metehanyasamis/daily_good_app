@@ -10,26 +10,30 @@ class FavoriteProductsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final favorites = ref.watch(favoritesProvider);
-    final favoriteProducts = favorites.favoriteProducts;
+    // API'den gelen veriye bağlandı
+    final favoriteProducts = ref.watch(favoritesProvider.select((s) => s.favoriteProducts));
 
     if (favoriteProducts.isEmpty) return _buildEmptyState(context);
 
-    return ListView.builder(
-      padding: EdgeInsets.fromLTRB(
-        12,
-        12,
-        12,
-        MediaQuery.of(context).padding.bottom + 80,
+    return RefreshIndicator(
+      // Pull to refresh ekliyoruz
+      onRefresh: ref.read(favoritesProvider.notifier).fetchFavoriteProducts,
+      child: ListView.builder(
+        padding: EdgeInsets.fromLTRB(
+          12,
+          12,
+          12,
+          MediaQuery.of(context).padding.bottom + 80,
+        ),
+        itemCount: favoriteProducts.length,
+        itemBuilder: (context, index) {
+          final product = favoriteProducts[index];
+          return ProductCard(
+            product: product,
+            onTap: () => context.push('/product-detail', extra: product),
+          );
+        },
       ),
-      itemCount: favoriteProducts.length,
-      itemBuilder: (context, index) {
-        final product = favoriteProducts[index];
-        return ProductCard(
-          product: product,
-          onTap: () => context.push('/product-detail', extra: product),
-        );
-      },
     );
   }
 

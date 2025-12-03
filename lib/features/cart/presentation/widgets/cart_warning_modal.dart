@@ -1,3 +1,5 @@
+// lib/features/cart/presentation/widgets/cart_conflict_modal.dart
+
 import 'package:flutter/material.dart';
 
 Future<bool?> showCartConflictModal(BuildContext context) {
