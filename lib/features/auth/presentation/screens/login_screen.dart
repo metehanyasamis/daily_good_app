@@ -28,10 +28,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // PHONE NORMALIZE
   // ---------------------------------------------------------------------------
   String _normalizePhone(String input) {
+    // Tüm boşluk ve parantezleri kaldır
     final raw = input.replaceAll(RegExp(r'[^0-9]'), '');
 
+    // 10 hane ise 0 ekle (5xx xxx xx xx -> 05xx xxx xx xx)
     if (raw.length == 10) return "0$raw";
+    // 11 hane ve 0 ile başlıyorsa tamamdır
     if (raw.length == 11 && raw.startsWith("0")) return raw;
+    // 90 ile başlıyor ve 12 haneyse 90'ı at
     if (raw.startsWith("90") && raw.length == 12) return "0${raw.substring(2)}";
 
     return raw;
@@ -41,6 +45,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // ERROR SNACKBAR
   // ---------------------------------------------------------------------------
   void _error(String msg) {
+    // Eğer widget ağacından ayrılmışsa gösterme
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
@@ -53,13 +59,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // SEND OTP & OPEN BOTTOM SHEET
   // ---------------------------------------------------------------------------
   Future<void> _onSubmit() async {
+    // Aynı anda birden fazla OTP isteği göndermeyi engelle
     if (_isOtpOpen) return;
 
     final input = _phoneController.text.trim();
     final phone = _normalizePhone(input);
 
     if (phone.length != 11) {
-      return _error("Lütfen geçerli bir telefon numarası girin.");
+      return _error("Lütfen geçerli bir telefon numarası girin (Örn: 05xx xxx xx xx).");
     }
 
     if (!isTermsChecked) {
@@ -68,7 +75,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final auth = ref.read(authNotifierProvider.notifier);
 
-    // Kayıtlı mı?
+    // Kayıtlı mı? (API bağlantısı)
+    // AuthNotifier'da bu metot senkronize olmalı veya loading state'i gösterilmeli.
     final exists = await auth.isPhoneRegistered(phone);
 
     if (isLoginTab && !exists) {
@@ -80,10 +88,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     // OTP gönder
-    await auth.sendOtp(phone);
+    final success = await auth.sendOtp(phone);
+    if (!success) {
+      return _error("OTP gönderme başarısız oldu. Lütfen tekrar deneyin.");
+    }
 
     setState(() => _isOtpOpen = true);
 
+    // OTP doğrulama ekranını aç
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -94,6 +106,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
 
+    // Bottom sheet kapandığında state'i resetle
     if (mounted) setState(() => _isOtpOpen = false);
   }
 
@@ -143,18 +156,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     _buildSubmitButton(),
 
                     const SizedBox(height: 20),
-
+                    // Sosyal medya butonları
                     SocialButton(
                       assetIcon: 'assets/logos/apple.png',
                       text: "Apple ile devam et",
-                      onTap: () {},
+                      onTap: () {
+                        // Implement Apple sign in
+                      },
                     ),
                     const SizedBox(height: 12),
 
                     SocialButton(
                       assetIcon: 'assets/logos/google.png',
                       text: "Google ile devam et",
-                      onTap: () {},
+                      onTap: () {
+                        // Implement Google sign in
+                      },
                     ),
 
                     const SizedBox(height: 32),
@@ -225,7 +242,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         hintText: "Telefon numarası",
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(40),
+          borderSide: BorderSide.none,
         ),
+        fillColor: AppColors.background,
+        filled: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       ),
     );
   }
@@ -240,13 +261,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           value: isTermsChecked,
           onChanged: (v) => setState(() => isTermsChecked = v!),
           activeColor: AppColors.primaryDarkGreen,
-          side: BorderSide.none,
+          side: BorderSide(color: Colors.grey.shade400, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         ),
-        const SizedBox(width: 4),
         Expanded(
-          child: Text(
-            "Koşulları kabul ediyorum",
-            style: TextStyle(color: Colors.grey[700]),
+          child: GestureDetector(
+            onTap: () => setState(() => isTermsChecked = !isTermsChecked),
+            child: Text(
+              "Koşulları kabul ediyorum",
+              style: TextStyle(color: Colors.grey[700], fontSize: 13),
+            ),
           ),
         ),
       ],
@@ -257,16 +281,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // SUBMIT BUTTON
   // ---------------------------------------------------------------------------
   Widget _buildSubmitButton() {
+    // AuthNotifier'ın loading state'ini dinleyerek butonu disable/enable et
+    final isLoading = ref.watch(authNotifierProvider).isLoading;
+
     return GestureDetector(
-      onTap: _onSubmit,
+      onTap: isLoading ? null : _onSubmit,
       child: Container(
         height: 52,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(40),
-          color: AppColors.primaryDarkGreen,
+          color: isLoading
+              ? AppColors.primaryLightGreen.withOpacity(0.7)
+              : AppColors.primaryDarkGreen,
         ),
-        child: Text(
+        child: isLoading
+            ? const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        )
+            : Text(
           isLoginTab ? "Giriş Yap" : "Kayıt Ol",
           style: const TextStyle(
             color: Colors.white,

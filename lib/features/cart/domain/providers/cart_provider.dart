@@ -1,118 +1,219 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/providers/dio_provider.dart';
 import '../../../businessShop/data/model/businessShop_model.dart';
 import '../../../businessShop/data/mock/mock_businessShop_model.dart';
 import '../../../product/data/models/product_model.dart';
+import '../../data/repository/cart_repository.dart';
 import '../models/cart_item.dart';
 
-/// 🔹 Sepet kontrolcüsü (aynı işletmeden ürün ekleme kuralı)
+// --- API KATMANI PROVIDER'LARI ---
+
+/// 🔹 Dio bağımlılığını enjekte eden Repository Provider
+final cartRepositoryProvider = Provider((ref) {
+  return CartRepository(ref.watch(dioProvider));
+});
+
+
+// --- STATE NOTIFIER VE BUSINESS LOGIC ---
+
+/// 🔹 Sepet kontrolcüsü
 class CartController extends StateNotifier<List<CartItem>> {
-  CartController() : super(const []);
+  final CartRepository _repository;
+
+  // 🔥 Yeni Eklendi: Sepetle ilişkili işletme bilgisi (API'den gelmeli ama şimdilik state'te tutuluyor)
+  String? _currentShopId;
+  String? _currentShopName;
+  String? _currentShopImage;
+
+  CartController(this._repository) : super(const []) {
+    debugPrint('🔄 CartController başlatılıyor. Sepet yükleniyor...');
+    fetchCartItems();
+  }
+
+  /// 🌐 API'den sepet içeriğini çeker (GET /customer/cart)
+  Future<void> fetchCartItems() async {
+    try {
+      final items = await _repository.getCartItems();
+      state = items;
+      debugPrint('✅ Sepet State\'i güncellendi. Toplam ${items.length} ürün.');
+
+      // 🔥 Eğer sepet boş değilse, ilk üründen işletme bilgisini çek.
+      if (items.isNotEmpty) {
+        _currentShopId = items.first.shopId;
+        _currentShopName = items.first.shopName;
+        // 🚨 Not: API'den cart item çekerken shop image gelmiyorsa bu alan null kalacaktır.
+        // Bu bilginin API'den gelmesi idealdir. Şimdilik mockBusinessList'i kullanmaya devam ediyoruz.
+        if (_currentShopImage == null) {
+          final business = findBusinessById(_currentShopId!);
+          _currentShopImage = business?.businessShopLogoImage;
+        }
+      } else {
+        _currentShopId = null;
+        _currentShopName = null;
+        _currentShopImage = null;
+      }
+
+    } catch (e) {
+      debugPrint("❌ CartController: Sepet yüklenirken kritik hata oluştu: $e");
+    }
+  }
 
   /// Aktif işletme kimliği
-  String? currentShopId() => state.isEmpty ? null : state.first.shopId;
+  String? currentShopId() => _currentShopId;
 
-  /// Aktif işletme modeli
-  BusinessModel? get currentBusiness =>
-      state.isEmpty ? null : findBusinessById(state.first.shopId);
+  /// Aktif işletme modeli (Mock'tan çekmeye devam)
+  BusinessModel? get currentBusiness {
+    return _currentShopId == null ? null : findBusinessById(_currentShopId!);
+  }
+
+  /// 🔥 Yeni Eklendi: İşletme bilgilerini state'te tutar.
+  void _saveShopInfo(String shopId, String shopName, String? shopImage) {
+    _currentShopId = shopId;
+    _currentShopName = shopName;
+    // Nullable olanı doğrudan atıyoruz, hata çözüldü.
+    _currentShopImage = shopImage;
+    debugPrint('ℹ️ İşletme Bilgisi Kaydedildi: ID $shopId, Adı $shopName');
+  }
+
 
   /// Toplam tutar
   double get total =>
       state.fold(0, (sum, e) => sum + (e.price * e.quantity));
 
-  // sepet ekranındaki + düğmesine de “kalan stok” sınırı
+  /// Ürünün sepetteki miktarını döner
   int quantityOf(String id) {
     final ix = state.indexWhere((e) => e.id == id);
     return ix == -1 ? 0 : state[ix].quantity;
   }
 
-  /// 🟢 Ürün ekle (aynı ürün varsa miktar artır)
-  void addProduct(ProductModel p, BusinessModel shop, {int qty = 1, int? maxQty}) {
-    final sameShop = state.isEmpty || currentShopId() == shop.id;
-    if (!sameShop) return;
+  /// 🟢 Ürün ekle (POST /customer/cart/add)
+  void addProductFromApi(ProductModel product, String shopId, String shopName, String? shopImage, {required int qty}) {
+    final existingItemIndex = state.indexWhere((item) => item.id == product.id);
 
-    final ix = state.indexWhere((e) => e.id == p.packageName);
-    if (ix == -1) {
-      // Yeni ürün
-      if (maxQty != null && qty > maxQty) return; // Stok aşımı
+    // Yeni CartItem oluştururken API modelinin alanlarını kullan
+    final newItem = CartItem(
+      id: product.id,
+      name: product.name,
+      shopId: shopId,
+      shopName: shopName,
+      image: product.imageUrl,
+      price: product.salePrice,
+      quantity: qty,
+      // 🔥 DÜZELTME: oldPrice yerine CartItem modeline uygun olarak originalPrice kullanıldı.
+      originalPrice: product.listPrice,
+    );
+
+    if (existingItemIndex >= 0) {
+      // Mevcutsa miktarı güncelle
       state = [
-        ...state,
-        CartItem(
-          id: p.packageName,
-          name: p.packageName,
-          shopId: shop.id,
-          shopName: shop.name,
-          image: p.bannerImage,
-          price: p.newPrice,
-          quantity: qty,
-        ),
+        for (final item in state)
+          if (item.id == product.id) item.copyWith(quantity: item.quantity + qty) else item,
       ];
     } else {
-      // Zaten sepette varsa
-      final item = state[ix];
-      final newQty = item.quantity + qty;
-
-      if (maxQty != null && newQty > maxQty) return; // toplam stok sınırını geçme
-
-      final updated = item.copyWith(quantity: newQty);
-      state = [...state]..[ix] = updated;
+      // Yeni ürün ekle
+      state = [...state, newItem];
     }
+    _saveShopInfo(shopId, shopName, shopImage);
   }
 
 
-  /// 🔁 Farklı işletme senaryosu: sepet sıfırla ve sadece bu ürünü ekle
-  void replaceWith(ProductModel p, BusinessModel shop, {int qty = 1}) {
-    state = [
-      CartItem(
-        id: p.packageName,
-        name: p.packageName,
-        shopId: shop.id,
-        shopName: shop.name,
-        image: p.bannerImage,
-        price: p.newPrice,
-        quantity: qty,
-      ),
-    ];
+// 🔥 YENİ METOT: API'den gelen ProductModel ile sepeti değiştirmek için
+  void replaceWithApi(ProductModel product, String shopId, String shopName, String? shopImage, {required int qty}) {
+    // Yeni CartItem oluştururken API modelinin alanlarını kullan
+    final newItem = CartItem(
+      id: product.id,
+      name: product.name,
+      shopId: shopId,
+      shopName: shopName,
+      image: product.imageUrl,
+      price: product.salePrice,
+      quantity: qty,
+      // 🔥 DÜZELTME: oldPrice yerine CartItem modeline uygun olarak originalPrice kullanıldı.
+      originalPrice: product.listPrice,
+    );
+
+    state = [newItem]; // Sepeti yeni ürünle değiştir
+    _saveShopInfo(shopId, shopName, shopImage);
   }
 
-  /// Ürün miktarını artır
-  void increment(String id, {int? maxQty}) {
+  /// Ürün miktarını artır (POST /customer/cart/add)
+  Future<void> increment(String id) async {
     final ix = state.indexWhere((e) => e.id == id);
     if (ix == -1) return;
 
     final current = state[ix];
-    if (maxQty != null && current.quantity >= maxQty) {
-      // Stok sınırına ulaşıldı, ekleme yapma
+    final newQty = current.quantity + 1;
+    debugPrint('➕ Miktar Artırma: Ürün ID: ${current.id}, Yeni Miktar: $newQty');
+
+    try {
+      final success = await _repository.addItemToCart(
+        productId: current.id,
+        quantity: newQty,
+      );
+      // Başarılı olursa API'den güncel sepeti çek
+      if (success) await fetchCartItems();
+    } catch (e) {
+      debugPrint("❌ Miktar artırma HATA: $e");
+      // UI'a hata bildirimi (Snackbar) burada yapılmalı.
+    }
+  }
+
+  /// Ürün miktarını azalt (POST /customer/cart/add)
+  Future<void> decrement(String id) async {
+    final ix = state.indexWhere((e) => e.id == id);
+    if (ix == -1) return;
+    final current = state[ix];
+    final newQty = current.quantity - 1;
+    debugPrint('➖ Miktar Azaltma: Ürün ID: ${current.id}, Yeni Miktar: $newQty');
+
+
+    if (newQty <= 0) {
+      debugPrint('🗑️ Miktar 0 olduğu için sepetten kaldırılıyor: ${current.id}');
+      // Sepet temizleme API çağrısı yapılmalı
+      removeItem(id);
       return;
     }
 
-    final updated = current.copyWith(quantity: current.quantity + 1);
-    state = [...state]..[ix] = updated;
-  }
-
-  /// Ürün miktarını azalt
-  void decrement(String id) {
-    final ix = state.indexWhere((e) => e.id == id);
-    if (ix == -1) return;
-    final q = state[ix].quantity - 1;
-    if (q <= 0) {
-      removeItem(id);
-    } else {
-      final updated = state[ix].copyWith(quantity: q);
-      state = [...state]..[ix] = updated;
+    try {
+      final success = await _repository.addItemToCart(
+        productId: current.id,
+        quantity: newQty,
+      );
+      // Başarılı olursa API'den güncel sepeti çek
+      if (success) await fetchCartItems();
+    } catch (e) {
+      debugPrint("❌ Miktar azaltma HATA: $e");
     }
   }
 
-  /// Ürünü sil
-  void removeItem(String id) =>
-      state = state.where((e) => e.id != id).toList();
+  /// Ürünü sil (Frontend State'i) - API endpoint'i bekleniyor
+  void removeItem(String id) {
+    state = state.where((e) => e.id != id).toList();
+    debugPrint('🗑️ Ürün UI State\'inden silindi: ID $id. Yeni ürün sayısı: ${state.length}');
 
-  /// Sepeti boşalt
-  void clearCart() => state = const [];
+    // Eğer sepet tamamen boşalırsa, işletme bilgisini de temizle
+    if (state.isEmpty) {
+      _currentShopId = null;
+      _currentShopName = null;
+      _currentShopImage = null;
+      debugPrint('🧹 Sepet boşaldığı için işletme bilgisi temizlendi.');
+    }
+  }
+
+  /// Sepeti boşalt (Frontend State'i) - API endpoint'i bekleniyor
+  void clearCart() {
+    state = const [];
+    _currentShopId = null;
+    _currentShopName = null;
+    _currentShopImage = null;
+    debugPrint('🧹 Sepet UI State\'i temizlendi.');
+  }
 }
 
 /// 🔹 Ana provider
 final cartProvider = StateNotifierProvider<CartController, List<CartItem>>(
-      (ref) => CartController(),
+      (ref) => CartController(ref.watch(cartRepositoryProvider)),
 );
 
 /// 🔹 Toplam ürün sayısı
@@ -129,12 +230,7 @@ final cartTotalProvider = Provider<double>((ref) {
 
 /// 🔹 Aktif işletme
 final cartBusinessProvider = Provider<BusinessModel?>((ref) {
-  final cart = ref.watch(cartProvider); // ✅ state'i izle
-  if (cart.isEmpty) return null;
-
-  final first = cart.first;
-  final business = findBusinessById(first.shopId);
-  if (business == null) return null; // 🔒 ek güvenlik
-
-  return business;
+  final controller = ref.watch(cartProvider.notifier);
+  // controller içindeki _currentShopId'ye göre mock listesinden işletmeyi bulur
+  return controller.currentBusiness;
 });

@@ -25,7 +25,7 @@ class _BusinessShopDetailsScreenState extends State<BusinessShopDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    isFav = widget.business.isFav;
+    isFav = widget.business.isFavorite;
   }
 
   @override

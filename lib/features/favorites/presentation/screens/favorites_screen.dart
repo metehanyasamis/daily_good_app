@@ -1,3 +1,5 @@
+// lib/features/favorites/presentation/screens/favorites_screen.dart
+
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../widgets/favorite_products_tab.dart';

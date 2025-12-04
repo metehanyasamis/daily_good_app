@@ -1,16 +1,33 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // debugPrint için
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
+// 🌟 Konum API bağımlılıkları
+import '../../features/location/data/repository/location_repository.dart';
+import 'dio_provider.dart';
+
+// --------------------------------------------------------------------------
+// 1. REPOSITORY PROVIDER
+// --------------------------------------------------------------------------
+
+final locationRepositoryProvider = Provider((ref) {
+  return LocationRepository(ref.watch(dioProvider));
+});
+
+
+// --------------------------------------------------------------------------
+// 2. STATE MODELİ
+// --------------------------------------------------------------------------
 
 class AppState {
   final bool isLoggedIn;
   final bool hasSeenOnboarding;
-  final bool hasSelectedLocation;  // kullanıcı konum seçti mi?
-  final double? latitude;          // seçilen konum
+  final bool hasSelectedLocation;
+  final double? latitude;
   final double? longitude;
   final bool isNewUser;
-  final bool hasSeenProfileDetails; // 💡 YENİ ALAN EKLENDİ
+  final bool hasSeenProfileDetails; // KRİTİK ALAN
 
   const AppState({
     this.isLoggedIn = false,
@@ -19,7 +36,7 @@ class AppState {
     this.latitude,
     this.longitude,
     this.isNewUser = false,
-    this.hasSeenProfileDetails = false, // 💡 Default değer
+    this.hasSeenProfileDetails = false,
   });
 
   AppState copyWith({
@@ -29,7 +46,7 @@ class AppState {
     double? latitude,
     double? longitude,
     bool? isNewUser,
-    bool? hasSeenProfileDetails, // 💡 copyWith metoduna eklendi
+    bool? hasSeenProfileDetails,
   }) {
     return AppState(
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
@@ -38,17 +55,23 @@ class AppState {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       isNewUser: isNewUser ?? this.isNewUser,
-      hasSeenProfileDetails: hasSeenProfileDetails ?? this.hasSeenProfileDetails, // 💡 Atama yapıldı
+      hasSeenProfileDetails: hasSeenProfileDetails ?? this.hasSeenProfileDetails,
     );
   }
 }
 
+
+// --------------------------------------------------------------------------
+// 3. STATE NOTIFIER VE BUSINESS LOGIC
+// --------------------------------------------------------------------------
+
 class AppStateNotifier extends StateNotifier<AppState> {
-  AppStateNotifier(this.ref) : super(const AppState()) {
+  final LocationRepository _locationRepository;
+  final Ref ref;
+
+  AppStateNotifier(this.ref, this._locationRepository) : super(const AppState()) {
     load();
   }
-
-  final Ref ref;
 
   /// ---------------------------------------------------------
   /// LOAD — tüm ayarları SharedPreferences'tan yükle
@@ -65,13 +88,14 @@ class AppStateNotifier extends StateNotifier<AppState> {
       hasSelectedLocation: prefs.getBool("selected_location") ?? false,
       latitude: lat,
       longitude: lng,
-      isNewUser: prefs.getBool("is_new_user") ?? false,   //  🔥 EKSİK OLAN SATIR
+      isNewUser: prefs.getBool("is_new_user") ?? false,
       hasSeenProfileDetails: prefs.getBool("seen_profile_details") ?? false,
     );
+    // debugPrint("App State Loaded: $state");
   }
 
   /// ---------------------------------------------------------
-  /// LOGIN
+  /// LOGIN, ONBOARDING, vs.
   /// ---------------------------------------------------------
   Future<void> setLoggedIn(bool v) async {
     final prefs = await SharedPreferences.getInstance();
@@ -87,18 +111,9 @@ class AppStateNotifier extends StateNotifier<AppState> {
     state = state.copyWith(isNewUser: v);
   }
 
-  Future<void> setIsNewUser(bool value) async {
-    final prefs = await SharedPreferences.getInstance(); // SharedPreferences'ı çağırmayı unutmayın
-    await prefs.setBool("is_new_user", value); // 💡 KRİTİK: SharedPreferences'a kaydet
-
-    debugPrint("🚦 [APP STATE] isNewUser güncelleniyor: $value");
-    state = state.copyWith(isNewUser: value);
-  }
-
-  // hasSeenProfileDetails metodu da bu mantıkta olmalı (Zaten varsa kontrol edin)
+  // hasSeenProfileDetails metodu
   Future<void> setHasSeenProfileDetails(bool value) async {
     final prefs = await SharedPreferences.getInstance();
-    // 💡 KRİTİK: SharedPreferences'a kaydediliyor
     await prefs.setBool("seen_profile_details", value);
 
     debugPrint("🚦 [APP STATE] hasSeenProfileDetails güncelleniyor: $value");
@@ -116,45 +131,49 @@ class AppStateNotifier extends StateNotifier<AppState> {
   }
 
   /// ---------------------------------------------------------
-  /// LOCATION SELECTED
+  /// Konumu kaydet (Cihazdan veya Haritadan) ve API'ye gönder
   /// ---------------------------------------------------------
-  Future<void> setLocationSelected(bool v) async {
+  Future<void> setUserLocation(double lat, double lng, {String address = "Bilinmeyen Adres"}) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool("selected_location", v);
 
-    state = state.copyWith(hasSelectedLocation: v);
-  }
+    // 1. API Güncellemesi
+    try {
+      final success = await _locationRepository.updateCustomerLocation(
+        latitude: lat,
+        longitude: lng,
+        address: address,
+      );
 
-  /// ---------------------------------------------------------
-  /// 📍 Konumu kaydet (Map Screen → "Adresim Doğru")
-  /// ---------------------------------------------------------
-  Future<void> setUserLocation(double lat, double lng) async {
-    final prefs = await SharedPreferences.getInstance();
+      if (success) {
+        debugPrint('✅ Konum API\'ye başarıyla kaydedildi.');
+      } else {
+        debugPrint('❗ Konum API\'ye kaydedilemedi, ancak lokal state güncel.');
+      }
+    } catch (e) {
+      debugPrint('❌ Konum API\'ye kaydetme hatası: $e');
+    }
+
+    // 2. SharedPreferences Güncellemesi
     await prefs.setDouble("user_lat", lat);
     await prefs.setDouble("user_lng", lng);
-    await prefs.setBool("selected_location", true);
+    await prefs.setBool("selected_location", true); // Konum seçildi olarak işaretle
 
+    // 3. Lokal State Güncellemesi
     state = state.copyWith(
       latitude: lat,
       longitude: lng,
       hasSelectedLocation: true,
     );
   }
-
-  /// ---------------------------------------------------------
-  /// Kullanıcı konum izni verdi mi? (info screen)
-  /// ---------------------------------------------------------
-  Future<void> setLocationAccess(bool v) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool("selected_location", v);
-
-    state = state.copyWith(
-      hasSelectedLocation: v,
-    );
-  }
 }
+
+
+// --------------------------------------------------------------------------
+// 4. MAIN PROVIDER TANIMI
+// --------------------------------------------------------------------------
 
 final appStateProvider =
 StateNotifierProvider<AppStateNotifier, AppState>((ref) {
-  return AppStateNotifier(ref);
+  final locationRepository = ref.watch(locationRepositoryProvider);
+  return AppStateNotifier(ref, locationRepository);
 });

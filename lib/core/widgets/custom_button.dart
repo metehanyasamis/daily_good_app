@@ -4,7 +4,7 @@ import '../theme/app_theme.dart';
 class CustomButton extends StatelessWidget {
   final String text;
   final double? price;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool showPrice; // 🆕 fiyatlı mı sade mi?
 
   const CustomButton({

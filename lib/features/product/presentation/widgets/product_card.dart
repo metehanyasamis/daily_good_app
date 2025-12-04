@@ -1,12 +1,13 @@
-import 'package:daily_good/core/widgets/circular_shop_image.dart';
+// lib/features/product/presentation/widgets/product_card.dart
+
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/fav_button.dart';
-import '../../../businessShop/data/mock/mock_businessShop_model.dart';
-import '../../../businessShop/data/model/businessShop_model.dart';
+import '../../../../core/widgets/circular_shop_image.dart'; // CircularShopImage
+
 import '../../data/models/product_model.dart';
 
-class ProductCard extends StatefulWidget {
+class ProductCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback onTap;
 
@@ -17,27 +18,25 @@ class ProductCard extends StatefulWidget {
   });
 
   @override
-  State<ProductCard> createState() => _ProductCardState();
-}
-
-class _ProductCardState extends State<ProductCard> {
-  bool isFav = false;
-
-  @override
   Widget build(BuildContext context) {
-    final p = widget.product;
+    final p = product;
+    final store = p.store; // 🔥 API'den gelen gömülü Store bilgisi
 
-    final BusinessModel? business = findBusinessById(p.businessId);
-    if (business == null) return const SizedBox.shrink();
+    // 💡 Artık BusinessModel'i mock'tan çekmiyoruz.
+    // BusinessModel yerine ProductStoreModel kullanacağız.
 
-    final String logoPath = business.businessShopLogoImage;
-    final String brandName = business.name;
-    final double rating = p.rating;
-    final double distanceKm = p.distance;
+    // final String logoPath = store.brand.logoUrl ?? 'assets/images/placeholder_logo.png'; // Eğer asset değil URL ise
+    final String logoPath = store.brand.logoUrl ?? 'assets/logos/default_brand.png'; // Geçici olarak bir asset varsayalım
+    final String brandName = store.brand.name;
+    // ⭐ Rating (puan) ve karbon tasarrufu bilgisi API yanıtında yok. 
+    // Eğer bunlar kritikse, backend ile konuşulup eklenmelidir.
+    // Şimdilik rating için sabit bir değer kullanalım veya kaldırın.
+    const double mockRating = 4.5; // API'den gelmeyene kadar
 
+    final double distanceKm = p.distance; // ProductModel içindeki getter
 
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(left: 10, right: 10, bottom: 20),
         decoration: BoxDecoration(
@@ -64,11 +63,18 @@ class _ProductCardState extends State<ProductCard> {
                 ),
                 child: Stack(
                   children: [
-                    Image.asset(
-                      p.bannerImage,
+                    // 🔥 Resim URL'ini kullanmak için NetworkImage/CachedNetworkImage gerekli
+                    Image.network(
+                      p.imageUrl,
                       height: 125,
                       width: double.infinity,
                       fit: BoxFit.cover,
+                      // Hata durumunda placeholder göstermek faydalıdır
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 125,
+                        color: Colors.grey.shade200,
+                        child: const Center(child: Icon(Icons.broken_image)),
+                      ),
                     ),
                     // 🏷️ stok etiketi
                     Positioned(
@@ -84,7 +90,7 @@ class _ProductCardState extends State<ProductCard> {
                           ),
                         ),
                         child: Text(
-                          p.stockLabel,
+                          p.stockLabel, // 🔥 Getter'dan geldi
                           style: const TextStyle(
                             color: AppColors.primaryDarkGreen,
                             fontWeight: FontWeight.w700,
@@ -98,7 +104,7 @@ class _ProductCardState extends State<ProductCard> {
                       top: 8,
                       right: 8,
                       child: FavButton(
-                        item: widget.product, // 👈 sadece bu yeterli
+                        item: product,
                         size: 34,
                       ),
                     ),
@@ -108,8 +114,10 @@ class _ProductCardState extends State<ProductCard> {
                       left: 10,
                       child: Row(
                         children: [
+                          // 🔥 Logo için URL kullanıyoruz
                           BusinessLogo(
-                            imagePath: business.businessShopLogoImage,
+                            imagePath: logoPath,
+                            isAsset: false, // NetworkImage kullan
                             size: 46,
                           ),
                           const SizedBox(width: 8),
@@ -148,7 +156,7 @@ class _ProductCardState extends State<ProductCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            p.packageName,
+                            p.name, // 🔥 API'den gelen "name"
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: Colors.black87,
@@ -158,7 +166,7 @@ class _ProductCardState extends State<ProductCard> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            p.pickupTimeText,
+                            p.pickupTimeText, // 🔥 Getter'dan geldi
                             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -171,7 +179,7 @@ class _ProductCardState extends State<ProductCard> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '${p.oldPrice.toStringAsFixed(2)} ₺',
+                          '${p.listPrice.toStringAsFixed(2)} ₺',
                           style: const TextStyle(
                             fontSize: 13,
                             color: Colors.grey,
@@ -180,7 +188,7 @@ class _ProductCardState extends State<ProductCard> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${p.newPrice.toStringAsFixed(2)} ₺',
+                          '${p.salePrice.toStringAsFixed(2)} ₺',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -201,8 +209,9 @@ class _ProductCardState extends State<ProductCard> {
                   children: [
                     Icon(Icons.star, size: 14, color: AppColors.primaryDarkGreen),
                     const SizedBox(width: 8),
+                    // 🔥 Mock rating yerine sabit değer
                     Text(
-                      rating.toStringAsFixed(1),
+                      mockRating.toStringAsFixed(1),
                       style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
                     ),
                     const SizedBox(width: 6),
@@ -211,7 +220,7 @@ class _ProductCardState extends State<ProductCard> {
                     Icon(Icons.place, size: 14, color: AppColors.primaryDarkGreen),
                     const SizedBox(width: 4),
                     Text(
-                      '${distanceKm.toStringAsFixed(1)} km',
+                      '${distanceKm.toStringAsFixed(1)} km', // 🔥 Getter'dan geldi
                       style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
                     ),
                   ],
