@@ -115,6 +115,77 @@ class AuthRepository {
     }
   }
 
+// ------------------------------------------------------------------
+// 🆕 YENİ KULLANICI KAYDI (/customer/auth/register)
+// Sadece dolu olan (non-null ve non-empty) alanları gönderir.
+// ------------------------------------------------------------------
+  Future<UserModel> registerUser(UserModel user) async {
+    debugPrint("🌐 [API] POST /customer/auth/register (Yeni Kayıt)");
+
+    // 1. ZORUNLU alanlarla data objesini başlat
+    final data = <String, dynamic>{
+      "phone": user.phone,
+      "first_name": user.firstName,
+      "last_name": user.lastName,
+    };
+
+    // 2. OPSİYONEL alanları kontrol ederek ekle
+
+    // E-posta
+    if (user.email != null && user.email!.isNotEmpty) {
+      data["email"] = user.email;
+    }
+
+    // Doğum Tarihi (UserModel'de birthDate string olarak tutulduğu varsayılır)
+    if (user.birthDate != null && user.birthDate!.isNotEmpty) {
+      data["birth_date"] = user.birthDate;
+    }
+
+    // Konum (Lat/Lng) - Her ikisi de 'null' DEĞİLSE gönder (isEmpty kontrolü kalktı)
+    if (user.latitude != null && user.longitude != null) {
+      // 'isNotEmpty' kontrolünü tamamen kaldırıyoruz, çünkü double'dır.
+      // Not: Backend'e double olarak göndermeniz beklenir.
+      data["latitude"] = user.latitude;
+      data["longitude"] = user.longitude;
+    }
+
+    // FCM Token (String olduğu varsayılır, isNotEmpty kontrolü kalır)
+    if (user.fcmToken != null && user.fcmToken!.isNotEmpty) {
+      data["fcm_token"] = user.fcmToken;
+    }
+
+    // FCM Token
+    if (user.fcmToken != null && user.fcmToken!.isNotEmpty) {
+      data["fcm_token"] = user.fcmToken;
+    }
+
+    debugPrint("➡️ Gönderilen (Dinamik): $data"); // Gönderilen son JSON'u kontrol edin
+
+    try {
+      // API çağrısı
+      final res = await _dio.post("/customer/auth/register", data: data);
+
+      debugPrint("📩 [API] registerUser STATUS: ${res.statusCode}");
+      // ... (Kalan başarı mantığı ve token kaydı aynı)
+
+      final registeredUser = UserModel.fromJson(res.data["data"]["customer"]).copyWith(
+        token: res.data["data"]["token"],
+      );
+
+      if (registeredUser.token != null) {
+        _dio.options.headers["Authorization"] = "Bearer ${registeredUser.token}";
+      }
+
+      return registeredUser;
+
+    } on DioException catch (e) {
+      debugPrint("❌ [API] registerUser ERROR STATUS: ${e.response?.statusCode}");
+      debugPrint("❌ [API] registerUser ERROR DATA: ${e.response?.data}");
+      rethrow;
+    }
+  }
+
+
   Future<void> logout() async {
     try {
       await _dio.post("/customer/auth/logout");

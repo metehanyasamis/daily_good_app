@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../core/data/prefs_service.dart';
-import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/providers/auth_notifier.dart';
 
@@ -38,62 +36,39 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // Splash flow'u başlat
-    Future.microtask(_handleStartup);
+    // Başlangıç işlemlerini başlat
+    Future.microtask(_startupSequence);
   }
 
   @override
   void dispose() {
-    _controller.dispose();   // 🔥 ANİMASYON TİCKER'INI YOK EDİYOR
+    _controller.dispose();
     super.dispose();
   }
 
   // ----------------------------------------------------------
-  // SPLASH FLOW
+  // STARTUP FLOW (KÜÇÜK AMA KRİTİK)
   // ----------------------------------------------------------
-  Future<void> _handleStartup() async {
+  Future<void> _startupSequence() async {
     debugPrint("🚀 [Splash] Başlatılıyor...");
+    await Future.delayed(const Duration(milliseconds: 600));
 
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    final app = ref.read(appStateProvider);
+    // 1) SharedPreferences -> sadece token alınır
     final token = await PrefsService.readToken();
+    debugPrint("🔑 [Splash] Token = $token");
 
-    debugPrint("🔍 [Splash] isLoggedIn=${app.isLoggedIn}");
-    debugPrint("🔑 [Splash] Token=$token");
-
-    // 1) Hiç login olmamış → login ekranı
-    if (!app.isLoggedIn) {
-      debugPrint("❌ [Splash] isLoggedIn=false → login");
-      context.go('/login');
-      return;
+    // 2) Token varsa kullanıcıyı yenile (/me)
+    if (token != null && token.isNotEmpty) {
+      debugPrint("🔐 [Splash] Token bulundu → /me çağrılıyor...");
+      await ref.read(authNotifierProvider.notifier).loadUserFromToken();
+    } else {
+      debugPrint("🟡 [Splash] Token yok → yeni kullanıcı olabilir");
     }
 
-    // 2) Login olmuş ama token yok → YENİ KULLANICI
-    if (app.isLoggedIn && (token == null || token.isEmpty)) {
-      debugPrint("🆕 [Splash] Yeni kullanıcı → profil doldurma akışına gidiyor");
-      context.go('/profileDetail');
-      return;
-    }
-
-    // 3) Eski kullanıcı → /me kontrolü
-    debugPrint("🔐 [Splash] isLoggedIn=true → /me ile kullanıcı yükleniyor");
-
-    final auth = ref.read(authNotifierProvider.notifier);
-    final ok = await auth.loadUserFromToken();
-
-    if (!ok) {
-      debugPrint("⚠️ [Splash] /me başarısız → login");
-      context.go('/login');
-      return;
-    }
-
-    debugPrint("🎉 [Splash] /me başarılı → home");
-    context.go('/home');
+    // ✔ Splash hiçbir yere yönlendirme yapmaz
+    // ✔ Redirect tamamen GoRouter tarafından yapılır
+    debugPrint("🎯 [Splash] Hazır → GoRouter redirect devralacak");
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +78,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: AppGradients.dark, // Theme’den gradient
+          gradient: AppGradients.dark,
         ),
         child: Center(
           child: FadeTransition(

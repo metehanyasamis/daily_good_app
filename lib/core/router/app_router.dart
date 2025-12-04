@@ -39,7 +39,6 @@ import '../../features/cart/presentation/screens/cart_screen.dart';
 
 import '../providers/app_state_provider.dart';
 import 'app_shell.dart';
-import '../../features/explore/presentation/widgets/category_filter_option.dart';
 
 
 // --------------------------------------------------------------
@@ -74,43 +73,79 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
 
     // ----------------------------------------------------------
-    // 🚦 Redirect Kuralları
+    // 🚦 REDIRECT RULES (TAM PROFESYONEL FINAL VERSİYON)
     // ----------------------------------------------------------
     redirect: (context, state) {
-      final app = ref.read(appStateProvider);
-      final user = ref.read(userNotifierProvider).user;
+      final app = ref.watch(appStateProvider);
+      final user = ref.watch(userNotifierProvider).user;
       final loc = state.uri.toString();
 
-      debugPrint("🔍 [ROUTER] loc=$loc, isLoggedIn=${app.isLoggedIn}, user=$user");
+      debugPrint("🚦 [REDIRECT] → $loc");
+      debugPrint("   isLoggedIn = ${app.isLoggedIn}");
+      debugPrint("   isNewUser = ${app.isNewUser}");
+      debugPrint("   hasSeenOnboarding = ${app.hasSeenOnboarding}");
+      debugPrint("   hasSelectedLocation = ${app.hasSelectedLocation}");
+      debugPrint("   user = $user");
 
-      // 🔍 Ekstra loglar
-      debugPrint("🧭 [ROUTER] loc=$loc");
-      debugPrint("🔐 isLoggedIn=${app.isLoggedIn}");
-      debugPrint("👤 user=$user");
-      debugPrint("🆕 isNewUser=${app.isNewUser}");
-      debugPrint("📍 hasSelectedLocation=${app.hasSelectedLocation} | lat=${app.latitude} lng=${app.longitude}");
+      // ----------------------------------------------------------
+      // 0) Splash her zaman serbest
+      // ----------------------------------------------------------
+      //if (loc == '/splash') return null;
 
-
-      // Splash serbest
-      if (loc == '/splash') return null;
-
-// 1) Login olmamış
+      // ----------------------------------------------------------
+      // 1) Login değilse → sadece login & intro serbest
+      // ----------------------------------------------------------
       if (!app.isLoggedIn) {
-        // 👇 DİKKAT: Yeni kullanıcı akışı için '/profileDetail' da serbest bırakılmalı
-        if (loc == '/login' || loc == '/profileDetail' || loc == '/onboarding' || loc == '/intro') {
-          return null;
-        }
+        if (loc == '/login' || loc == '/intro') return null;
         return '/login';
       }
 
-      // 2) YENİ KULLANICI PROFIL AKIŞI (user = null ama giriş yapılmışsa)
-      if (app.isLoggedIn && user == null) {
-        ref.read(appStateProvider.notifier).setNewUser(true); // 👈
-        if (loc != '/profileDetail') return '/profileDetail';
+      // ----------------------------------------------------------
+      // 2) YENİ KULLANICI AKIŞI
+      // ----------------------------------------------------------
+      if (app.isNewUser) {
+        // Profil doldurulmadıysa:
+        final hasProfile =
+            user != null &&
+                user.firstName != null &&
+                user.firstName!.isNotEmpty;
+
+        if (!hasProfile) {
+          if (loc != '/profileDetail') return '/profileDetail';
+          return null;
+        }
+
+        if (!hasProfile || !app.hasSeenProfileDetails) {
+          if (loc != '/profileDetail') return '/profileDetail';
+          return null;
+        }
+
+        // Onboarding görülmediyse:
+        if (!app.hasSeenOnboarding) {
+          if (loc != '/onboarding') return '/onboarding';
+          return null;
+        }
+
+        // Konum seçilmemişse:
+        if (!app.hasSelectedLocation ||
+            app.latitude == null ||
+            app.longitude == null) {
+          if (loc != '/locationInfo') return '/locationInfo';
+          return null;
+        }
+
+        // LocationInfo → Map zorunlu
+        if (loc == '/locationInfo') return '/map';
+
+        // Her şey tamamlandı → Home
+        if (loc != '/home') return '/home';
+
         return null;
       }
 
-      // 3) Eski kullanıcı → location zorunlu
+      // ----------------------------------------------------------
+      // 3) MEVCUT KULLANICI AKIŞI
+      // ----------------------------------------------------------
       if (!app.hasSelectedLocation ||
           app.latitude == null ||
           app.longitude == null) {
@@ -118,30 +153,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // 4) Geri dönüş engelleme
-      if ([
+      // Geri dönüş engelleme:
+      const blocked = [
         '/login',
+        '/intro',
         '/profileDetail',
         '/onboarding',
         '/locationInfo',
-        '/intro'
-      ].contains(loc)) {
-        return '/home';
-      }
+      ];
+
+      if (blocked.contains(loc)) return '/home';
 
       return null;
     },
 
-
-
-
-
     // ----------------------------------------------------------
-    // 🔥 ROUTE TREE
+    // ROUTES
     // ----------------------------------------------------------
     routes: [
-
-      // ---------------- AUTH ----------------
+      // AUTH
       GoRoute(
         path: '/splash',
         pageBuilder: (_, state) =>
@@ -163,22 +193,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             buildAnimatedPage(key: state.pageKey, child: const OnboardingScreen()),
       ),
 
-      // ---------------- FULLSCREEN (ShellRoute DIŞI) ----------------
+      // FULLSCREEN
       GoRoute(
         path: '/locationInfo',
         pageBuilder: (_, state) =>
             buildAnimatedPage(key: state.pageKey, child: const LocationInfoScreen()),
       ),
-      GoRoute(
-        path: '/map',
-        builder: (_, _) => const LocationMapScreen(),
-      ),
+      GoRoute(path: '/map', builder: (_, __) => const LocationMapScreen()),
 
       GoRoute(
         path: '/profileDetail',
-        builder: (_, state) => ProfileDetailsScreen(
-          fromOnboarding: (state.extra as Map?)?['fromOnboarding'] == true,
-        ),
+        builder: (_, state) => const ProfileDetailsScreen(),
       ),
 
       GoRoute(
@@ -195,10 +220,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/businessShop-detail',
         pageBuilder: (_, state) {
-          final business = state.extra as BusinessModel;
+          final b = state.extra as BusinessModel;
           return buildAnimatedPage(
             key: state.pageKey,
-            child: BusinessShopDetailsScreen(business: business),
+            child: BusinessShopDetailsScreen(business: b),
           );
         },
       ),
@@ -206,46 +231,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/payment',
         builder: (_, state) =>
-            PaymentScreen(amount: state.extra as double? ?? 0.0),
+            PaymentScreen(amount: state.extra as double? ?? 0),
       ),
 
-      GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
-      GoRoute(path: '/notifications', builder: (_, _) => const NotificationScreen()),
-      GoRoute(path: '/order-success', builder: (_, _) => const OrderSuccessScreen()),
-      GoRoute(path: '/order-tracking', builder: (_, _) => const OrderTrackingScreen()),
-      GoRoute(path: '/thank-you', builder: (_, _) => const ThankYouScreen()),
-      GoRoute(path: '/order-history', builder: (_, _) => const OrderHistoryScreen()),
-      GoRoute(path: '/support', builder: (_, _) => const SupportScreen()),
-      GoRoute(path: '/support-success', builder: (_, _) => const SupportSuccessScreen()),
+      GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
+      GoRoute(path: '/notifications', builder: (_, __) => const NotificationScreen()),
+      GoRoute(path: '/order-success', builder: (_, __) => const OrderSuccessScreen()),
+      GoRoute(path: '/order-tracking', builder: (_, __) => const OrderTrackingScreen()),
+      GoRoute(path: '/thank-you', builder: (_, __) => const ThankYouScreen()),
+      GoRoute(path: '/order-history', builder: (_, __) => const OrderHistoryScreen()),
+      GoRoute(path: '/support', builder: (_, __) => const SupportScreen()),
+      GoRoute(path: '/support-success', builder: (_, __) => const SupportSuccessScreen()),
 
-
-      // ----------------------------------------------------------
-      // 🔥 SHELL ROUTE (BOTTOM NAV) — SADECE NAVBAR EKRANLARI
-      // ----------------------------------------------------------
+      // SHELL NAV BAR
       ShellRoute(
-        builder: (context, state, child) =>
+        builder: (_, state, child) =>
             AppShell(location: state.uri.toString(), child: child),
         routes: [
-          GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
 
           GoRoute(
             path: '/explore',
             builder: (_, state) {
-              final extra = (state.extra as Map?)?.cast<String, dynamic>();
-
-              final initialCategory = extra?['category'] as CategoryFilterOption?;
-              final fromHome = extra?['fromHome'] == true;
-
+              final extra = state.extra as Map?;
               return ExploreListScreen(
-                initialCategory: initialCategory,
-                fromHome: fromHome,
+                initialCategory: extra?['category'],
+                fromHome: extra?['fromHome'] ?? false,
               );
             },
           ),
 
-          GoRoute(path: '/explore-map', builder: (_, _) => const ExploreMapScreen()),
-          GoRoute(path: '/favorites', builder: (_, _) => const FavoritesScreen()),
-          GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
+          GoRoute(path: '/explore-map', builder: (_, __) => const ExploreMapScreen()),
+          GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
+          GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
         ],
       ),
     ],

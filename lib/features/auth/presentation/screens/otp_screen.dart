@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -9,7 +8,7 @@ import '../../domain/providers/auth_notifier.dart';
 
 class OtpBottomSheet extends ConsumerStatefulWidget {
   final String phone;
-  final bool isLogin;
+  final bool isLogin; // sadece label için
 
   const OtpBottomSheet({
     super.key,
@@ -22,14 +21,11 @@ class OtpBottomSheet extends ConsumerStatefulWidget {
 }
 
 class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
-  // ---------------------------------------------------
-  // STATE
-  // ---------------------------------------------------
-  final TextEditingController _pinController = TextEditingController();
+  final TextEditingController _pin = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
   Timer? _timer;
-  int _secondsLeft = 120;
+  int _seconds = 120;
 
   bool _loading = false;
   bool _error = false;
@@ -43,35 +39,48 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
   @override
   void dispose() {
     _timer?.cancel();
-    _pinController.dispose();
+    _pin.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  // ---------------------------------------------------
-  // GET OTP CODE
-  // ---------------------------------------------------
-  String _getCode() => _pinController.text;
-
-  // ---------------------------------------------------
+  // ---------------------------------------------------------------------------
   // TIMER
-  // ---------------------------------------------------
+  // ---------------------------------------------------------------------------
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (_secondsLeft == 0) {
+      if (_seconds == 0) {
         t.cancel();
       } else {
-        setState(() => _secondsLeft--);
+        setState(() => _seconds--);
       }
     });
   }
 
-// ---------------------------------------------------
-// SUBMIT LOGIC (GÜNCEL)
-// ---------------------------------------------------
-  Future<void> _submit() async {
-    final code = _pinController.text.trim();
+  // ---------------------------------------------------------------------------
+  // RESEND OTP
+  // ---------------------------------------------------------------------------
+  Future<void> _resend() async {
+    if (_seconds != 0) return;
 
+    final auth = ref.read(authNotifierProvider.notifier);
+    await auth.sendOtp(widget.phone);
+
+    setState(() {
+      _seconds = 120;
+      _error = false;
+    });
+
+    _pin.clear();
+    _focusNode.requestFocus();
+    _startTimer();
+  }
+
+  // ---------------------------------------------------------------------------
+  // SUBMIT
+  // ---------------------------------------------------------------------------
+  Future<void> _submit() async {
+    final code = _pin.text.trim();
     if (code.length != 6) return;
 
     setState(() {
@@ -81,115 +90,60 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
 
     final auth = ref.read(authNotifierProvider.notifier);
 
-    debugPrint("🔵 [OTP] verifyOtp → phone=${widget.phone} code=$code");
+    // ---------------------------------------------------------------------
+    // 💡 YENİ AKIŞ: Doğrudan login'i çağırıyoruz. Backend hem doğrular,
+    // hem de Token döndürür (mevcutsa) veya 404 döndürür (yeniyse).
+    // ---------------------------------------------------------------------
+    final result = await auth.login(widget.phone, code);
 
-    // ---------------------------------------------------
-    // 1) OTP DOĞRULAMA
-    // ---------------------------------------------------
-    final ok = await auth.verifyOtp(widget.phone, code);
-
-    if (!ok) {
-      debugPrint("🔴 [OTP] HATALI KOD → _handleError()");
-      _handleError();
+    // Login başarılıysa ("NEW" veya "EXISTING" dönmeli) bottom sheet'i kapat.
+    if (result == "NEW" || result == "EXISTING") {
+      if (!mounted) return;
+      // Login başarılı oldu, uygulama içi yönlendirme AppState/GoRouter tarafından yapılır.
+      Navigator.pop(context);
       return;
     }
 
-    debugPrint("🟢 [OTP] Kod doğru → login çağrılıyor...");
-
-    // ---------------------------------------------------
-    // 2) LOGIN (Yeni mi eski mi belirleniyor)
-    // ---------------------------------------------------
-    final loginResult = await auth.login(widget.phone, code);
-
-    if (!mounted) return;
-
-    // Bottom sheet kapansın
-    Navigator.pop(context);
-
-    debugPrint("✨ [OTP] Login Sonucu → $loginResult");
-
-    // ---------------------------------------------------
-    // 3) GO_ROUTER YÖNLENDİRME
-    // ---------------------------------------------------
-
-    // Yeni kullanıcı → Profil detay doldurma /profileDetail
-    if (loginResult == "NEW") {
-      debugPrint("🟡 Yeni kullanıcı → Profil doldurma ekranına yönlendiriliyor");
-      context.go('/profileDetail', extra: {'fromOnboarding': true});
-      return;
-    }
-
-    // Eski kullanıcı → Direkt Home
-    if (loginResult == "EXISTING") {
-      debugPrint("🟢 Mevcut kullanıcı → Home ekranına yönlendiriliyor");
-      context.go('/home');
-      return;
-    }
-
-    // Hata olduysa
-    debugPrint("🔴 Login sırasında hata oluştu");
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Giriş yapılamadı, tekrar deneyin"),
-        backgroundColor: Colors.redAccent,
-      ),
-    );
+    // Hata durumunda (result == "ERROR" veya AuthNotifier'daki catch bloğu)
+    // AuthNotifier'da catch bloklarının state'i AuthState.error olarak ayarlaması beklenir.
+    // Ancak bu bottom sheet'te sadece basit bir hata gösterelim:
+    return _handleError();
   }
 
-
-
-  // ---------------------------------------------------
-  // ERROR LOGIC
-  // ---------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // ERROR
+  // ---------------------------------------------------------------------------
   void _handleError() {
+    // 💡 1. DÜZELTME: İlk setState çağrısından önce kontrol ekle.
+    if (!mounted) return;
+
     setState(() {
       _loading = false;
       _error = true;
     });
 
-    // 1.2 saniye kırmızı kalsın
     Future.delayed(const Duration(milliseconds: 1200), () {
+      // 💡 2. DÜZELTME: Delayed çağrı içindeki setState'den önce kontrol ekle.
       if (!mounted) return;
+
       setState(() => _error = false);
     });
 
-    // kutuları temizle
-    _pinController.clear();
+    _pin.clear();
     _focusNode.requestFocus();
   }
 
-  // ---------------------------------------------------
-  // RESEND OTP
-  // ---------------------------------------------------
-  Future<void> _resendCode() async {
-    if (_secondsLeft != 0) return;
-
-    final auth = ref.read(authNotifierProvider.notifier);
-    await auth.sendOtp(widget.phone);
-
-    setState(() {
-      _secondsLeft = 120;
-      _error = false;
-    });
-
-    _pinController.clear();
-    _focusNode.requestFocus();
-    _startTimer();
-  }
-
-  // ---------------------------------------------------
+  // ---------------------------------------------------------------------------
   // UI
-  // ---------------------------------------------------
+  // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    // PIN temasını oluşturuyoruz
-    final defaultPinTheme = PinTheme(
+    final baseTheme = PinTheme(
       height: 56,
       width: 56,
       textStyle: const TextStyle(
         fontSize: 24,
-        fontWeight: FontWeight.w700,
-        color: Colors.black,
+        fontWeight: FontWeight.bold,
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
@@ -197,23 +151,6 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
           color: _error ? Colors.red : AppColors.primaryDarkGreen,
           width: 2,
         ),
-      ),
-    );
-
-    final focusedTheme = defaultPinTheme.copyWith(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: _error ? Colors.red : AppColors.primaryDarkGreen,
-          width: 3,
-        ),
-      ),
-    );
-
-    final errorTheme = defaultPinTheme.copyWith(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.red, width: 3),
       ),
     );
 
@@ -226,7 +163,6 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
         ),
         child: SafeArea(
-          top: false,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -236,48 +172,58 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
               ),
               const SizedBox(height: 12),
               const Text(
-                "Telefonunuza gönderilen 6 haneli OTP kodunu giriniz.",
+                "Telefonunuza gönderilen 6 haneli kodu giriniz.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.black54),
               ),
               const SizedBox(height: 24),
 
-              // PIN INPUT
+              // -------------------- OTP INPUT --------------------
               Pinput(
                 length: 6,
-                controller: _pinController,
+                controller: _pin,
                 focusNode: _focusNode,
-                defaultPinTheme: defaultPinTheme,
-                focusedPinTheme: focusedTheme,
-                errorPinTheme: errorTheme,
+                defaultPinTheme: baseTheme,
+                focusedPinTheme: baseTheme.copyWith(
+                  decoration: baseTheme.decoration!.copyWith(
+                    border: Border.all(
+                      color: _error ? Colors.red : AppColors.primaryDarkGreen,
+                      width: 3,
+                    ),
+                  ),
+                ),
+                errorPinTheme: baseTheme.copyWith(
+                  decoration: baseTheme.decoration!.copyWith(
+                    border: Border.all(color: Colors.red, width: 3),
+                  ),
+                ),
                 forceErrorState: _error,
                 autofocus: true,
-                onCompleted: (value) => _submit(),
+                onCompleted: (_) => _submit(),
               ),
 
               const SizedBox(height: 24),
 
-              // TIMER
-              if (_secondsLeft > 0)
-                Text(
-                  "${_secondsLeft ~/ 60}:${(_secondsLeft % 60).toString().padLeft(2, '0')} içinde yeniden gönderebilirsin",
-                  style: const TextStyle(color: Colors.black54),
-                )
-              else
-                TextButton(
-                  onPressed: _resendCode,
-                  child: const Text(
-                    "Kodu tekrar gönder",
-                    style: TextStyle(
-                      color: AppColors.primaryDarkGreen,
-                      fontWeight: FontWeight.w600,
-                    ),
+              // -------------------- TIMER --------------------
+              _seconds > 0
+                  ? Text(
+                "${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')} içinde tekrar gönderebilirsin",
+                style: const TextStyle(color: Colors.black54),
+              )
+                  : TextButton(
+                onPressed: _resend,
+                child: const Text(
+                  "Kodu tekrar gönder",
+                  style: TextStyle(
+                    color: AppColors.primaryDarkGreen,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+              ),
 
               const SizedBox(height: 24),
 
-              // SUBMIT BUTTON
+              // -------------------- BUTTON --------------------
               SizedBox(
                 width: double.infinity,
                 height: 52,
