@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
-import '../../../businessShop/data/mock/mock_businessShop_model.dart';
 import '../../data/order_model.dart';
 import '../../providers/order_provider.dart';
 
@@ -157,7 +156,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
         InkWell(
         onTap: () {
           if (business != null) {
-            context.push('/businessShop-detail', extra: business);
+            context.push('/stores-detail', extra: business);
           }
         },
         child: Row(

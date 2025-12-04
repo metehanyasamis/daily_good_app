@@ -1,16 +1,13 @@
-// lib/features/cart/data/models/cart_response_model.dart
-
 import '../../domain/models/cart_item.dart';
 
-// API'deki "GET /customer/cart" yanıtındaki tek bir öğeyi temsil eder
 class CartResponseModel {
   final String id;
-  final ProductDetail product;
+  final ProductDetailCart product;
   final int quantity;
-  final double unitPrice; // Yeni fiyat (sale_price)
+  final double unitPrice;
   final double totalPrice;
-  final StoreDetail store;
-  final BrandDetail brand;
+  final StoreCartDetail store;
+  final BrandCartDetail brand;
 
   CartResponseModel({
     required this.id,
@@ -25,16 +22,16 @@ class CartResponseModel {
   factory CartResponseModel.fromJson(Map<String, dynamic> json) {
     return CartResponseModel(
       id: json['id'] as String,
-      product: ProductDetail.fromJson(json['product'] as Map<String, dynamic>),
-      quantity: json['quantity'] as int,
+      product: ProductDetailCart.fromJson(json['product']),
+      quantity: json['quantity'],
       unitPrice: (json['unit_price'] as num).toDouble(),
       totalPrice: (json['total_price'] as num).toDouble(),
-      store: StoreDetail.fromJson(json['store'] as Map<String, dynamic>),
-      brand: BrandDetail.fromJson(json['brand'] as Map<String, dynamic>),
+      store: StoreCartDetail.fromJson(json['store']),
+      brand: BrandCartDetail.fromJson(json['brand']),
     );
   }
 
-  // Domain modeline (CartItem) dönüşüm
+  /// Domain’e dönüşüm → CartItem
   CartItem toDomain() {
     return CartItem(
       id: product.id,
@@ -43,53 +40,71 @@ class CartResponseModel {
       shopName: store.name,
       image: brand.logo,
       price: unitPrice,
+      originalPrice: product.listPrice,
       quantity: quantity,
-      originalPrice: product.listPrice, // Eski fiyatı (list_price)
     );
   }
 }
 
-// Alt detay modelleri (API yanıtına göre)
-class ProductDetail {
+class ProductDetailCart {
   final String id;
   final String name;
   final double salePrice;
   final double listPrice;
 
-  ProductDetail({required this.id, required this.name, required this.salePrice, required this.listPrice});
-  factory ProductDetail.fromJson(Map<String, dynamic> json) => ProductDetail(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    salePrice: (json['sale_price'] as num).toDouble(),
-    listPrice: (json['list_price'] as num).toDouble(),
-  );
+  ProductDetailCart({
+    required this.id,
+    required this.name,
+    required this.salePrice,
+    required this.listPrice,
+  });
+
+  factory ProductDetailCart.fromJson(Map<String, dynamic> json) {
+    return ProductDetailCart(
+      id: json['id'],
+      name: json['name'],
+      salePrice: (json['sale_price'] as num).toDouble(),
+      listPrice: (json['list_price'] as num).toDouble(),
+    );
+  }
 }
 
-class StoreDetail {
+class StoreCartDetail {
   final String id;
   final String name;
   final String address;
   final String latitude;
   final String longitude;
 
-  StoreDetail({required this.id, required this.name, required this.address, required this.latitude, required this.longitude});
-  factory StoreDetail.fromJson(Map<String, dynamic> json) => StoreDetail(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    address: json['address'] as String,
-    latitude: json['latitude'] as String,
-    longitude: json['longitude'] as String,
-  );
-// BusinessModel'a dönüşüm metodu burada eklenebilir, ancak şimdilik BusinessModel'ı mock'tan çektiğiniz için dokunmuyoruz.
+  StoreCartDetail({
+    required this.id,
+    required this.name,
+    required this.address,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  factory StoreCartDetail.fromJson(Map<String, dynamic> json) {
+    return StoreCartDetail(
+      id: json['id'],
+      name: json['name'],
+      address: json['address'],
+      latitude: json['latitude'],
+      longitude: json['longitude'],
+    );
+  }
 }
 
-class BrandDetail {
+class BrandCartDetail {
   final String name;
-  final String logo; // image yerine logo kullanıyoruz
+  final String logo;
 
-  BrandDetail({required this.name, required this.logo});
-  factory BrandDetail.fromJson(Map<String, dynamic> json) => BrandDetail(
-    name: json['name'] as String,
-    logo: json['logo'] as String,
-  );
+  BrandCartDetail({required this.name, required this.logo});
+
+  factory BrandCartDetail.fromJson(Map<String, dynamic> json) {
+    return BrandCartDetail(
+      name: json['name'],
+      logo: json['logo'],
+    );
+  }
 }

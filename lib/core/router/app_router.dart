@@ -17,12 +17,13 @@ import '../../features/favorites/presentation/screens/favorites_screen.dart';
 import '../../features/account/presentation/screens/account_screen.dart';
 
 import '../../features/location/presentation/screens/location_info_screen.dart';
-import '../../features/location/presentation/screens/location_map_screen.dart'; // HATA: LocationPickerScreen yerine LocationMapScreen kullanılıyor.
+import '../../features/location/presentation/screens/location_map_screen.dart';
 
-import '../../features/businessShop/presentation/screens/businessShop_details_screen.dart';
-import '../../features/businessShop/data/model/businessShop_model.dart';
-
+import '../../features/product/data/models/store_summary.dart';
 import '../../features/product/presentation/screens/product_detail_screen.dart';
+
+// 🔥 STORE — DOĞRU İMPORT (BusinessModel değil!)
+import '../../features/stores/presentation/screens/store_detail_screen.dart';
 
 import '../../features/support/presentation/support_screen.dart';
 import '../../features/support/presentation/support_success_screen.dart';
@@ -38,27 +39,17 @@ import '../../features/cart/presentation/screens/cart_screen.dart';
 
 import '../providers/app_state_provider.dart';
 import 'app_shell.dart';
-import '../../features/explore/presentation/widgets/category_filter_option.dart';
-
 
 // --------------------------------------------------------------
-// 🔥 EKSİK TANIMLAR
+// ROUTE CONSTANTS
 // --------------------------------------------------------------
 abstract class AppRoutes {
   static const String home = 'home';
   static const String productDetail = 'product-detail';
 }
 
-Widget fadeTransition(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
-  return FadeTransition( // <-- Burası direkt Widget dönüyor
-    opacity: animation,
-    child: child,
-  );
-}
-
-
 // --------------------------------------------------------------
-// 🔥 CUSTOM PAGE TRANSITION (buildAnimatedPage fonksiyonu)
+// TRANSITION
 // --------------------------------------------------------------
 CustomTransitionPage buildAnimatedPage({
   required Widget child,
@@ -66,9 +57,9 @@ CustomTransitionPage buildAnimatedPage({
 }) {
   return CustomTransitionPage(
     key: key,
-    transitionDuration: const Duration(milliseconds: 450),
+    transitionDuration: const Duration(milliseconds: 350),
     child: child,
-    transitionsBuilder: (context, animation, sec, child) {
+    transitionsBuilder: (_, animation, _, child) {
       return FadeTransition(
         opacity: CurvedAnimation(
           parent: animation,
@@ -80,132 +71,87 @@ CustomTransitionPage buildAnimatedPage({
   );
 }
 
-
 // --------------------------------------------------------------
-// 🔥 FINAL — DOĞRU ROUTER YAPISI
+// GO_ROUTER — FINAL, CLEAN VERSION
 // --------------------------------------------------------------
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
 
-    // ----------------------------------------------------------
-    // 🚦 REDIRECT RULES
-    // ----------------------------------------------------------
-    // Hata 1: redirect fonksiyonunun en sonunda tek bir return ifadesi olmalı.
-    // Hata 2: hasProfile tanımı redirect içinde yapılmalı.
     redirect: (context, state) {
       final app = ref.watch(appStateProvider);
-      final user = ref.watch(userNotifierProvider).user;
+      final userState = ref.watch(userNotifierProvider);
+      final user = userState.user;
+
       final loc = state.uri.toString();
 
-      debugPrint("🔍 [ROUTER] loc=$loc, isLoggedIn=${app.isLoggedIn}, user=${user != null ? '✅' : '❌'}");
-
-      // ----------------------------------------------------------
-      // 0) Splash her zaman serbest
-      // ----------------------------------------------------------
       if (loc == '/splash') return null;
 
-      // ----------------------------------------------------------
-      // 1) Login değilse → sadece login & intro serbest
-      // ----------------------------------------------------------
       if (!app.isLoggedIn) {
         if (loc == '/login' || loc == '/intro') return null;
         return '/login';
       }
 
-      // ----------------------------------------------------------
-      // 2) Login olduysa (app.isLoggedIn == true)
-      // ----------------------------------------------------------
+      final hasProfile =
+          user != null && user.firstName != null && user.firstName!.isNotEmpty;
 
-      // Profil doldurma kontrolü için hasProfile değişkeni tanımlanmalı (Hata çözümü)
-      final bool hasProfile = user != null && user.firstName != null && user.firstName!.isNotEmpty;
-
-      // YENİ KULLANICI AKIŞI
       if (app.isNewUser) {
-        // 2a) Profil doldurulmadıysa:
-        if (!hasProfile) {
-          if (loc != '/profileDetail') return '/profileDetail';
-          return null;
+        if (!hasProfile && loc != '/profileDetail') return '/profileDetail';
+        if (!app.hasSeenOnboarding && loc != '/onboarding') return '/onboarding';
+        if (!app.hasSelectedLocation && loc != '/location-info') {
+          return '/location-info';
         }
-
-        // 2b) Onboarding görülmediyse:
-        if (!app.hasSeenOnboarding) {
-          if (loc != '/onboarding') return '/onboarding';
-          return null;
-        }
-
-        // 2c) Konum seçilmemişse:
-        if (!app.hasSelectedLocation || app.latitude == null || app.longitude == null) {
-          if (loc != '/locationInfo') return '/locationInfo';
-          return null;
-        }
-
-        // Her şey tamamlandıysa, isNewUser bayrağını resetleyebiliriz (opsiyonel ama ideal)
-        // Bu kısım UI'da halledilebilir, şimdilik sadece yönlendirme yapalım:
         return '/home';
       }
 
-
-      // MEVCUT KULLANICI AKIŞI (isNewUser == false)
-
-      // Konum seçimi tamamlanmadıysa (Eski kullanıcı ama konum bilgisi eksik):
-      if (!app.hasSelectedLocation || app.latitude == null || app.longitude == null) {
-        if (loc != '/locationInfo') return '/locationInfo';
-        return null;
-      }
-
-      // Giriş akışını bloke et (Hata çözümü)
       const blocked = [
         '/login',
         '/intro',
         '/profileDetail',
         '/onboarding',
-        '/locationInfo',
+        '/location-info',
       ];
 
       if (blocked.contains(loc)) return '/home';
 
-      // ----------------------------------------------------------
-      // 3) Geri kalan tüm rotalar serbest
-      // ----------------------------------------------------------
       return null;
     },
 
-    // ----------------------------------------------------------
-    // ROUTES
-    // ----------------------------------------------------------
     routes: [
-      // AUTH
+      // ---------------- AUTH ----------------
       GoRoute(
         path: '/splash',
         pageBuilder: (_, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const SplashScreen()),
+            buildAnimatedPage(child: const SplashScreen(), key: state.pageKey),
       ),
+
       GoRoute(
         path: '/intro',
         pageBuilder: (_, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const IntroScreen()),
+            buildAnimatedPage(child: const IntroScreen(), key: state.pageKey),
       ),
+
       GoRoute(
         path: '/login',
         pageBuilder: (_, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const LoginScreen()),
+            buildAnimatedPage(child: const LoginScreen(), key: state.pageKey),
       ),
+
       GoRoute(
         path: '/onboarding',
         pageBuilder: (_, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const OnboardingScreen()),
+            buildAnimatedPage(child: const OnboardingScreen(), key: state.pageKey),
       ),
 
-      // ---------------- FULLSCREEN (ShellRoute DIŞI) ----------------
+      // ---------------- FULLSCREEN ----------------
       GoRoute(
         path: '/location-info',
-        builder: (context, state) => const LocationInfoScreen(),
+        builder: (_, state) => const LocationInfoScreen(),
       ),
+
       GoRoute(
-        // LocationPickerScreen yerine LocationMapScreen kullanıldı (Hata çözümü)
         path: '/location-picker',
-        builder: (context, state) => const LocationMapScreen(),
+        builder: (_, state) => const LocationMapScreen(),
       ),
 
       GoRoute(
@@ -213,32 +159,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => const ProfileDetailsScreen(),
       ),
 
+      // ---------------- PRODUCT DETAIL ----------------
       GoRoute(
-        path: 'product-detail/:productId',
+        path: '/product-detail/:productId',
         name: AppRoutes.productDetail,
         pageBuilder: (context, state) {
           final productId = state.pathParameters['productId']!;
-          return CustomTransitionPage(
-            key: state.pageKey,
-            child: ProductDetailScreen(
-              productId: productId,
-            ),
-            transitionsBuilder: fadeTransition,
-          );
-        },
-      ),
-
-      GoRoute(
-        path: '/businessShop-detail',
-        pageBuilder: (_, state) {
-          final business = state.extra as BusinessModel;
           return buildAnimatedPage(
             key: state.pageKey,
-            child: BusinessShopDetailsScreen(business: business),
+            child: ProductDetailScreen(productId: productId),
           );
         },
       ),
 
+      // ---------------- STORE DETAIL ----------------
+      GoRoute(
+        path: '/store-detail',
+        pageBuilder: (_, state) {
+          final store = state.extra as StoreSummary;
+          return buildAnimatedPage(
+            key: state.pageKey,
+            child: StoreDetailScreen(storeId: store.id),
+          );
+        },
+      ),
+
+      // ---------------- PAYMENT ----------------
       GoRoute(
         path: '/payment',
         builder: (_, state) =>
@@ -254,32 +200,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/support', builder: (_, _) => const SupportScreen()),
       GoRoute(path: '/support-success', builder: (_, _) => const SupportSuccessScreen()),
 
-
-      // ----------------------------------------------------------
-      // 🔥 SHELL ROUTE (BOTTOM NAV) — SADECE NAVBAR EKRANLARI
-      // ----------------------------------------------------------
+      // ---------------- SHELL ROUTE ----------------
       ShellRoute(
-        builder: (context, state, child) =>
+        builder: (_, state, child) =>
             AppShell(location: state.uri.toString(), child: child),
         routes: [
           GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
 
           GoRoute(
             path: '/explore',
-            builder: (_, state) {
-              final extra = (state.extra as Map?)?.cast<String, dynamic>();
-
-              final initialCategory = extra?['category'] as CategoryFilterOption?;
-              final fromHome = extra?['fromHome'] == true;
-
-              return ExploreListScreen(
-                initialCategory: initialCategory,
-                fromHome: fromHome,
-              );
-            },
+            builder: (_, _) => const ExploreListScreen(),
           ),
 
-          GoRoute(path: '/explore-map', builder: (_, _) => const ExploreMapScreen()),
+          GoRoute(
+            path: '/explore-map',
+            builder: (_, _) => const ExploreMapScreen(),
+          ),
+
           GoRoute(path: '/favorites', builder: (_, _) => const FavoritesScreen()),
           GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
         ],

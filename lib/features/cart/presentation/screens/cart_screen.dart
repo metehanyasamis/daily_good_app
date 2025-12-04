@@ -9,7 +9,7 @@ import '../../../../core/utils/navigation_utils.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 
-import '../../../businessShop/data/model/businessShop_model.dart';
+import '../../../stores/data/model/store_detail_model.dart';
 import '../../domain/models/cart_item.dart';
 import '../../domain/providers/cart_provider.dart';
 
@@ -35,7 +35,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final items = ref.watch(cartProvider);
     final total = ref.watch(cartTotalProvider);
-    final business = ref.watch(cartBusinessProvider);
+    final cartItems = ref.watch(cartProvider);
 
     return GestureDetector(
       onTap: () => _focusNode.unfocus(),
@@ -73,7 +73,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: _CartCard(business: business!, items: items, ref: ref),
+                child: _CartCard(business: cartItems, items: items, ref: ref),
               ),
             ),
 
@@ -135,7 +135,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 }
 
 class _CartCard extends StatelessWidget {
-  final BusinessModel business;
+  final StoreDetailModel business;
   final List<CartItem> items;
   final WidgetRef ref;
 
@@ -177,6 +177,7 @@ class _CartCard extends StatelessWidget {
                     fit: BoxFit.cover,
                   ),
                 ),
+                */
               ),
 
               const SizedBox(width: 10),

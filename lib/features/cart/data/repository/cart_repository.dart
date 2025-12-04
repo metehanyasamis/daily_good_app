@@ -1,7 +1,5 @@
-// lib/features/cart/data/repository/cart_repository.dart
-
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart'; // debugPrint için
+import 'package:flutter/foundation.dart';
 import '../../domain/models/cart_item.dart';
 import '../../domain/models/cart_response_model.dart';
 
@@ -10,59 +8,38 @@ class CartRepository {
 
   CartRepository(this._dio);
 
-  /// 🛒 GET /customer/cart - Sepeti listeleme
-  Future<List<CartItem>> getCartItems() async {
-    debugPrint('🛒 Sepet listeleme isteği gönderiliyor: GET /customer/cart');
+  // GET /customer/cart
+  Future<List<CartItem>> getCart() async {
     try {
-      final response = await _dio.get('/customer/cart');
-      debugPrint('✅ Sepet listeleme yanıtı alındı (Status: ${response.statusCode})');
+      final res = await _dio.get('/customer/cart');
 
-      final List data = response.data['data'] as List;
-      debugPrint('➡️ ${data.length} adet sepet öğesi modele dönüştürülüyor.');
+      final list = (res.data['data'] as List)
+          .map((e) => CartResponseModel.fromJson(e).toDomain())
+          .toList();
 
-      return data.map((json) => CartResponseModel.fromJson(json).toDomain()).toList();
-
+      return list;
     } on DioException catch (e) {
-      debugPrint('❌ Sepet listeleme HATA: ${e.response?.statusCode} - ${e.message}');
-      if (e.response?.statusCode == 404 || e.response?.statusCode == 401) { // 401/404 durumunda boş dön.
-        if (e.response?.statusCode == 401) {
-          debugPrint('⚠️ Token geçersiz, kullanıcı login ekranına yönlendirilmeli (401)'); // 401 yönetimi
-        }
+      if (e.response?.statusCode == 401) {
+        debugPrint("⚠ Token geçersiz");
         return [];
       }
-      rethrow;
+      return [];
     }
   }
 
-  /// ➕ POST /customer/cart/add - Sepete ürün ekleme veya miktar güncelleme
-  Future<bool> addItemToCart({
+  // POST /customer/cart/add
+  Future<bool> addOrUpdate({
     required String productId,
     required int quantity,
     String? notes,
   }) async {
     final payload = {
-      'product_id': productId,
-      'quantity': quantity,
-      'notes': notes,
+      "product_id": productId,
+      "quantity": quantity,
+      "notes": notes,
     };
-    debugPrint('📦 Sepete ürün ekleme/güncelleme isteği gönderiliyor: POST /customer/cart/add. Payload: $payload');
 
-    try {
-      final response = await _dio.post(
-        '/customer/cart/add',
-        data: payload,
-      );
-
-      debugPrint('✅ Sepet güncelleme başarılı. (Status: ${response.statusCode})');
-      return response.data['success'] == true;
-
-    } on DioException catch (e) {
-      debugPrint('❌ Sepet güncelleme HATA: ${e.response?.statusCode} - ${e.message}');
-      if (e.response?.statusCode == 400) { // Bad Request: Genellikle stok, format hatası vb.
-        debugPrint('❗ Backend yanıtı: ${e.response?.data['message']}');
-      }
-      rethrow;
-    }
+    final res = await _dio.post('/customer/cart/add', data: payload);
+    return res.data['success'] == true;
   }
-
 }

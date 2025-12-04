@@ -14,7 +14,7 @@ class AuthRepository {
         headers: {"Accept": "application/json"},
       ));
 
-  Future<void> sendOtp(String phone) async {
+  Future<bool> sendOtp(String phone) async {
     debugPrint("🌐 [API] POST /customer/auth/send-otp");
     debugPrint("➡️ phone: $phone");
 
@@ -23,12 +23,14 @@ class AuthRepository {
         "phone": phone,
       });
 
-      debugPrint("📩 [OTP] Response STATUS: ${res.statusCode}");
-      debugPrint("📩 [OTP] Response DATA: ${res.data}");
+      debugPrint("📩 STATUS: ${res.statusCode}");
+      debugPrint("📩 DATA: ${res.data}");
+
+      return res.statusCode == 200;
     } on DioException catch (e) {
-      debugPrint("❌ [OTP] sendOtp ERROR STATUS: ${e.response?.statusCode}");
-      debugPrint("❌ [OTP] sendOtp ERROR DATA: ${e.response?.data}");
-      rethrow;
+      debugPrint("❌ sendOtp ERROR STATUS: ${e.response?.statusCode}");
+      debugPrint("❌ sendOtp ERROR DATA: ${e.response?.data}");
+      return false;
     }
   }
 

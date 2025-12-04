@@ -57,4 +57,14 @@ class AuthState {
       : status = AuthStatus.error,
         user = null,
         errorMessage = msg;
+
+  // ---------------------- UI Helper Getters (EKLENDİ) ----------------------
+
+  bool get isLoading => status == AuthStatus.loading;
+
+  bool get isOtpSent => status == AuthStatus.otpSent;
+
+  bool get isAuthenticated => status == AuthStatus.authenticated;
+
+  bool get hasError => status == AuthStatus.error;
 }

@@ -27,7 +27,7 @@ class FavoriteShopsTab extends ConsumerWidget {
         final shop = favoriteShops[index];
 
         return GestureDetector(
-          onTap: () => context.push('/businessShop-detail', extra: shop),
+          onTap: () => context.push('/stores-detail', extra: shop),
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(

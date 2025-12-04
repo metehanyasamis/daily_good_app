@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/favorites/providers/favorites_provider.dart';
+import '../../features/product/data/models/store_summary.dart';
 import '../theme/app_theme.dart';
-import '../../features/product/data/models/product_model.dart';
-import '../../features/businessShop/data/model/businessShop_model.dart';
 
-/// 💚 Ortak Favori Butonu (toast + animasyon + global provider entegrasyonu)
+import '../../features/product/data/models/product_model.dart';
+
+/// 💚 Ortak Favori Butonu
 class FavButton extends ConsumerStatefulWidget {
-  final dynamic item; // 🔹 Hem ProductModel hem BusinessModel destekler
+  final dynamic item; // ProductModel veya StoreSummary
   final double size;
-  final VoidCallback? onChanged; // 🔸 Favori değişince dışarıya rebuild sinyali
+  final VoidCallback? onChanged;
 
   const FavButton({
     super.key,
@@ -33,7 +34,7 @@ class _FavButtonState extends ConsumerState<FavButton>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 280),
+      duration: const Duration(milliseconds: 250),
     );
 
     _scale = Tween<double>(begin: 1.0, end: 1.25).animate(
@@ -56,8 +57,17 @@ class _FavButtonState extends ConsumerState<FavButton>
 
   bool _isFavorite(dynamic item) {
     final favorites = ref.watch(favoritesProvider);
-    if (item is ProductModel) return favorites.favoriteProducts.contains(item);
-    if (item is BusinessModel) return favorites.favoriteShops.contains(item);
+
+    if (item is ProductModel) {
+      return favorites.favoriteProducts
+          .any((p) => p.id == item.id);
+    }
+
+    if (item is StoreSummary) {
+      return favorites.favoriteStores
+          .any((s) => s.id == item.id);
+    }
+
     return false;
   }
 
@@ -66,11 +76,10 @@ class _FavButtonState extends ConsumerState<FavButton>
 
     if (item is ProductModel) {
       notifier.toggleProduct(item);
-    } else if (item is BusinessModel) {
-      notifier.toggleShop(item);
+    } else if (item is StoreSummary) {
+      notifier.toggleStore(item);
     }
 
-    // 🔸 Liste ekranlarında state yenileme için
     widget.onChanged?.call();
   }
 
@@ -82,14 +91,11 @@ class _FavButtonState extends ConsumerState<FavButton>
       onTap: () async {
         await _animate();
         _toggleFavorite(widget.item);
-
       },
       child: AnimatedBuilder(
         animation: _scale,
-        builder: (context, child) => Transform.scale(
-          scale: _scale.value,
-          child: child,
-        ),
+        builder: (_, child) =>
+            Transform.scale(scale: _scale.value, child: child),
         child: Container(
           width: widget.size,
           height: widget.size,

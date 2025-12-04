@@ -1,7 +1,7 @@
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io' show Platform;
 
-import '../../features/businessShop/data/model/businessShop_model.dart';
+import '../../features/stores/data/model/store_detail_model.dart';
 
 /// Açıklama:
 /// openMap() - cihazın harita uygulamasında navigasyon başlatır.
@@ -24,7 +24,7 @@ Future<void> openMap(double lat, double lng, {String? label}) async {
 }
 
 /// BusinessModel için kolay çağırım
-Future<void> openBusinessMap(BusinessModel business) async {
+Future<void> openBusinessMap(StoreDetailModel business) async {
   await openMap(
     business.latitude,
     business.longitude,

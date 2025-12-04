@@ -111,7 +111,7 @@ class UserNotifier extends StateNotifier<UserState> {
         // =======================================================
         final appStateNotifier = ref.read(appStateProvider.notifier);
         await appStateNotifier.setHasSeenProfileDetails(true);
-        await appStateNotifier.setNewUser(false);
+        await appStateNotifier.setIsNewUser(false);
         // =======================================================
 
       } else {
