@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../data/order_model.dart';
+import '../../data/models/order_model.dart';
 import 'countdown_progress.dart';
 
 class OrderSummaryCard extends StatelessWidget {

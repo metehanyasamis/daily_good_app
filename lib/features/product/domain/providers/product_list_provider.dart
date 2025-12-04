@@ -12,5 +12,7 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) {
 final productListProvider =
 FutureProvider.autoDispose<List<ProductModel>>((ref) async {
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getProducts();
+
+  final list = await repo.fetchProducts(); // ← getProducts yerine fetchProducts
+  return list.products; // çünkü fetchProducts ProductListResponse döndürüyor
 });

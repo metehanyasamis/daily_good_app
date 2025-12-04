@@ -1,8 +1,9 @@
 import '../../../product/data/models/product_model.dart';
 import '../../../product/data/models/store_summary.dart';
+import '../../../review/data/models/review_response_model.dart';
+import '../../../review/domain/models/review_model.dart';
 import 'working_hours_model.dart';
 import 'store_brand_model.dart';
-import 'review_model.dart';
 
 class StoreDetailModel {
   final String id;
@@ -13,14 +14,12 @@ class StoreDetailModel {
   final double latitude;
   final double longitude;
 
-  final String bannerImage;
+  final String bannerImageUrl; // ✔ YENİ
   final bool isFavorite;
 
   final double? distanceKm;
 
-  final
-  StoreBrandModel? brand;
-
+  final StoreBrandModel? brand;
   final WorkingHoursModel? workingHours;
 
   final double overallRating;
@@ -37,7 +36,7 @@ class StoreDetailModel {
     required this.imageUrl,
     required this.latitude,
     required this.longitude,
-    required this.bannerImage,
+    required this.bannerImageUrl, // ✔ YENİ
     required this.isFavorite,
     required this.distanceKm,
     required this.brand,
@@ -59,9 +58,9 @@ class StoreDetailModel {
       latitude: double.tryParse(json['latitude']?.toString() ?? "") ?? 0.0,
       longitude: double.tryParse(json['longitude']?.toString() ?? "") ?? 0.0,
 
-      bannerImage: json['banner_image'] ?? "",
-      isFavorite: json['is_favorite'] == true,
+      bannerImageUrl: json['banner_image'] ?? "", // ✔ ESKİ bannerImage yerine YENİ
 
+      isFavorite: json['is_favorite'] == true,
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
 
       brand: json['brand'] != null ? StoreBrandModel.fromJson(json['brand']) : null,
@@ -81,11 +80,15 @@ class StoreDetailModel {
           : [],
 
       reviews: json['reviews'] != null
-          ? (json['reviews'] as List).map((e) => ReviewModel.fromJson(e)).toList()
+          ? (json['reviews'] as List).map((e) {
+        final response = ReviewResponseModel.fromJson(e);
+        return ReviewModel.fromResponse(json['id'].toString(), response);
+      }).toList()
           : [],
     );
   }
 }
+
 
 extension StoreDetailMapper on StoreDetailModel {
   StoreSummary toProductStoreModel() {
@@ -93,12 +96,20 @@ extension StoreDetailMapper on StoreDetailModel {
       id: id,
       name: name,
       address: address,
-      imageUrl: imageUrl,
+
+      latitude: latitude,
+      longitude: longitude,
+
+      imageUrl: bannerImageUrl,     // ✔ backend’de store detail → banner_image_url
       distanceKm: distanceKm,
       overallRating: overallRating,
+      isFavorite: isFavorite,
     );
   }
 }
+
+
+
 
 
 class AverageRatingsModel {

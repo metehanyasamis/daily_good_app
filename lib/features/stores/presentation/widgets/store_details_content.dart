@@ -1,3 +1,4 @@
+import 'package:daily_good/features/stores/data/model/working_hours_model.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../product/data/models/product_model.dart';

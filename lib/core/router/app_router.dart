@@ -187,9 +187,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ---------------- PAYMENT ----------------
       GoRoute(
         path: '/payment',
-        builder: (_, state) =>
-            PaymentScreen(amount: state.extra as double? ?? 0.0),
+        builder: (_, state) => const PaymentScreen(),
       ),
+
 
       GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
       GoRoute(path: '/notifications', builder: (_, _) => const NotificationScreen()),

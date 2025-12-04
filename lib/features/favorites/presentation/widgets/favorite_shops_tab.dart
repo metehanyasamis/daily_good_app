@@ -60,13 +60,9 @@ class FavoriteShopsTab extends ConsumerWidget {
                             color: Colors.white,
                           ),
                           child: ClipOval(
-                            child: Image.asset(
-                              shop.businessShopLogoImage,
-                              fit: shop.businessShopLogoImage
-                                  .toLowerCase()
-                                  .contains("logo")
-                                  ? BoxFit.contain      // LOGO İÇİN
-                                  : BoxFit.cover,       // FOTOĞRAF İÇİN
+                            child: Image.network(
+                              shop.imageUrl,
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
@@ -104,7 +100,7 @@ class FavoriteShopsTab extends ConsumerWidget {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  shop.rating.toStringAsFixed(1),
+                                  shop.overallRating?.toStringAsFixed(1) ?? "0.0",
                                   style: const TextStyle(fontSize: 13),
                                 ),
                                 const SizedBox(width: 10),
@@ -115,7 +111,7 @@ class FavoriteShopsTab extends ConsumerWidget {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '${shop.distance.toStringAsFixed(1)} km',
+                                  '${shop.distanceKm?.toStringAsFixed(1) ?? "0.0"} km',
                                   style: const TextStyle(fontSize: 13),
                                 ),
                               ],
@@ -131,7 +127,8 @@ class FavoriteShopsTab extends ConsumerWidget {
                 Positioned(
                   top: 6,
                   right: 6,
-                  child: FavButton(item: shop, size: 34),
+                  child: FavButton(id: shop.id, isStore: true)
+                  ,
                 ),
               ],
             ),

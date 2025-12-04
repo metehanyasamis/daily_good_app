@@ -6,8 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
-import '../../data/order_model.dart';
-import '../../providers/order_provider.dart';
+import '../../data/models/order_model.dart';
+import '../../domain/providers/local_order_provider.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   const OrderTrackingScreen({super.key});
@@ -116,7 +116,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
 
   Widget _buildBusinessCard(BuildContext context, OrderItem order) {
     final theme = Theme.of(context);
-    final business = findBusinessById(order.businessId);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
@@ -136,106 +135,106 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          // 🟢 Başlık
-          Text(
-          "Teslim alma bilgileri",
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 1,
-          width: double.infinity,
-          color: AppColors.primaryDarkGreen.withOpacity(0.3),
-        ),
-        const SizedBox(height: 12),
-
-        // 🏪 İşletme Bilgisi
-        InkWell(
-        onTap: () {
-          if (business != null) {
-            context.push('/stores-detail', extra: business);
-          }
-        },
-        child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Image.asset(
-            order.businessLogo,
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
-          ),
-          const SizedBox(width: 10),
-
-          // 🔹 Metinler
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // İşletme Adı
-                Text(
-                  order.businessName,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-
-                // Adres Bilgisi
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      color: AppColors.primaryDarkGreen,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        order.businessAddress,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 4),
-
-                InkWell(
-                  onTap: () => _launchMaps(order.businessAddress),
-                  child: Text(
-                    "Navigasyon yönlendirmesi için tıklayınız 📍",
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[700],
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ],
+            // 🟢 Başlık
+            Text(
+              "Teslim alma bilgileri",
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
-          ),
+            const SizedBox(height: 8),
+            Container(
+              height: 1,
+              width: double.infinity,
+              color: AppColors.primaryDarkGreen.withOpacity(0.3),
+            ),
+            const SizedBox(height: 12),
 
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.primaryDarkGreen,
-            size: 22,
-          ),
-        ],
+            InkWell(
+              onTap: () {
+                /// mağaza detayına gitmek istersen:
+                context.push('/stores-detail', extra: order.businessId);
+              },
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 🔹 Logo
+                  Image.network(
+                    order.businessLogo,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  // 🔹 Yazılar
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // İşletme Adı
+                        Text(
+                          order.businessName,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        // Adres
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.location_on_outlined,
+                              color: AppColors.primaryDarkGreen,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                order.businessAddress,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        // Navigasyon linki
+                        InkWell(
+                          onTap: () => _launchMaps(order.businessAddress),
+                          child: Text(
+                            "Navigasyon yönlendirmesi için tıklayınız 📍",
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[700],
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.primaryDarkGreen,
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),]
-    ,
-    )
-    ,
-    )
-    ,
     );
   }
 

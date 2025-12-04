@@ -1,19 +1,21 @@
 // lib/features/support/presentation/support_screen.dart
 
+import 'dart:io';
+
 import 'package:daily_good/features/support/presentation/photo_preview_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../../../../core/theme/app_theme.dart';
-import '../../../core/widgets/custom_button.dart';
+import '../../../../core/widgets/custom_button.dart';
 import '../../account/domain/providers/user_notifier.dart';
-import '../../orders/data/mock_orders.dart';
-import '../../orders/data/order_model.dart';
+import '../../orders/data/models/order_list_item.dart';
+import '../../orders/domain/providers/order_provider.dart';
 import '../data/support_message_model.dart';
 import '../data/support_topics.dart';
 import '../domain/support_provider.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 
 class SupportScreen extends ConsumerStatefulWidget {
   const SupportScreen({super.key});
@@ -24,35 +26,38 @@ class SupportScreen extends ConsumerStatefulWidget {
 
 class _SupportScreenState extends ConsumerState<SupportScreen> {
   String? selectedTopic;
-  OrderItem? selectedOrder;
+  OrderListItem? selectedOrder;
 
   final messageController = TextEditingController();
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final emailController = TextEditingController();
 
-  final List<File> _photos = []; // MAX 3 FOTO
+  final List<File> _photos = [];
 
   @override
   void initState() {
     super.initState();
 
-    // Profilden bilgileri çek
+    // Kullanıcı bilgisini doldur
     final userState = ref.read(userNotifierProvider);
 
     if (userState.user != null) {
-      final user = userState.user!;
-
-      nameController.text = "${user.firstName ?? ''} ${user.lastName ?? ''}".trim();
-      phoneController.text = user.phone;
-      emailController.text = user.email ?? '';
+      final u = userState.user!;
+      nameController.text = "${u.firstName ?? ''} ${u.lastName ?? ''}".trim();
+      phoneController.text = u.phone;
+      emailController.text = u.email ?? '';
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
-    final orders = mockOrders;
+    final orderHistory = ref.watch(orderHistoryProvider);
+
+    List<OrderListItem> orders = orderHistory.maybeWhen(
+      data: (list) => list,
+      orElse: () => <OrderListItem>[],
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -78,12 +83,13 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               "Her türlü soru, öneri veya geri bildirimin bizim için değerli.\nAşağıdaki formu doldur — en kısa sürede sana dönüş yapacağız.",
               style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.3),
             ),
+
             const SizedBox(height: 24),
 
-            // KONULAR
+            // ⭐ KONULAR
             const Text("Konu Başlığı", style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
-            _dropdown(
+            _dropdown<String>(
               hint: "Konu başlığı seçiniz...",
               value: selectedTopic,
               items: supportTopics,
@@ -92,22 +98,23 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
 
             const SizedBox(height: 20),
 
-            // SİPARİŞ
+            // ⭐ SİPARİŞ
             const Text("Hangi Siparişiniz ile ilgili", style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
-            _dropdown<OrderItem>(
+            _dropdown<OrderListItem>(
               hint: "Sipariş seçiniz...",
               value: selectedOrder,
               items: orders,
-              display: (o) => "${o.businessName} • ${o.newPrice.toInt()} TL",
+              display: (o) => "${o.storeName} • ${o.totalAmount.toInt()} TL",
               onChanged: (v) => setState(() => selectedOrder = v),
             ),
 
             const SizedBox(height: 20),
+
+            // ⭐ FOTOĞRAF
             const Text("Fotoğraf ekleyin", style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
 
-            // 🔥 HER ZAMAN 3 FOTO KUTUSU
             Row(
               children: List.generate(3, (index) {
                 final hasPhoto = index < _photos.length;
@@ -150,9 +157,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                           right: 4,
                           child: GestureDetector(
                             onTap: () {
-                              setState(() {
-                                _photos.removeAt(index);
-                              });
+                              setState(() => _photos.removeAt(index));
                             },
                             child: Container(
                               padding: const EdgeInsets.all(2),
@@ -160,11 +165,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                                 color: Colors.black54,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
-                                Icons.close,
-                                size: 14,
-                                color: Colors.white,
-                              ),
+                              child: const Icon(Icons.close, size: 14, color: Colors.white),
                             ),
                           ),
                         ),
@@ -202,66 +203,53 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             const SizedBox(height: 12),
 
             _input(emailController, "E-mail", keyboard: TextInputType.emailAddress),
+
             const SizedBox(height: 24),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: CustomButton(
-                text: "Gönder",
-                onPressed: () async {
-                  // 1️⃣ Konu zorunlu
-                  if (selectedTopic == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Lütfen konu başlığı seçin")),
-                    );
-                    return;
-                  }
+            CustomButton(
+              text: "Gönder",
+              onPressed: () async {
+                // VALIDATION
+                if (selectedTopic == null) {
+                  _toast("Lütfen konu başlığı seçin");
+                  return;
+                }
 
-                  // 0️⃣ Sipariş zorunlu
-                  if (selectedOrder == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Lütfen ilgili siparişi seçin")),
-                    );
-                    return;
-                  }
+                if (selectedOrder == null) {
+                  _toast("Lütfen ilgili siparişi seçin");
+                  return;
+                }
 
-                  // 2️⃣ İsim Zorunlu
-                  if (nameController.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Lütfen isim soyisim girin")),
-                    );
-                    return;
-                  }
+                if (nameController.text.trim().isEmpty) {
+                  _toast("Lütfen isim soyisim girin");
+                  return;
+                }
 
-                  // 3️⃣ Telefon veya Email’den EN AZ BİRİ zorunlu
-                  final phone = phoneController.text.trim();
-                  final email = emailController.text.trim();
+                final phone = phoneController.text.trim();
+                final email = emailController.text.trim();
 
-                  if (phone.isEmpty && email.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Cep telefonu veya e-mail bilgisinden en az birini giriniz")),
-                    );
-                    return;
-                  }
+                if (phone.isEmpty && email.isEmpty) {
+                  _toast("Cep telefonu veya e-mail bilgisinden en az birini giriniz");
+                  return;
+                }
 
-                  // 4️⃣ Mesaj oluştur
-                  final msg = SupportMessage(
-                    topic: selectedTopic!,
-                    orderId: selectedOrder?.id,
-                    message: messageController.text,
-                    name: nameController.text.trim(),
-                    phone: phone,
-                    email: email,
-                    photos: _photos,
-                  );
+                // ⭐ MESAJ OLUŞTUR
+                final msg = SupportMessage(
+                  topic: selectedTopic!,
+                  orderId: selectedOrder!.id,
+                  message: messageController.text.trim(),
+                  name: nameController.text.trim(),
+                  phone: phone,
+                  email: email,
+                  photos: _photos,
+                );
 
-                  await ref.read(sendSupportMessageProvider(msg).future);
+                await ref.read(sendSupportMessageProvider(msg).future);
 
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    context.go('/support-success');
-                  });
-                },
-              ),
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  context.go('/support-success');
+                });
+              },
             ),
 
             const SizedBox(height: 80),
@@ -271,7 +259,14 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     );
   }
 
-  // DROPDOWN
+  // -------------------------
+  // WIDGET HELPERS
+  // -------------------------
+
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   Widget _dropdown<T>({
     required String hint,
     required T? value,
@@ -315,7 +310,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     );
   }
 
-  // 🔥 FOTO SEÇME (INDEX DESTEKLİ)
+  // FOTO SEÇİMİ
   Future<void> _pickPhoto(int index) async {
     if (_photos.length >= 3 && index >= _photos.length) return;
 
@@ -347,11 +342,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
 
     if (source == null) return;
 
-    final picked = await picker.pickImage(
-      source: source,
-      imageQuality: 70,
-    );
-
+    final picked = await picker.pickImage(source: source, imageQuality: 70);
     if (picked == null) return;
 
     setState(() {
@@ -363,7 +354,6 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     });
   }
 
-// 🔥 AppBar için mini home exit buton widget'ı
   Widget _homeExitButton() {
     return IconButton(
       icon: const Icon(Icons.home_outlined, color: Colors.white),
@@ -376,26 +366,17 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               "Formu göndermeden ayrılmak üzeresiniz!",
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
             ),
-            content: const Text(
-                "Bu sayfadan çıkarsanız yazdıklarınız kaybolacak."),
+            content: const Text("Bu sayfadan çıkarsanız yazdıklarınız kaybolacak."),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text("İptal",
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child: const Text("İptal"),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text(
+                child: const Text(
                   "Anasayfa'ya Dön",
-                  style: TextStyle(
-                    color: AppColors.primaryDarkGreen,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(color: AppColors.primaryDarkGreen),
                 ),
               ),
             ],
@@ -408,6 +389,4 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       },
     );
   }
-
-
 }

@@ -5,11 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/navigation_utils.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 
-import '../../../stores/data/model/store_detail_model.dart';
 import '../../domain/models/cart_item.dart';
 import '../../domain/providers/cart_provider.dart';
 
@@ -35,16 +33,17 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final items = ref.watch(cartProvider);
     final total = ref.watch(cartTotalProvider);
-    final cartItems = ref.watch(cartProvider);
 
     return GestureDetector(
       onTap: () => _focusNode.unfocus(),
       child: Scaffold(
         backgroundColor: AppColors.background,
-
         appBar: AppBar(
           backgroundColor: AppColors.primaryDarkGreen,
-          title: const Text('Sepetim', style: TextStyle(color: Colors.white)),
+          title: const Text(
+            'Sepetim',
+            style: TextStyle(color: Colors.white),
+          ),
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
@@ -58,25 +57,29 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   : () async {
                 final ok = await _showConfirmDialog(context);
                 if (ok == true) {
-                  // Sepet silme API endpoint'i bekleniyor. Şimdilik sadece UI State'ini temizliyoruz.
+                  // Şimdilik sadece lokal state temizleniyor
                   ref.read(cartProvider.notifier).clearCart();
                 }
               },
             ),
           ],
         ),
-
         body: items.isEmpty
             ? const Center(child: Text("Sepetiniz boş"))
             : CustomScrollView(
           slivers: [
+            // 🧺 Sepet Kartı
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: _CartCard(business: cartItems, items: items, ref: ref),
+                child: _CartCard(
+                  items: items,
+                  ref: ref,
+                ),
               ),
             ),
 
+            // ℹ️ Bilgilendirme kutusu
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -84,6 +87,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
             ),
 
+            // 📝 Sipariş notu
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -94,17 +98,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
             ),
 
+            // 💰 Toplam kutusu
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _TotalBox(total: total, items: items),
+                child: _TotalBox(
+                  total: total,
+                  items: items,
+                ),
               ),
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
-
         bottomNavigationBar: items.isEmpty
             ? null
             : Padding(
@@ -134,13 +141,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 🧺 Sepet Kartı
+// ---------------------------------------------------------------------------
 class _CartCard extends StatelessWidget {
-  final StoreDetailModel business;
   final List<CartItem> items;
   final WidgetRef ref;
 
   const _CartCard({
-    required this.business,
     required this.items,
     required this.ref,
   });
@@ -151,75 +159,34 @@ class _CartCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primaryDarkGreen.withOpacity(0.3)),
+        border: Border.all(
+          color: AppColors.primaryDarkGreen.withOpacity(0.3),
+        ),
       ),
       padding: const EdgeInsets.all(16),
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Teslim alma bilgileri",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 8),
-
-          Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.primaryDarkGreen),
-                ),
-                child: ClipOval(
-                  child: Image.asset(
-                    business.businessShopLogoImage,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                */
-              ),
-
-              const SizedBox(width: 10),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(business.name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text(business.address,
-                        style: const TextStyle(fontSize: 13)),
-                    InkWell(
-                      onTap: () => openBusinessMap(business),
-                      child: const Text(
-                        "Navigasyon için tıklayın 📍",
-                        style: TextStyle(
-                          color: AppColors.primaryDarkGreen,
-                          decoration: TextDecoration.underline,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          const Text(
+            "Sepet özeti",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
-
-          const Divider(height: 24),
-          const Text("Sepet özeti",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 10),
-
-          ...items.map((item) => _CartItemRow(item: item)),
+          const SizedBox(height: 12),
+          ...items.map(
+                (item) => _CartItemRow(item: item),
+          ),
         ],
       ),
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// 🧺 Sepet Satırı
+// ---------------------------------------------------------------------------
 class _CartItemRow extends ConsumerWidget {
   final CartItem item;
   const _CartItemRow({required this.item});
@@ -228,7 +195,7 @@ class _CartItemRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(cartProvider.notifier);
 
-    // Stok/Fiyat kontrolü artık Backend'e bırakıldı.
+    // Backend stok kontrolü devreye girene kadar maxReached = false bırakıyoruz
     const maxReached = false;
 
     final oldUnit = item.originalPrice;
@@ -237,20 +204,21 @@ class _CartItemRow extends ConsumerWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // -------------------------
-          // SOL TARAF — Ürün adı + fiyatlar
-          // -------------------------
+          // SOL: Ürün bilgisi
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 15)),
+                Text(
+                  item.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Row(
                   children: [
@@ -262,7 +230,7 @@ class _CartItemRow extends ConsumerWidget {
                         decoration: TextDecoration.lineThrough,
                       ),
                     ),
-                    const Text("  "),
+                    const SizedBox(width: 4),
                     Text(
                       "${newUnit.toStringAsFixed(2)} ₺",
                       style: const TextStyle(
@@ -276,9 +244,7 @@ class _CartItemRow extends ConsumerWidget {
             ),
           ),
 
-          // -------------------------
-          // ADET KONTROLÜ
-          // -------------------------
+          // Adet kontrol
           _QtyControl(
             quantity: item.quantity,
             maxReached: maxReached,
@@ -286,16 +252,16 @@ class _CartItemRow extends ConsumerWidget {
             onIncrement: () => ctrl.increment(item.id),
           ),
 
-          // -------------------------
-          // TOPLAM TUTAR
-          // -------------------------
+          // Sağ: Toplam
           SizedBox(
             width: 70,
             child: Text(
               "${total.toStringAsFixed(2)} ₺",
               textAlign: TextAlign.end,
               style: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.black87),
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],
@@ -304,6 +270,9 @@ class _CartItemRow extends ConsumerWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// ➕➖ Adet Kontrol Bileşeni
+// ---------------------------------------------------------------------------
 class _QtyControl extends StatelessWidget {
   final int quantity;
   final VoidCallback onIncrement;
@@ -330,9 +299,13 @@ class _QtyControl extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _icon(Icons.remove, onDecrement, false),
-          Text('$quantity',
-              style:
-              const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          Text(
+            '$quantity',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
           _icon(Icons.add, onIncrement, maxReached),
         ],
       ),
@@ -342,19 +315,26 @@ class _QtyControl extends StatelessWidget {
   Widget _icon(IconData icon, VoidCallback onTap, bool disabled) {
     return InkWell(
       onTap: disabled ? null : onTap,
-      child: Icon(icon,
-          size: 18,
-          color:
-          disabled ? Colors.grey.shade400 : AppColors.primaryDarkGreen),
+      child: Icon(
+        icon,
+        size: 18,
+        color: disabled ? Colors.grey.shade400 : AppColors.primaryDarkGreen,
+      ),
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// 📝 Sipariş Notu
+// ---------------------------------------------------------------------------
 class _NoteField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
 
-  const _NoteField({required this.controller, required this.focusNode});
+  const _NoteField({
+    required this.controller,
+    required this.focusNode,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -376,15 +356,21 @@ class _NoteField extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 💰 Toplam Tutar Kutusu
+// ---------------------------------------------------------------------------
 class _TotalBox extends StatelessWidget {
   final double total;
   final List<CartItem> items;
 
-  const _TotalBox({required this.total, required this.items});
+  const _TotalBox({
+    required this.total,
+    required this.items,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Toplam orijinal fiyatı hesaplamak için CartItem modelinden gelen veriyi kullanıyoruz.
+    // Orijinal fiyat toplamı
     final double original = items.fold(
       0,
           (sum, e) => sum + (e.originalPrice * e.quantity),
@@ -397,31 +383,31 @@ class _TotalBox extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300),
       ),
       padding: const EdgeInsets.all(14),
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             "Toplam (vergiler dahil)",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
-
           const Divider(height: 12),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text("Toplam"),
-
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     "${total.toStringAsFixed(2)} ₺",
                     style: const TextStyle(
-                        color: AppColors.primaryDarkGreen,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16),
+                      color: AppColors.primaryDarkGreen,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   Text(
                     "${original.toStringAsFixed(2)} ₺",
@@ -434,13 +420,16 @@ class _TotalBox extends StatelessWidget {
                 ],
               ),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// 🗑 Sepet boşaltma diyaloğu
+// ---------------------------------------------------------------------------
 Future<bool?> _showConfirmDialog(BuildContext context) {
   return showDialog<bool>(
     context: context,
@@ -462,5 +451,3 @@ Future<bool?> _showConfirmDialog(BuildContext context) {
     ),
   );
 }
-
-// openBusinessMap metodu, muhtemelen core/utils/navigation_utils.dart dosyasından gelmektedir.

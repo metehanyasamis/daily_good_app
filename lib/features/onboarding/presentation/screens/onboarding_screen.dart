@@ -54,7 +54,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (_currentPage == _pages.length - 1) {
       // Onboarding seen olarak işaretle
       await PrefsService.setHasSeenOnboarding(true);
-      ref.read(appStateProvider.notifier).setOnboardingSeen(true);
+      ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
 
       // Lokasyon akışına yönlendir
       context.go('/locationInfo');
@@ -94,7 +94,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             child: TextButton(
               onPressed: () async {
                 await PrefsService.setHasSeenOnboarding(true);
-                ref.read(appStateProvider.notifier).setOnboardingSeen(true);
+                ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
                 context.go('/locationInfo');
               },
               child: Text(

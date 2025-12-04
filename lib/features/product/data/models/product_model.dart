@@ -1,6 +1,6 @@
 // lib/features/product/data/models/product_model.dart
 
-import 'package:daily_good/features/product/data/models/store_summary.dart';
+import 'store_summary.dart';
 
 class ProductModel {
   final String id;
@@ -10,7 +10,8 @@ class ProductModel {
   final int stock;
   final String imageUrl;
 
-  final StoreSummary store;     // store {}
+  final StoreSummary store;
+
   final String startHour;
   final String endHour;
   final String startDate;
@@ -34,23 +35,18 @@ class ProductModel {
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
-      id: json['id'],
-      name: json['name'],
-      listPrice: (json['list_price'] as num).toDouble(),
-      salePrice: (json['sale_price'] as num).toDouble(),
-      stock: json['stock'] ?? 0,
-      imageUrl: json['image_url'] ?? '',
-      store: StoreSummary.fromJson(json['store']),
-      startHour: json['start_hour'] ?? "",
-      endHour: json['end_hour'] ?? "",
-      startDate: json['start_date'] ?? "",
-      endDate: json['end_date'] ?? "",
-      createdAt: DateTime.parse(json['created_at']),
+      id: json["id"],
+      name: json["name"],
+      listPrice: (json["list_price"] as num).toDouble(),
+      salePrice: (json["sale_price"] as num).toDouble(),
+      stock: json["stock"] ?? 0,
+      imageUrl: json["image_url"] ?? "",
+      store: StoreSummary.fromJson(json["store"]),
+      startHour: json["start_hour"] ?? "",
+      endHour: json["end_hour"] ?? "",
+      startDate: json["start_date"] ?? "",
+      endDate: json["end_date"] ?? "",
+      createdAt: DateTime.parse(json["created_at"]),
     );
-  }
-}
-extension ProductModelExtensions on ProductModel {
-  String get pickupTimeText {
-    return "$startHour - $endHour arası";
   }
 }

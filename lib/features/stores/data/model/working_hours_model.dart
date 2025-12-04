@@ -19,3 +19,18 @@ class WorkingHoursModel {
     );
   }
 }
+
+// 🔥 Çalışan extension
+extension WorkingHoursFormatter on WorkingHoursModel {
+  String toDisplayString() {
+    if (open.isEmpty || close.isEmpty) {
+      return "Çalışma saatleri belirtilmedi";
+    }
+
+    // 09:00 formatına çevir
+    final formattedOpen = open.substring(0, 5);
+    final formattedClose = close.substring(0, 5);
+
+    return "$formattedOpen - $formattedClose";
+  }
+}

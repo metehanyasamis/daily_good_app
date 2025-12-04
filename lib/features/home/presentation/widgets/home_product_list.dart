@@ -45,6 +45,7 @@ class HomeProductList extends StatelessWidget {
             ),
             child: ProductCard(
               product: product,
+
               onTap: () {
                 if (onProductTap != null) {
                   onProductTap!(product);

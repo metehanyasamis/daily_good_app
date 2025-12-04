@@ -1,18 +1,17 @@
+// lib/features/stores/presentation/widgets/store_card.dart
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../data/model/store_detail_model.dart';
+import '../../../product/data/models/store_summary.dart'; // ÖNEMLİ: StoreSummary import
 
 class StoreCard extends StatelessWidget {
-  final StoreDetailModel store;
+  final StoreSummary store;
   const StoreCard({super.key, required this.store});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => context.push(
-        "/stores/${store.id}",
-      ),
+      onTap: () => context.push("/stores/${store.id}"),
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
@@ -33,7 +32,7 @@ class StoreCard extends StatelessWidget {
                 bottomLeft: Radius.circular(14),
               ),
               child: Image.network(
-                store.bannerImageUrl,
+                store.bannerImageUrl ?? "",
                 width: 100,
                 height: 100,
                 fit: BoxFit.cover,

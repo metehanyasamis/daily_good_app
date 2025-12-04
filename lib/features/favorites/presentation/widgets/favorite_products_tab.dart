@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../favorites/providers/favorites_provider.dart';
 import '../../../product/presentation/widgets/product_card.dart';
@@ -28,10 +27,7 @@ class FavoriteProductsTab extends ConsumerWidget {
         itemCount: favoriteProducts.length,
         itemBuilder: (context, index) {
           final product = favoriteProducts[index];
-          return ProductCard(
-            product: product,
-            onTap: () => context.push('/product-detail', extra: product),
-          );
+          return ProductCard(product: product);
         },
       ),
     );

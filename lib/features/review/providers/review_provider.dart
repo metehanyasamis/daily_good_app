@@ -1,8 +1,6 @@
 // lib/features/review/providers/review_provider.dart
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart';
-
 import '../../../core/providers/dio_provider.dart';
 import '../data/repository/review_repository.dart';
 import '../data/models/review_response_model.dart';
@@ -51,8 +49,8 @@ class ReviewController
         );
       }
 
-      final domain = ReviewModel.fromApi(storeId, result);
-      state = AsyncValue.data(domain);
+      final review = ReviewModel.fromResponse(storeId, result);
+      state = AsyncValue.data(review);
       return true;
     } catch (e, st) {
       state = AsyncValue.error(e, st);

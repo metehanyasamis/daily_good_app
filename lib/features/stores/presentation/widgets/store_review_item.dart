@@ -1,5 +1,3 @@
-// lib/features/stores/presentation/widgets/store_review_item.dart
-
 import 'package:flutter/material.dart';
 import '../../../review/domain/models/review_model.dart';
 
@@ -26,13 +24,13 @@ class StoreReviewItem extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                review.user,
+                review.userName,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Row(
                 children: [
                   const Icon(Icons.star, size: 16, color: Colors.orange),
-                  Text(review.rating.toStringAsFixed(1)),
+                  Text(review.averageRating.toStringAsFixed(1)),
                 ],
               ),
             ],
@@ -41,14 +39,14 @@ class StoreReviewItem extends StatelessWidget {
           const SizedBox(height: 6),
 
           Text(
-            review.comment,
+            review.comment ?? "",
             style: const TextStyle(color: Colors.black87),
           ),
 
           const SizedBox(height: 6),
 
           Text(
-            "${review.date.day}.${review.date.month}.${review.date.year}",
+            "${review.createdAt.day}.${review.createdAt.month}.${review.createdAt.year}",
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],

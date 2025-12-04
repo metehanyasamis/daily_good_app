@@ -3,12 +3,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/fav_button.dart';
 import '../../data/models/product_model.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
+  final VoidCallback? onTap; // ⭐ dışarıdan yönlendirme alır
 
-  const ProductCard({super.key, required this.product});
+  const ProductCard({
+    super.key,
+    required this.product,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +26,7 @@ class ProductCard extends StatelessWidget {
         : 0;
 
     return InkWell(
-      onTap: () => context.push('/product/${product.id}'),
+      onTap: onTap ?? () => context.push('/product/${product.id}'),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -74,14 +80,7 @@ class ProductCard extends StatelessWidget {
                 Positioned(
                   top: 10,
                   right: 10,
-                  child: Icon(
-                    product.store.isFavorite == true
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    color: product.store.isFavorite == true
-                        ? Colors.red
-                        : Colors.white,
-                  ),
+                  child: FavButton(id: product.id),
                 ),
               ],
             ),

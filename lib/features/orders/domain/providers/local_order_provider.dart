@@ -1,24 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/order_model.dart';
+import '../../data/models/order_model.dart';
 
-/// Ana sipariş listesi sağlayıcısı
+/// LOCAL ORDER STATE
+/// Yalnızca:
+/// - ödeme sonrası ekrana OrderItem eklemek
+/// - teslim edildi olarak işaretlemek
+/// için kullanılır.
+
 final ordersProvider = StateNotifierProvider<OrdersNotifier, List<OrderItem>>(
       (ref) => OrdersNotifier(),
 );
 
-/// Aktif (teslim edilmemiş) sipariş var mı?
-final hasActiveOrderProvider = Provider<bool>((ref) {
-  final orders = ref.watch(ordersProvider);
-  return orders.any((o) => !o.isDelivered);
-});
-
 class OrdersNotifier extends StateNotifier<List<OrderItem>> {
   OrdersNotifier() : super([]);
 
+  /// Yeni sipariş ekle
   void addOrder(OrderItem item) {
     state = [...state, item];
   }
 
+  /// Siparişi teslim edilmiş yap
   void markDelivered(String id) {
     state = [
       for (final o in state)

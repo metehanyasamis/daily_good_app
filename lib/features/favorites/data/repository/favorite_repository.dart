@@ -1,49 +1,51 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../model/favorite_product_response_model.dart';
 import '../model/favorite_shop_response_model.dart';
-import '../../../product/data/models/product_model.dart';
+
+final favoriteRepositoryProvider = Provider((ref) => FavoriteRepository());
 
 class FavoriteRepository {
-  final Dio dio;
-  FavoriteRepository(this.dio);
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: "https://dailygood.dijicrea.net/api/v1",
+    headers: {"Accept": "application/json"},
+  ));
 
-  // STORE FAVORITES --------------------
-  Future<List<StoreSummary>> getFavoriteShops() async {
-    final res = await dio.get('/customer/favorites');
-    final List data = res.data['data'];
-
-    return data
-        .map((j) => FavoriteShopResponseModel.fromJson(j).toDomain())
+  // -------------------------------
+  // PRODUCTS
+  // -------------------------------
+  Future<List<FavoriteProductResponseModel>> getFavoriteProducts() async {
+    final res = await _dio.get("/customer/favorites/products");
+    final list = res.data["data"] as List;
+    return list
+        .map((e) => FavoriteProductResponseModel.fromJson(e))
         .toList();
   }
 
-  Future<bool> addFavoriteShop(String id) async {
-    final res = await dio.post('/customer/favorites/add/$id');
-    return res.data['success'] == true;
+  Future<void> addFavoriteProduct(String id) async {
+    await _dio.post("/customer/favorites/products/add/$id");
   }
 
-  Future<bool> removeFavoriteShop(String id) async {
-    final res = await dio.delete('/customer/favorites/remove/$id');
-    return res.data['success'] == true;
+  Future<void> removeFavoriteProduct(String id) async {
+    await _dio.delete("/customer/favorites/products/remove/$id");
   }
 
-  // PRODUCT FAVORITES --------------------
-  Future<List<ProductModel>> getFavoriteProducts() async {
-    final res = await dio.get('/customer/favorites/products');
-    final List data = res.data['data'];
-
-    return data
-        .map((j) => FavoriteProductResponseModel.fromJson(j).toDomain())
+  // -------------------------------
+  // STORES
+  // -------------------------------
+  Future<List<FavoriteShopResponseModel>> getFavoriteStores() async {
+    final res = await _dio.get("/customer/favorites");
+    final list = res.data["data"] as List;
+    return list
+        .map((e) => FavoriteShopResponseModel.fromJson(e))
         .toList();
   }
 
-  Future<bool> addFavoriteProduct(String id) async {
-    final res = await dio.post('/customer/favorites/products/add/$id');
-    return res.data['success'] == true;
+  Future<void> addFavoriteStore(String id) async {
+    await _dio.post("/customer/favorites/add/$id");
   }
 
-  Future<bool> removeFavoriteProduct(String id) async {
-    final res = await dio.delete('/customer/favorites/products/remove/$id');
-    return res.data['success'] == true;
+  Future<void> removeFavoriteStore(String id) async {
+    await _dio.delete("/customer/favorites/remove/$id");
   }
 }
