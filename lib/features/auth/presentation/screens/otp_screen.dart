@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -90,25 +91,36 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
 
     final auth = ref.read(authNotifierProvider.notifier);
 
-    // ---------------------------------------------------------------------
-    // 💡 YENİ AKIŞ: Doğrudan login'i çağırıyoruz. Backend hem doğrular,
-    // hem de Token döndürür (mevcutsa) veya 404 döndürür (yeniyse).
-    // ---------------------------------------------------------------------
-    final result = await auth.login(widget.phone, code);
+    // LOGIN
+    if (widget.isLogin) {
+      final result = await auth.login(widget.phone, code);
 
-    // Login başarılıysa ("NEW" veya "EXISTING" dönmeli) bottom sheet'i kapat.
-    if (result == "NEW" || result == "EXISTING") {
       if (!mounted) return;
-      // Login başarılı oldu, uygulama içi yönlendirme AppState/GoRouter tarafından yapılır.
-      Navigator.pop(context);
+
+      if (result == "EXISTING") {
+        context.go("/");     // ✔ DOĞRU
+        return;
+      }
+
+      _handleError();
       return;
     }
 
-    // Hata durumunda (result == "ERROR" veya AuthNotifier'daki catch bloğu)
-    // AuthNotifier'da catch bloklarının state'i AuthState.error olarak ayarlaması beklenir.
-    // Ancak bu bottom sheet'te sadece basit bir hata gösterelim:
-    return _handleError();
+    // REGISTER
+    final ok = await auth.verifyOtp(widget.phone, code);
+
+    if (!ok) {
+      _handleError();
+      return;
+    }
+
+    if (!mounted) return;
+
+    context.go("/profileDetail");  // ✔ DOĞRU
   }
+
+
+
 
   // ---------------------------------------------------------------------------
   // ERROR

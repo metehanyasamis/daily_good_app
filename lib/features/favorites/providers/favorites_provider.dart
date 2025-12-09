@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../product/data/models/product_model.dart';
-import '../../product/data/models/store_summary.dart';
+import '../../stores/data/model/store_summary.dart';
 import '../data/repository/favorite_repository.dart';
 
 

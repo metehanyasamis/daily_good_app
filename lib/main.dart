@@ -14,7 +14,7 @@ Future<void> main() async {
   // Türkçe tarih formatları
   await initializeDateFormatting('tr_TR');
 
-  // Riverpod çalıştır
+  // Riverpod
   runApp(const ProviderScope(child: Bootstrap()));
 }
 
@@ -23,7 +23,7 @@ class Bootstrap extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(appRouterProvider);
+    final router = ref.read(appRouterProvider);
 
     return MaterialApp.router(
       title: 'Daily Good',

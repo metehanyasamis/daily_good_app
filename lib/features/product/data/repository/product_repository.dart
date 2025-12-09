@@ -29,19 +29,25 @@ class ProductRepository {
     double? latitude,
     double? longitude,
   }) async {
-    final res = await _dio.get("/products", queryParameters: {
+
+    final params = {
       if (hemenYaninda == true) "hemen_yaninda": true,
       if (sonSans == true) "son_sans": true,
       if (yeni == true) "yeni": true,
       if (bugun == true) "bugun": true,
       if (yarin == true) "yarin": true,
-      if (search != null) "search": search,
-      if (categoryId != null) "category": categoryId,
+      if (search != null && search.isNotEmpty) "name": search,
+      if (categoryId != null) "categoryId": categoryId,
       if (storeId != null) "store_id": storeId,
       "per_page": perPage,
       if (latitude != null) "latitude": latitude,
       if (longitude != null) "longitude": longitude,
-    });
+    };
+
+    final res = await _dio.get(
+      "/products/category",
+      queryParameters: params,
+    );
 
     return ProductListResponse.fromJson(res.data);
   }

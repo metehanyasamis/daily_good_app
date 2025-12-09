@@ -1,4 +1,4 @@
-import '../../../product/data/models/store_summary.dart';
+import '../../../stores/data/model/store_summary.dart';
 
 class FavoriteShopResponseModel {
   final String id;

@@ -64,20 +64,33 @@ class AuthRepository {
         "code": code,
       });
 
-      // Başarılı → giriş yaptı
-      final user = UserModel.fromJson(res.data["data"]);
       debugPrint("📦 Login Response raw: ${res.data}");
 
-      if (user.token != null && user.token!.isNotEmpty) {
-        await PrefsService.saveToken(user.token!);
-        _dio.options.headers["Authorization"] = "Bearer ${user.token}";
+      // 1) JSON’u parçalıyoruz
+      final data = res.data["data"];
+      final token = data["token"];
+      final customerJson = data["customer"];
+
+      // 2) User modelini JSON’dan oluştur
+      UserModel user = UserModel.fromJson(customerJson);
+
+      // 3) Token'ı modele ekle (copyWith)
+      user = user.copyWith(token: token);
+
+      // 4) Token’ı kaydet
+      if (token != null && token.isNotEmpty) {
+        await PrefsService.saveToken(token);
+        _dio.options.headers["Authorization"] = "Bearer $token";
+        debugPrint("🔑 Token kaydedildi → $token");
+      } else {
+        debugPrint("⚠️ Token GELMEDİ → Backend login response kontrol edilmeli");
       }
 
-      return user; // eski kullanıcı
+      return user; // mevcut kullanıcı
 
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
-        // ❗ KULLANICI KAYITLI DEĞİL → yeni kullanıcı
+        // Kullanıcı daha önce kayıt olmadı → yeni kullanıcı flow
         return null;
       }
 
@@ -86,21 +99,6 @@ class AuthRepository {
     }
   }
 
-/// Yeni kayıtlı kullanıcı olup olmadığını kontrol eder. henüz backend endpoint olmadığı için simülasyon kullanılır.
-  /// final res = await _dio.post("/customer/auth/check-phone", data: {
-  //   "phone": phone,
-  // });
-  // return res.statusCode == 200;
-  Future<bool> checkPhone(String phone) async {
-    debugPrint("🌐 [API] POST /customer/auth/check-phone (Simulated)");
-
-    // Simülasyon: 05001112233 kayıtlı, diğerleri değil
-    if (phone == "05001112233") {
-      return true; // kayıtlı kullanıcı
-    } else {
-      return false; // yeni kullanıcı
-    }
-  }
 
 
   Future<UserModel?> me() async {
@@ -133,49 +131,42 @@ class AuthRepository {
 
     // 2. OPSİYONEL alanları kontrol ederek ekle
 
-    // E-posta
     if (user.email != null && user.email!.isNotEmpty) {
       data["email"] = user.email;
     }
 
-    // Doğum Tarihi (UserModel'de birthDate string olarak tutulduğu varsayılır)
     if (user.birthDate != null && user.birthDate!.isNotEmpty) {
       data["birth_date"] = user.birthDate;
     }
 
-    // Konum (Lat/Lng) - Her ikisi de 'null' DEĞİLSE gönder (isEmpty kontrolü kalktı)
     if (user.latitude != null && user.longitude != null) {
-      // 'isNotEmpty' kontrolünü tamamen kaldırıyoruz, çünkü double'dır.
-      // Not: Backend'e double olarak göndermeniz beklenir.
       data["latitude"] = user.latitude;
       data["longitude"] = user.longitude;
     }
 
-    // FCM Token (String olduğu varsayılır, isNotEmpty kontrolü kalır)
     if (user.fcmToken != null && user.fcmToken!.isNotEmpty) {
       data["fcm_token"] = user.fcmToken;
     }
 
-    // FCM Token
-    if (user.fcmToken != null && user.fcmToken!.isNotEmpty) {
-      data["fcm_token"] = user.fcmToken;
-    }
-
-    debugPrint("➡️ Gönderilen (Dinamik): $data"); // Gönderilen son JSON'u kontrol edin
+    // 🔥 Artık data hazır → burada loglamak doğru
+    debugPrint("➡️ GÖNDERİLEN JSON → $data");
 
     try {
       // API çağrısı
       final res = await _dio.post("/customer/auth/register", data: data);
 
-      debugPrint("📩 [API] registerUser STATUS: ${res.statusCode}");
-      // ... (Kalan başarı mantığı ve token kaydı aynı)
+      debugPrint("📩 STATUS → ${res.statusCode}");
+      debugPrint("📥 RESPONSE BODY → ${res.data}");
+      debugPrint("📤 REQUEST BODY → ${res.requestOptions.data}");
 
-      final registeredUser = UserModel.fromJson(res.data["data"]["customer"]).copyWith(
+      final registeredUser =
+      UserModel.fromJson(res.data["data"]["customer"]).copyWith(
         token: res.data["data"]["token"],
       );
 
-      if (registeredUser.token != null) {
-        _dio.options.headers["Authorization"] = "Bearer ${registeredUser.token}";
+      if (registeredUser.token != null && registeredUser.token!.isNotEmpty) {
+        _dio.options.headers["Authorization"] =
+        "Bearer ${registeredUser.token}";
       }
 
       return registeredUser;
@@ -183,9 +174,11 @@ class AuthRepository {
     } on DioException catch (e) {
       debugPrint("❌ [API] registerUser ERROR STATUS: ${e.response?.statusCode}");
       debugPrint("❌ [API] registerUser ERROR DATA: ${e.response?.data}");
+      debugPrint("📤 REQUEST BODY (HATA ANINDA) → ${e.requestOptions.data}");
       rethrow;
     }
   }
+
 
 
   Future<void> logout() async {

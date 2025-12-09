@@ -1,6 +1,6 @@
 // lib/features/location/presentation/screens/location_info_screen.dart
 
-// ... (import'lar aynı kaldı) ...
+// ... (import'lar  aynı kaldı) ...
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,19 +19,14 @@ class LocationInfoScreen extends ConsumerWidget {
 
     if (status == PermissionStatus.granted) {
       final position = await Geolocator.getCurrentPosition();
-      debugPrint("Konum: ${position.latitude}, ${position.longitude}");
 
-      // ✅ Konumu API'ye ve Lokal State'e kaydet (AppStateNotifier'a taşıdık)
-      // Geocoding işlemi (Lat/Lng'den adres bulma) burada yapılabilir, 
-      // şimdilik varsayılan adres gönderiyoruz.
       ref.read(appStateProvider.notifier).setUserLocation(
         position.latitude,
         position.longitude,
         address: "Mevcut Cihaz Konumu (API)",
       );
 
-      // ✅ Konum başarıyla ayarlandı, anasayfaya (veya Explore) yönlendir
-      context.go('/home'); // Varsayılan home rotasına yönlendiriyoruz
+      context.go('/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Konum izni gerekli")),

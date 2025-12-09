@@ -19,10 +19,10 @@ import '../../features/account/presentation/screens/account_screen.dart';
 import '../../features/location/presentation/screens/location_info_screen.dart';
 import '../../features/location/presentation/screens/location_map_screen.dart';
 
-import '../../features/product/data/models/store_summary.dart';
+import '../../features/stores/data/model/store_summary.dart';
 import '../../features/product/presentation/screens/product_detail_screen.dart';
 
-// 🔥 STORE — DOĞRU İMPORT (BusinessModel değil!)
+// STORE
 import '../../features/stores/presentation/screens/store_detail_screen.dart';
 
 import '../../features/support/presentation/support_screen.dart';
@@ -59,7 +59,7 @@ CustomTransitionPage buildAnimatedPage({
     key: key,
     transitionDuration: const Duration(milliseconds: 350),
     child: child,
-    transitionsBuilder: (_, animation, _, child) {
+    transitionsBuilder: (_, animation, __, child) {
       return FadeTransition(
         opacity: CurvedAnimation(
           parent: animation,
@@ -72,50 +72,154 @@ CustomTransitionPage buildAnimatedPage({
 }
 
 // --------------------------------------------------------------
-// GO_ROUTER — FINAL, CLEAN VERSION
+// GO_ROUTER
 // --------------------------------------------------------------
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final routerNotifier = RouterNotifier(ref);
+
   return GoRouter(
     initialLocation: '/splash',
+    refreshListenable: routerNotifier,  // ❗ BU SAYEDE REDIRECT ARTIK ÇALIŞACAK
 
     redirect: (context, state) {
-      final app = ref.watch(appStateProvider);
-      final userState = ref.watch(userNotifierProvider);
+      final app = ref.read(appStateProvider);
+      final userState = ref.read(userNotifierProvider);
       final user = userState.user;
 
       final loc = state.uri.toString();
 
-      if (loc == '/splash') return null;
+      debugPrint("\n──────────────────────────────────────────────");
+      debugPrint("🔀 ROUTER REDIRECT ÇALIŞTI");
 
-      if (!app.isLoggedIn) {
-        if (loc == '/login' || loc == '/intro') return null;
-        return '/login';
+      // --------------------------------------------------
+      // ALLOW → /location-picker (redirect engellenmesin)
+      // --------------------------------------------------
+      if (loc == "/location-picker") {
+        debugPrint("➡️ (/location-picker) redirect BYPASS");
+        return null;
       }
 
-      final hasProfile =
-          user != null && user.firstName != null && user.firstName!.isNotEmpty;
+
+      debugPrint("📍 Current: $loc");
+      debugPrint("📦 AppState: "
+          "initialized=${app.isInitialized}, "
+          "loggedIn=${app.isLoggedIn}, "
+          "newUser=${app.isNewUser}, "
+          "profile=${user?.firstName}, "
+          "onboarding=${app.hasSeenOnboarding}, "
+          "location=${app.hasSelectedLocation}");
+      debugPrint("──────────────────────────────────────────────\n");
+
+      // ───────────────────────────────────────────
+      // 0) App initialize edilmemiş → Splash
+      // ───────────────────────────────────────────
+      if (!app.isInitialized) {
+        debugPrint("⏳ [INIT] App not initialized → redirect → /splash");
+        return loc == "/splash" ? null : "/splash";
+      }
+
+      // ───────────────────────────────────────────
+      // 1) Login değil → Intro → Login
+      // ───────────────────────────────────────────
+      if (!app.isLoggedIn) {
+        debugPrint("🔒 [AUTH] User not logged in");
+
+        if (!app.hasSeenIntro && loc != "/intro") {
+          debugPrint("➡️  Intro görülmedi → redirect → /intro");
+          return "/intro";
+        }
+
+        if (loc == "/intro") {
+          debugPrint("ℹ️ Intro screen allowed");
+          return null;
+        }
+
+        if (loc != "/login") {
+          debugPrint("➡️  Require login → redirect → /login");
+          return "/login";
+        }
+
+        debugPrint("👍 Login screen allowed");
+        return null;
+      }
+
+      // ───────────────────────────────────────────
+      // 2) Yeni kullanıcı onboarding flow
+      // ───────────────────────────────────────────
+      final hasProfile = user?.firstName?.isNotEmpty == true;
 
       if (app.isNewUser) {
-        if (!hasProfile && loc != '/profileDetail') return '/profileDetail';
-        if (!app.hasSeenOnboarding && loc != '/onboarding') return '/onboarding';
-        if (!app.hasSelectedLocation && loc != '/location-info') {
-          return '/location-info';
+        debugPrint("🆕 [NEW USER FLOW] Active");
+
+        if (!hasProfile) {
+          if (loc != "/profileDetail") {
+            debugPrint("➡️  No profile → redirect → /profileDetail");
+            return "/profileDetail";
+          }
+          debugPrint("👍 Profile screen allowed");
+          return null;
         }
-        return '/home';
+
+        if (!app.hasSeenOnboarding) {
+          if (loc != "/onboarding") {
+            debugPrint("➡️  Onboarding needed → redirect → /onboarding");
+            return "/onboarding";
+          }
+          debugPrint("👍 Onboarding screen allowed");
+          return null;
+        }
+
+        if (!app.hasSelectedLocation) {
+          if (loc != "/location-info") {
+            debugPrint("➡️  Location required → redirect → /location-info");
+            return "/location-info";
+          }
+          debugPrint("👍 Location Info allowed");
+          return null;
+        }
+
+        // Yeni kullanıcı artık home dışındaki ekranlara gidemez
+        const restricted = [
+          "/login", "/intro", "/profileDetail", "/onboarding", "/location-info"
+        ];
+
+        if (restricted.contains(loc)) {
+          debugPrint("🚫 Restricted screen attempted → redirect → /home");
+          return "/home";
+        }
+
+        debugPrint("🟢 New user flow completed. Continue normally.");
+        return null;
       }
 
+      // ───────────────────────────────────────────
+      // 3) Normal kullanıcı ama lokasyon yok → Location Info
+      // ───────────────────────────────────────────
+      if (!app.hasSelectedLocation) {
+        if (loc != "/location-info") {
+          debugPrint("📍 Location missing → redirect → /location-info");
+          return "/location-info";
+        }
+        debugPrint("👍 Location Info allowed");
+        return null;
+      }
+
+      // ───────────────────────────────────────────
+      // 4) Normal kullanıcı login/onboarding ekranlarına gidemez
+      // ───────────────────────────────────────────
       const blocked = [
-        '/login',
-        '/intro',
-        '/profileDetail',
-        '/onboarding',
-        '/location-info',
+        "/login", "/intro", "/profileDetail", "/onboarding", "/location-info"
       ];
 
-      if (blocked.contains(loc)) return '/home';
+      if (blocked.contains(loc)) {
+        debugPrint("🚫 Old user accessing blocked screen → redirect → /home");
+        return "/home";
+      }
 
+      debugPrint("✅ No redirect. Continue → $loc");
       return null;
     },
+
 
     routes: [
       // ---------------- AUTH ----------------
@@ -139,8 +243,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/onboarding',
-        pageBuilder: (_, state) =>
-            buildAnimatedPage(child: const OnboardingScreen(), key: state.pageKey),
+        pageBuilder: (_, state) => buildAnimatedPage(
+          child: const OnboardingScreen(),
+          key: state.pageKey,
+        ),
       ),
 
       // ---------------- FULLSCREEN ----------------
@@ -184,21 +290,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // ---------------- PAYMENT ----------------
+      // ---------------- PAYMENT & CART ----------------
       GoRoute(
         path: '/payment',
         builder: (_, state) => const PaymentScreen(),
       ),
-
-
       GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
-      GoRoute(path: '/notifications', builder: (_, _) => const NotificationScreen()),
-      GoRoute(path: '/order-success', builder: (_, _) => const OrderSuccessScreen()),
-      GoRoute(path: '/order-tracking', builder: (_, _) => const OrderTrackingScreen()),
-      GoRoute(path: '/thank-you', builder: (_, _) => const ThankYouScreen()),
-      GoRoute(path: '/order-history', builder: (_, _) => const OrderHistoryScreen()),
+
+      // ---------------- NOTIFICATIONS & ORDERS & SUPPORT ----------------
+      GoRoute(
+        path: '/notifications',
+        builder: (_, _) => const NotificationScreen(),
+      ),
+      GoRoute(
+        path: '/order-success',
+        builder: (_, _) => const OrderSuccessScreen(),
+      ),
+      GoRoute(
+        path: '/order-tracking',
+        builder: (_, _) => const OrderTrackingScreen(),
+      ),
+      GoRoute(
+        path: '/thank-you',
+        builder: (_, _) => const ThankYouScreen(),
+      ),
+      GoRoute(
+        path: '/order-history',
+        builder: (_, _) => const OrderHistoryScreen(),
+      ),
       GoRoute(path: '/support', builder: (_, _) => const SupportScreen()),
-      GoRoute(path: '/support-success', builder: (_, _) => const SupportSuccessScreen()),
+      GoRoute(
+        path: '/support-success',
+        builder: (_, _) => const SupportSuccessScreen(),
+      ),
 
       // ---------------- SHELL ROUTE ----------------
       ShellRoute(
@@ -206,21 +330,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppShell(location: state.uri.toString(), child: child),
         routes: [
           GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
-
           GoRoute(
             path: '/explore',
             builder: (_, _) => const ExploreListScreen(),
           ),
-
           GoRoute(
             path: '/explore-map',
             builder: (_, _) => const ExploreMapScreen(),
           ),
-
-          GoRoute(path: '/favorites', builder: (_, _) => const FavoritesScreen()),
+          GoRoute(
+              path: '/favorites', builder: (_, _) => const FavoritesScreen()),
           GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
         ],
       ),
     ],
   );
 });
+
+class RouterNotifier extends ChangeNotifier {
+  final Ref ref;
+
+  RouterNotifier(this.ref) {
+    // appState değiştiğinde router'ı refresh et
+    ref.listen(appStateProvider, (_, __) {
+      notifyListeners();
+    });
+
+    // auth değiştiğinde de tetikle
+    ref.listen(userNotifierProvider, (_, __) {
+      notifyListeners();
+    });
+  }
+}

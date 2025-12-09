@@ -53,6 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // ---------------------------------------------------------------------------
   // SEND OTP
   // ---------------------------------------------------------------------------
+
   Future<void> _onSubmit() async {
     if (_isOtpOpen) return;
 
@@ -67,18 +68,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return _error("Lütfen koşulları kabul edin.");
     }
 
+    // ❌ ARTIK isPhoneRegistered KULLANMIYORUZ
+    // Backend kimin mevcut / yeni olduğunu kendisi bilecek
     final auth = ref.read(authNotifierProvider.notifier);
-    final exists = await auth.isPhoneRegistered(phone);
-
-    if (isLoginTab && !exists) {
-      return _error("Bu telefon numarasıyla hesap bulunamadı.");
-    }
-
-    if (!isLoginTab && exists) {
-      return _error("Bu telefon numarası zaten kayıtlı.");
-    }
-
-    // 🔥 Tek gerçek sendOtp → AuthNotifier
     final success = await auth.sendOtp(phone);
 
     if (!success) {
@@ -93,7 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => OtpBottomSheet(
         phone: phone,
-        isLogin: isLoginTab,
+        isLogin: isLoginTab, // 👉 Login mi, Kayıt mı bilgisi buradan
       ),
     );
 

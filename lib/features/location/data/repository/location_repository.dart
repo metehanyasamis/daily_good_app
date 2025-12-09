@@ -8,28 +8,37 @@ class LocationRepository {
 
   LocationRepository(this._dio);
 
-  /// 🌍 PUT /customer/location/update - Müşteri konumunu API'ye kaydeder.
+  /// 🌍 PUT /customer/location/update
   Future<bool> updateCustomerLocation({
     required double latitude,
     required double longitude,
-    required String address,
+    String? address,
   }) async {
-    debugPrint('🔄 Konum güncelleme isteği: PUT /customer/location/update');
+    debugPrint("📍 Konum API isteği → PUT /customer/location/update");
+
     try {
-      final response = await _dio.put(
+      final Map<String, dynamic> body = {
+        "latitude": latitude.toString(),     // ✅ STRING
+        "longitude": longitude.toString(),   // ✅ STRING
+      };
+
+      if (address != null && address.isNotEmpty) {
+        body["address"] = address;           // address zaten string → sorun yok
+      }
+
+      debugPrint("📤 Gönderilen BODY: $body");
+
+      final res = await _dio.put(
         '/customer/location/update',
-        data: {
-          'latitude': latitude.toString(),
-          'longitude': longitude.toString(),
-          'address': address,
-        },
+        data: body,
       );
 
-      // Başarılı yanıt geldiğinde true döner (200 OK)
-      return response.data['success'] == true;
+      debugPrint("📥 Response: ${res.data}");
+
+      return res.data['success'] == true;
     } on DioException catch (e) {
-      debugPrint('❌ Konum Güncelleme HATA: ${e.response?.statusCode} - ${e.message}');
-      // DioException'ı tekrar fırlatırız ki, Provider katmanı hatayı yakalasın.
+      debugPrint("❌ LOCATION ERROR STATUS: ${e.response?.statusCode}");
+      debugPrint("❌ LOCATION ERROR DATA: ${e.response?.data}");
       rethrow;
     }
   }

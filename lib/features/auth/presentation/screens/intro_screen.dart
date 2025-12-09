@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/providers/app_state_provider.dart';
 
-class IntroScreen extends StatefulWidget {
+class IntroScreen extends ConsumerStatefulWidget {
   const IntroScreen({super.key});
 
   @override
-  State<IntroScreen> createState() => _IntroScreenState();
+  ConsumerState<IntroScreen> createState() => _IntroScreenState();
 }
 
-class _IntroScreenState extends State<IntroScreen>
+class _IntroScreenState extends ConsumerState<IntroScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeIn;
@@ -34,9 +36,16 @@ class _IntroScreenState extends State<IntroScreen>
     super.dispose();
   }
 
-  void _goNext() {
-    if (!_isCompleted) {
-      setState(() => _isCompleted = true);
+  Future<void> _goNext() async {
+    if (_isCompleted) return;
+
+    setState(() => _isCompleted = true);
+
+    // ✅ Intro görüldü flag
+    await ref.read(appStateProvider.notifier).setHasSeenIntro(true);
+
+    // Login ekranına geç
+    if (mounted) {
       context.go('/login');
     }
   }
@@ -90,7 +99,6 @@ class _IntroScreenState extends State<IntroScreen>
                   ),
                   SizedBox(height: size.height * 0.06),
 
-                  // 🔹 Swipe Button (dokunulmadı)
                   Center(
                     child: SizedBox(
                       height: 80,
@@ -99,7 +107,7 @@ class _IntroScreenState extends State<IntroScreen>
                         clipBehavior: Clip.none,
                         alignment: Alignment.centerLeft,
                         children: [
-                          // 🔸 Arka plan butonu
+                          // Arka plan butonu
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 100),
                             height: 84,
@@ -109,9 +117,10 @@ class _IntroScreenState extends State<IntroScreen>
                                 colors: [
                                   const Color(0xFFE3FFE7),
                                   Color.lerp(
-                                      AppColors.primaryLightGreen,
-                                      AppColors.primaryDarkGreen,
-                                      _dragPosition / maxDrag)!,
+                                    AppColors.primaryLightGreen,
+                                    AppColors.primaryDarkGreen,
+                                    _dragPosition / maxDrag,
+                                  )!,
                                 ],
                                 begin: Alignment.centerLeft,
                                 end: Alignment.centerRight,
@@ -126,8 +135,9 @@ class _IntroScreenState extends State<IntroScreen>
                             ),
                             child: Center(
                               child: Opacity(
-                                opacity:
-                                1 - (_dragPosition / maxDrag).clamp(0.0, 1.0),
+                                opacity: 1 -
+                                    (_dragPosition / maxDrag)
+                                        .clamp(0.0, 1.0),
                                 child: const Text(
                                   'Başlayalım',
                                   style: TextStyle(
@@ -140,39 +150,51 @@ class _IntroScreenState extends State<IntroScreen>
                             ),
                           ),
 
-                          // 🔸 Ok ikonları
+                          // Ok ikonları
                           Align(
                             alignment: Alignment.centerRight,
                             child: Padding(
                               padding: const EdgeInsets.only(right: 20),
                               child: Opacity(
-                                opacity:
-                                1 - (_dragPosition / maxDrag).clamp(0.0, 1.0),
+                                opacity: 1 -
+                                    (_dragPosition / maxDrag)
+                                        .clamp(0.0, 1.0),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.chevron_right_rounded,
-                                        color: Colors.black.withOpacity(0.4),
-                                        size: 30),
-                                    Icon(Icons.chevron_right_rounded,
-                                        color: Colors.black.withOpacity(0.7),
-                                        size: 30),
-                                    const Icon(Icons.chevron_right_rounded,
-                                        color: Colors.black, size: 30),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      color:
+                                      Colors.black.withOpacity(0.4),
+                                      size: 30,
+                                    ),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      color:
+                                      Colors.black.withOpacity(0.7),
+                                      size: 30,
+                                    ),
+                                    const Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: Colors.black,
+                                      size: 30,
+                                    ),
                                   ],
                                 ),
                               ),
                             ),
                           ),
 
-                          // 🔸 Sürüklenebilir logo
+                          // Sürüklenebilir logo
                           Positioned(
                             left: _dragPosition,
                             child: GestureDetector(
                               onHorizontalDragUpdate: (details) {
                                 setState(() {
                                   _dragPosition += details.delta.dx;
-                                  if (_dragPosition < 0) _dragPosition = 0;
+                                  if (_dragPosition < 0) {
+                                    _dragPosition = 0;
+                                  }
                                   if (_dragPosition > maxDrag) {
                                     _dragPosition = maxDrag;
                                     _goNext();
@@ -187,7 +209,8 @@ class _IntroScreenState extends State<IntroScreen>
                                 }
                               },
                               child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
+                                duration:
+                                const Duration(milliseconds: 200),
                                 height: 90,
                                 width: 90,
                                 decoration: const BoxDecoration(

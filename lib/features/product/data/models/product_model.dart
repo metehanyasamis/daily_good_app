@@ -1,6 +1,4 @@
-// lib/features/product/data/models/product_model.dart
-
-import 'store_summary.dart';
+import '../../../stores/data/model/store_summary.dart';
 
 class ProductModel {
   final String id;
@@ -35,18 +33,30 @@ class ProductModel {
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
-      id: json["id"],
-      name: json["name"],
-      listPrice: (json["list_price"] as num).toDouble(),
-      salePrice: (json["sale_price"] as num).toDouble(),
+      id: json["id"].toString(),
+      name: json["name"] ?? "",
+      listPrice: (json["list_price"] as num?)?.toDouble() ?? 0,
+      salePrice: (json["sale_price"] as num?)?.toDouble() ?? 0,
       stock: json["stock"] ?? 0,
       imageUrl: json["image_url"] ?? "",
-      store: StoreSummary.fromJson(json["store"]),
+
+      /// STORE null gelirse app çökmemesi için fallback ekledik
+      store: json["store"] != null
+          ? StoreSummary.fromJson(json["store"])
+          : StoreSummary(
+        id: "",
+        name: "",
+        address: "",
+        imageUrl: "",
+      ),
+
       startHour: json["start_hour"] ?? "",
       endHour: json["end_hour"] ?? "",
       startDate: json["start_date"] ?? "",
       endDate: json["end_date"] ?? "",
-      createdAt: DateTime.parse(json["created_at"]),
+
+      /// created_at null olursa crash olmasın
+      createdAt: DateTime.tryParse(json["created_at"] ?? "") ?? DateTime.now(),
     );
   }
 }

@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/dio_provider.dart';
-import '../../../product/data/models/store_summary.dart';
+import '../model/store_summary.dart';
 import '../../../review/data/models/review_response_model.dart';
 import '../../../review/domain/models/review_model.dart';
 import '../model/store_detail_model.dart';

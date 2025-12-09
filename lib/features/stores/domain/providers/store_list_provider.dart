@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../product/data/models/store_summary.dart';
+import '../../data/model/store_summary.dart';
 import '../../data/repository/store_repository.dart';
 
 class StoreListState {

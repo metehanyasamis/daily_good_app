@@ -1,5 +1,5 @@
 import '../../../product/data/models/product_model.dart';
-import '../../../product/data/models/store_summary.dart';
+import 'store_summary.dart';
 import '../../../review/data/models/review_response_model.dart';
 import '../../../review/domain/models/review_model.dart';
 import 'working_hours_model.dart';

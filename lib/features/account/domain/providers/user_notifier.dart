@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/app_state_provider.dart';
@@ -84,51 +85,69 @@ class UserNotifier extends StateNotifier<UserState> {
   // PROFIL UPDATE VEYA REGISTER (ANA REFACTOR BURASI)
   // ------------------------------------------------------------------
   Future<void> updateUser(UserModel updated) async {
-    debugPrint("🔄 [USER] updateUser çağrıldı. Mevcut User ID: ${updated.id}");
+    debugPrint("🔄 [USER] updateUser çağrıldı. UserID: ${updated.id}");
 
     try {
       state = const UserState.loading();
 
-      // NOT: Kullanıcı ID'si ve Token'ı varsa bile, login sırasında aldığımız
-      // eksik kullanıcı bilgisi nedeniyle buraya düşebilir.
       final bool isNewUser = (updated.id.isEmpty || updated.token == null);
 
-      // 💡 DÜZELTME: user değişkenine başlangıç değeri olarak updated modelini atayın.
-      // Bu, hem new/existing dallarında kullanılır hem de hata durumunu çözer.
-      UserModel user = updated;
+      UserModel savedUser;
 
+      // --------------------- NEW USER ---------------------
       if (isNewUser) {
-        debugPrint("📌 [USER] Yeni Kullanıcı Algılandı → registerUser çağrılıyor (TEST AMAÇLI ATLANIYOR).");
+        debugPrint("🆕 Yeni kullanıcı → registerUser çağırılıyor");
 
-        // 1. Kayıt işlemini yap (GEÇİCİ OLARAK YORUM SATIRI KALMALI)
-        // user = await authRepository.registerUser(updated);
+        try {
+          savedUser = await authRepository.registerUser(updated);
+        } on DioException catch (e) {
+          final msg = e.response?.data["message"] ??
+              "Kayıt olurken bir hata oluştu.";
+          state = UserState.error(msg);
+          return;
+        }
 
-        // 2. Token'ı kaydet (GEÇİCİ OLARAK YORUM SATIRI KALMALI)
-        // await saveUser(user);
+        // 📌 TOKEN KAYDI (PREFS + APPSTATE) — EN ÖNEMLİ YER!
+        if (savedUser.token != null && savedUser.token!.isNotEmpty) {
+          await PrefsService.saveToken(savedUser.token!);
 
-        // =======================================================
-        // KRİTİK GÜNCELLEMELER (Test için gerekli)
-        // =======================================================
-        final appStateNotifier = ref.read(appStateProvider.notifier);
-        await appStateNotifier.setHasSeenProfileDetails(true);
-        await appStateNotifier.setIsNewUser(false);
-        // =======================================================
+          // ❗❗❗ EKLEMEN GEREKEN SATIR BU
+          await ref.read(appStateProvider.notifier).setToken(savedUser.token!);
+        }
 
-      } else {
-        debugPrint("📌 [USER] Mevcut Kullanıcı Algılandı → updateUser çağrılıyor.");
-        user = await repository.updateUser(updated);
+        // AppState güncellemeleri
+        final appState = ref.read(appStateProvider.notifier);
+        await appState.setLoggedIn(true);
+        await appState.setIsNewUser(true);
+        await appState.setHasSeenProfileDetails(true);
+        await appState.setHasSeenOnboarding(false);
+
+        state = UserState.ready(savedUser);
+        return;
       }
 
-      state = UserState.ready(user); // Artık 'user' kesinlikle atanmıştır.
+      // --------------------- UPDATE USER ---------------------
+      try {
+        savedUser = await repository.updateUser(updated);
+      } on DioException catch (e) {
+        final msg = e.response?.data["message"] ?? "Profil güncellenemedi.";
+        state = UserState.error(msg);
+        return;  // ❗ throw YOK
+      }
 
-      debugPrint("📌 [USER] updateUser/registerUser → BAŞARILI");
+      state = UserState.ready(savedUser);
+      debugPrint("✔️ Profil güncellendi");
+    }
 
-    } catch (e) {
+    catch (e) {
+      debugPrint("❌ Genel updateUser ERROR: $e");
       state = UserState.error(e.toString());
-      debugPrint("❌ [USER] updateUser/registerUser ERROR → $e");
-      rethrow;
+      return;  // ❗ throw YOK
     }
   }
+
+
+
 
   // ------------------------------------------------------------------
   // EMAIL OTP GÖNDER

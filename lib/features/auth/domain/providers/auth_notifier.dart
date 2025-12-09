@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/data/prefs_service.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../account/domain/providers/user_notifier.dart';
 import '../../../account/data/models/user_model.dart';
@@ -49,6 +50,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     debugPrint("🔑 OTP doğrulanıyor...");
 
     state = const AuthState.loading();
+
     final ok = await repo.verifyOtp(phone, code);
 
     if (!ok) {
@@ -56,22 +58,43 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     }
 
+    debugPrint("🔵 [OTP] Yeni kullanıcı OTP doğrulandı!");
+
+    // ----------------------------------------------------------
+    // 1) Kullanıcı "geçici olarak login" kabul edilmeli
+    // ----------------------------------------------------------
+    await ref.read(appStateProvider.notifier).setLoggedIn(true);
+
+    // ----------------------------------------------------------
+    // 2) Yeni kullanıcı akışını başlat
+    // ----------------------------------------------------------
+    await ref.read(appStateProvider.notifier).setIsNewUser(true);
+
+    // profil doldurmadığı için zorunlu
+    await ref.read(appStateProvider.notifier).setHasSeenProfileDetails(false);
+
+    // onboarding daha yapılmadı
+    await ref.read(appStateProvider.notifier).setHasSeenOnboarding(false);
+
+    // ----------------------------------------------------------
+    // 3) UserModel'i geçici olarak oluştur
+    // ----------------------------------------------------------
+    final tempUser = UserModel(
+      id: "",
+      phone: phone,
+    );
+
+    ref.read(userNotifierProvider.notifier).saveUserLocally(tempUser);
+
+    // ----------------------------------------------------------
+    // 4) Auth state başarıya döner
+    // ----------------------------------------------------------
+    state = const AuthState.authenticated();
+
     return true;
   }
 
-  // ---------------------------------------------------------------------------
-// TELEFON KAYITLI MI?
-// ---------------------------------------------------------------------------
-  Future<bool> isPhoneRegistered(String phone) async {
-    try {
-      final exists = await repo.checkPhone(phone);
-      debugPrint("📞 [AUTH] isPhoneRegistered = $exists");
-      return exists;
-    } catch (e) {
-      debugPrint("🔥 [AUTH] isPhoneRegistered ERROR: $e");
-      return false;
-    }
-  }
+
 
   // ---------------------------------------------------------------------------
   // LOGIN
@@ -82,25 +105,44 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final user = await repo.login(phone, code);
 
-      // Yeni kullanıcı
+      // -------------------------
+      // 1) Yeni kullanıcı (404 döner)
+      // -------------------------
       if (user == null) {
-        ref.read(appStateProvider.notifier).setLoggedIn(true);
-        ref.read(appStateProvider.notifier).setIsNewUser(true);
+        debugPrint("🆕 [AUTH] Yeni kullanıcı algılandı → setup başlatılıyor");
 
+        await ref.read(appStateProvider.notifier).setLoggedIn(true);
+        await ref.read(appStateProvider.notifier).setIsNewUser(true);
+        await ref.read(appStateProvider.notifier).setHasSeenProfileDetails(false);
+        await ref.read(appStateProvider.notifier).setHasSeenOnboarding(false);
+
+        // Token yok → Prefs'e bir şey yazmıyoruz.
+        // User local olarak kaydedilsin (telefon numarası için)
         final newUser = UserModel(
           id: "",
           phone: phone,
         );
-
         ref.read(userNotifierProvider.notifier).saveUserLocally(newUser);
-        state = const AuthState.authenticated();
 
+        state = const AuthState.authenticated();
         return "NEW";
       }
 
-      // Mevcut kullanıcı
+      // -------------------------
+      // 2) Mevcut kullanıcı
+      // -------------------------
+
+      // 💥💥💥 BURASI KRİTİK 💥💥💥
+      // TOKEN BURADA GELİYOR → HEMEN PREFS’E KAYDET
+      if (user.token != null && user.token!.isNotEmpty) {
+        await PrefsService.saveToken(user.token!);
+        debugPrint("🔑 [AUTH] Token kaydedildi → ${user.token}");
+      } else {
+        debugPrint("⚠️ [AUTH] USER TOKEN GELMEDİ! API'yi kontrol edin.");
+      }
+
       ref.read(userNotifierProvider.notifier).saveUser(user);
-      ref.read(appStateProvider.notifier).setLoggedIn(true);
+      await ref.read(appStateProvider.notifier).setLoggedIn(true);
 
       state = AuthState.authenticated(user);
       return "EXISTING";

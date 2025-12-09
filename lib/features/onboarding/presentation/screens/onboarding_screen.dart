@@ -52,12 +52,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _nextPage() async {
     if (_currentPage == _pages.length - 1) {
-      // Onboarding seen olarak işaretle
+      // Onboarding tamamlandı
       await PrefsService.setHasSeenOnboarding(true);
+
       ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
 
-      // Lokasyon akışına yönlendir
-      context.go('/locationInfo');
+      // 🚀 EN ÖNEMLİ EKLEME → Yeni kullanıcı statüsünü kapat
+      await ref.read(appStateProvider.notifier).setIsNewUser(false);
+
+      // Lokasyon sayfasına geç
+      context.go('/location-info');
     } else {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
@@ -95,7 +99,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               onPressed: () async {
                 await PrefsService.setHasSeenOnboarding(true);
                 ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
-                context.go('/locationInfo');
+
+                // 🚀 Yeni kullanıcı bitti
+                await ref.read(appStateProvider.notifier).setIsNewUser(false);
+
+                context.go('/location-info');
               },
               child: Text(
                 'Atla',

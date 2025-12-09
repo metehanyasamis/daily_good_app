@@ -1,4 +1,4 @@
-import 'store_summary.dart';
+import '../../../stores/data/model/store_summary.dart';
 
 class StoreInProductDetail {
   final String id;

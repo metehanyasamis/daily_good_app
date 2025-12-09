@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/widgets/email_verification_dialog.dart';
@@ -115,15 +114,14 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   // SAVE (Redirect yönlendirecek)
   // ----------------------------------------------------------
   Future<void> _save(UserNotifier notifier, UserState state) async {
-    if (!mounted) return; // Erken çıkış kontrolü
-
-    debugPrint("💾 [PROFILE] _save metodu çağrıldı.");
-
     final u = state.user!;
     final first = _nameController.text.trim();
     final last = _surnameController.text.trim();
+    final email = _emailController.text.trim();
 
-    // Zorunlu alan kontrolü
+    // -------------------------------
+    // ⭐ FRONTEND VALIDATION
+    // -------------------------------
     if (first.isEmpty || last.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Ad ve Soyad zorunludur.")),
@@ -131,59 +129,53 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       return;
     }
 
-    // UserModel'i form verileriyle güncelle
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("E-posta adresi zorunludur.")),
+      );
+      return;
+    }
+
+    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Geçerli bir e-posta adresi girin.")),
+      );
+      return;
+    }
+
+    // -------------------------------
+    // MODELİ GÜNCELLE
+    // -------------------------------
     final updated = u.copyWith(
       firstName: first,
       lastName: last,
-      email: _emailController.text.trim(),
+      email: email,
       birthDate: _selectedBirthDate != null
           ? _selectedBirthDate!.toIso8601String().split("T").first
           : null,
-      // Lokasyon ve FCM token gibi alanlar buraya eklenebilir.
     );
 
     try {
-      // 1. API Çağrısı ve Yerel Kullanıcı Güncellemesi
-      // AuthRepository'deki registerUser (veya updateUser) metodu çağrılır.
       await notifier.updateUser(updated);
 
-      // --- YÖNLENDİRME KRİTİK ADIMLARI ---
-
-      // 2. hasSeenProfileDetails bayrağını ayarla
-      // Bu adım, Profil Detayları ekranının bir daha gösterilmesini engeller.
-      final appStateNotifier = ref.read(appStateProvider.notifier);
-      await appStateNotifier.setHasSeenProfileDetails(true);
-
-      // 3. isNewUser bayrağını false yap
-      // Bu, GoRouter'a "Kullanıcı kaydını tamamladı, artık sıradaki adıma (Onboarding) geçebiliriz" sinyalini verir.
-      // Loglarda isNewUser=true görüldüğü için bu ekleme şarttır.
-      await appStateNotifier.setIsNewUser(false);
-
-      // --- BAŞARI VE YÖNLENDİRME ---
+      // Profil tamamlandı → sadece statü güncelle
+      await ref.read(appStateProvider.notifier).setHasSeenProfileDetails(true);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profil başarıyla kaydedildi.")),
-      );
-
-      // GoRouter'ın redirect mantığını tetiklemek için bir sonraki hedefe gitmeye zorlama.
-      // isNewUser=false ve hasSeenOnboarding=false olduğu için, GoRouter /onboarding'e yönlendirecektir.
-      ref.read(appRouterProvider).go('/splash');
+      // ❌ Asla yönlendirme ekleme
+      //   Router'ın redirect mekanizması zaten yönlendiriyor
 
     } catch (e) {
-      if (!mounted) return;
-
-      debugPrint("❌ [PROFILE] Kayıt/Güncelleme Hatası: $e");
-      // Hatanın detayını gösteren bir SnackBar gösterilebilir (örneğin e.toString() gibi)
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Profil kaydı/güncellemesi başarısız oldu. Lütfen tekrar deneyin."),
-          backgroundColor: Colors.redAccent,
+        SnackBar(
+          content: Text("Kayıt hatası: $e"),
+          backgroundColor: Colors.red,
         ),
       );
     }
   }
+
 
   // ----------------------------------------------------------
   // UI
@@ -242,7 +234,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                 const SizedBox(height: 20),
 
                 // EMAIL
-                _label("E-posta (opsiyonel)"),
+                _label("E-posta *"),
                 _emailField(user, notifier),
                 const SizedBox(height: 20),
 
@@ -315,6 +307,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           keyboardType: TextInputType.emailAddress,
           onChanged: (_) => _validateEmail(),
           decoration: InputDecoration(
+            hintText: "E-posta adresi",
             filled: true,
             fillColor: AppColors.surface,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),

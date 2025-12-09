@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/data/prefs_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/providers/app_state_provider.dart';
 import '../../domain/providers/auth_notifier.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -21,9 +22,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   void initState() {
     super.initState();
 
-    // ---------------------------
     // LOGO ANIMASYONU
-    // ---------------------------
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -47,26 +46,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   // ----------------------------------------------------------
-  // STARTUP FLOW (KÜÇÜK AMA KRİTİK)
+  // STARTUP FLOW
   // ----------------------------------------------------------
   Future<void> _startupSequence() async {
     debugPrint("🚀 [Splash] Başlatılıyor...");
-    await Future.delayed(const Duration(milliseconds: 600));
 
-    // 1) SharedPreferences -> sadece token alınır
+    // 1) AppState'i SharedPreferences'tan yükle
+    await ref.read(appStateProvider.notifier).load();
+
+    // 2) Token kontrolü
     final token = await PrefsService.readToken();
     debugPrint("🔑 [Splash] Token = $token");
 
-    // 2) Token varsa kullanıcıyı yenile (/me)
     if (token != null && token.isNotEmpty) {
       debugPrint("🔐 [Splash] Token bulundu → /me çağrılıyor...");
       await ref.read(authNotifierProvider.notifier).loadUserFromToken();
     } else {
-      debugPrint("🟡 [Splash] Token yok → yeni kullanıcı olabilir");
+      debugPrint("🟡 [Splash] Token yok → anonymous user");
     }
 
-    // ✔ Splash hiçbir yere yönlendirme yapmaz
-    // ✔ Redirect tamamen GoRouter tarafından yapılır
+    // Yönlendirme YOK – tamamen GoRouter redirect devralıyor
     debugPrint("🎯 [Splash] Hazır → GoRouter redirect devralacak");
   }
 

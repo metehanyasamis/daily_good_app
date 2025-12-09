@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../product/data/models/store_summary.dart'; // ÖNEMLİ: StoreSummary import
+import '../../data/model/store_summary.dart'; // ÖNEMLİ: StoreSummary import
 
 class StoreCard extends StatelessWidget {
   final StoreSummary store;
