@@ -99,7 +99,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-
       debugPrint("📍 Current: $loc");
       debugPrint("📦 AppState: "
           "initialized=${app.isInitialized}, "
@@ -110,13 +109,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           "location=${app.hasSelectedLocation}");
       debugPrint("──────────────────────────────────────────────\n");
 
+
+      // ⭐ SPLASH çıkış fix
+      // Eğer app initialize olduysa ve hala splash'taysak → splash’tan çık
+      if (loc == "/splash" && app.isInitialized) {
+        debugPrint("➡️ Splash tamam → yönlendirme başlasın");
+
+        // Login değilse login'e
+        if (!app.isLoggedIn) return "/login";
+
+        // Yeni kullanıcıysa new user flow'a
+        if (app.isNewUser) {
+          return "/profileDetail";
+        }
+
+        // Login + eski kullanıcı
+        return "/home";
+      }
+
+
       // ───────────────────────────────────────────
       // 0) App initialize edilmemiş → Splash
       // ───────────────────────────────────────────
       if (!app.isInitialized) {
         debugPrint("⏳ [INIT] App not initialized → redirect → /splash");
-        return loc == "/splash" ? null : "/splash";
+        return "/splash";
       }
+
 
       // ───────────────────────────────────────────
       // 1) Login değil → Intro → Login
@@ -142,6 +161,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         debugPrint("👍 Login screen allowed");
         return null;
       }
+
 
       // ───────────────────────────────────────────
       // 2) Yeni kullanıcı onboarding flow
@@ -178,19 +198,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return null;
         }
 
-        // Yeni kullanıcı artık home dışındaki ekranlara gidemez
         const restricted = [
           "/login", "/intro", "/profileDetail", "/onboarding", "/location-info"
         ];
 
         if (restricted.contains(loc)) {
-          debugPrint("🚫 Restricted screen attempted → redirect → /home");
+          debugPrint("🚫 Restricted → redirect → /home");
           return "/home";
         }
 
         debugPrint("🟢 New user flow completed. Continue normally.");
         return null;
       }
+
 
       // ───────────────────────────────────────────
       // 3) Normal kullanıcı ama lokasyon yok → Location Info
@@ -204,20 +224,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
+
+      // ───────────────────────────────────────────
       // 4) Normal kullanıcı login/onboarding ekranlarına gidemez
+      // ───────────────────────────────────────────
       const blocked = [
         "/login",
         "/intro",
         "/onboarding",
         "/location-info"
-        // ❌ "/profileDetail" kaldırıldı — artık serbest
+        // "/profileDetail" artık serbest
       ];
 
       if (blocked.contains(loc)) {
         debugPrint("🚫 Old user accessing blocked screen → redirect → /home");
         return "/home";
       }
-
 
       debugPrint("✅ No redirect. Continue → $loc");
       return null;

@@ -15,6 +15,82 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
+
+  late AnimationController _controller;
+  late Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _controller.forward();
+
+    Future.microtask(_startup);
+  }
+
+  Future<void> _startup() async {
+    debugPrint("🚀 Splash başladı");
+
+    // 1) AppState yükle
+    await ref.read(appStateProvider.notifier).load();
+
+    // 2) Token varsa /me
+    final token = await PrefsService.readToken();
+    debugPrint("🔑 Token = $token");
+
+    if (token != null && token.isNotEmpty) {
+      await ref.read(authNotifierProvider.notifier).loadUserFromToken();
+    }
+
+    debugPrint("🎯 Splash bitti → redirect çalışacak");
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppGradients.dark),
+        child: Center(
+          child: FadeTransition(
+            opacity: _fade,
+            child: Image.asset(
+              "assets/logos/whiteLogo.png",
+              height: size.height * 0.32,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+}
+
+
+
+/*
+class SplashScreen extends ConsumerStatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends ConsumerState<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
 
@@ -92,3 +168,5 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
   }
 }
+
+*/
