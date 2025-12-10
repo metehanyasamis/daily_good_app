@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -61,17 +62,18 @@ class _LocationMapScreenState extends ConsumerState<LocationMapScreen> {
   void _confirmLocation() async {
     if (_selectedPosition != null) {
 
-      await ref.read(appStateProvider.notifier).setUserLocation(
+      final ok = await ref.read(appStateProvider.notifier).setUserLocation(
         _selectedPosition!.latitude,
         _selectedPosition!.longitude,
       );
 
-      // ❌ Bunu siliyoruz:
-      // ref.read(appRouterProvider).go('/home');
-
-      // ✔ Router state değişince kendi yönlendirecek.
+      // ❗ SET işlemi başarılıysa yönlendir
+      if (context.mounted) {
+        context.go('/home');  // 🔥 HOME'A GEÇİŞ
+      }
     }
   }
+
 
 
 

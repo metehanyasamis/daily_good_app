@@ -61,7 +61,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     await ref.read(authNotifierProvider.notifier).logout();
     await PrefsService.clearAll();
 
-    if (mounted) context.go('/login');
+    //if (mounted) context.go('/login');
   }
 
   // -------------------------------------------------------------
@@ -111,7 +111,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     if (otp == null || otp.isEmpty) return;
 
     try {
-      await notifier.verifyEmailOtp(otp);
+      await notifier.verifyEmailOtp(email, otp);
 
       final refreshedUser = ref.read(userNotifierProvider).user;
 

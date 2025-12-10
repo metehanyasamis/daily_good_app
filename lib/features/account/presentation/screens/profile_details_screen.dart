@@ -22,8 +22,8 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   final _emailController = TextEditingController();
 
   bool _isEmailValid = false;
-  DateTime? _selectedBirthDate;
   bool _initialized = false;
+  DateTime? _selectedBirthDate;
 
   @override
   void dispose() {
@@ -33,61 +33,66 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     super.dispose();
   }
 
-  // ----------------------------------------------------------
-  // Kullanıcı formu doldur
-  // ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // USER DATA POPULATE
+  // ---------------------------------------------------------------------------
   void _populate(UserState state) {
     final u = state.user!;
     _nameController.text = u.firstName ?? "";
     _surnameController.text = u.lastName ?? "";
     _emailController.text = u.email ?? "";
-
     _selectedBirthDate =
     u.birthDate != null ? DateTime.tryParse(u.birthDate!) : null;
   }
 
-  // ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // EMAIL VALIDATION
-  // ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
   void _validateEmail() {
-    final text = _emailController.text.trim();
-    final ok =
-        text.isNotEmpty && RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(text);
+    final email = _emailController.text.trim();
+    final valid =
+        email.isNotEmpty && RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
 
-    if (_isEmailValid != ok) {
-      setState(() => _isEmailValid = ok);
+    if (_isEmailValid != valid) {
+      setState(() => _isEmailValid = valid);
     }
   }
 
-  // ----------------------------------------------------------
-  // EMAIL DOĞRULAMA
-  // ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // EMAIL OTP FLOW
+  // ---------------------------------------------------------------------------
   Future<void> _startEmailVerification(
       String email, UserNotifier notifier) async {
-    await notifier.sendEmailVerification(email);
-
-    final otp = await showDialog<String>(
-      context: context,
-      builder: (_) => EmailVerificationDialog(email: email),
-    );
-
-    if (otp == null || otp.isEmpty) return;
-
     try {
-      await notifier.verifyEmailOtp(otp);
+      await notifier.sendEmailVerification(email);
+
+      final result = await showDialog<String>(
+        context: context,
+        builder: (_) => EmailVerificationDialog(email: email),
+      );
+
+      if (result == null || result.isEmpty) return;
+
+      await notifier.verifyEmailOtp(
+        _emailController.text.trim(),
+        result,
+      );
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("E-posta doğrulandı")),
       );
-    } catch (_) {
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Kod geçersiz")),
       );
     }
   }
 
-  // ----------------------------------------------------------
-  // Tarih seçimi
-  // ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // BIRTH DATE PICKER
+  // ---------------------------------------------------------------------------
   Future<void> _pickDate() async {
     await showModalBottomSheet(
       context: context,
@@ -101,51 +106,33 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
             initialDateTime: _selectedBirthDate ?? DateTime(2000),
             maximumDate: DateTime.now(),
             minimumYear: 1950,
-            onDateTimeChanged: (v) {
-              setState(() => _selectedBirthDate = v);
-            },
+            onDateTimeChanged: (v) => setState(() => _selectedBirthDate = v),
           ),
         );
       },
     );
   }
 
-  // ----------------------------------------------------------
-  // SAVE (Redirect yönlendirecek)
-  // ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // SAVE BUTTON → Redirect Router tarafından yapılacak
+  // ---------------------------------------------------------------------------
   Future<void> _save(UserNotifier notifier, UserState state) async {
     final u = state.user!;
     final first = _nameController.text.trim();
     final last = _surnameController.text.trim();
     final email = _emailController.text.trim();
 
-    // -------------------------------
-    // ⭐ FRONTEND VALIDATION
-    // -------------------------------
+    // Validation
     if (first.isEmpty || last.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Ad ve Soyad zorunludur.")),
-      );
-      return;
+      return _showError("Ad ve Soyad zorunludur.");
     }
-
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("E-posta adresi zorunludur.")),
-      );
-      return;
+      return _showError("E-posta adresi zorunludur.");
     }
-
     if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Geçerli bir e-posta adresi girin.")),
-      );
-      return;
+      return _showError("Geçerli bir e-posta adresi girin.");
     }
 
-    // -------------------------------
-    // MODELİ GÜNCELLE
-    // -------------------------------
     final updated = u.copyWith(
       firstName: first,
       lastName: last,
@@ -157,38 +144,29 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
 
     try {
       await notifier.updateUser(updated);
-
-      // Profil tamamlandı → sadece statü güncelle
       await ref.read(appStateProvider.notifier).setHasSeenProfileDetails(true);
-
-      if (!mounted) return;
-
-      // ❌ Asla yönlendirme ekleme
-      //   Router'ın redirect mekanizması zaten yönlendiriyor
-
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Kayıt hatası: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showError("Kayıt hatası: $e");
     }
   }
 
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: Colors.red,
+    ));
+  }
 
-  // ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // UI
-  // ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(userNotifierProvider);
     final notifier = ref.read(userNotifierProvider.notifier);
 
     if (state.status == UserStatus.loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (state.status == UserStatus.error) {
@@ -218,27 +196,22 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
 
                 const SizedBox(height: 24),
 
-                // AD
                 _label("Ad *"),
                 _input(_nameController),
                 const SizedBox(height: 20),
 
-                // SOYAD
                 _label("Soyad *"),
                 _input(_surnameController),
                 const SizedBox(height: 20),
 
-                // TELEFON
                 _label("Telefon"),
                 _readonlyPhone(user?.phone ?? ""),
                 const SizedBox(height: 20),
 
-                // EMAIL
                 _label("E-posta *"),
                 _emailField(user, notifier),
                 const SizedBox(height: 20),
 
-                // Doğum tarihi
                 _label("Doğum Tarihi (opsiyonel)"),
                 _birthDateTile(),
                 const SizedBox(height: 30),
@@ -252,9 +225,9 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     );
   }
 
-  // ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // WIDGET HELPERS
-  // ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
   Widget _label(String text) {
     return Text(
       text,
@@ -292,9 +265,6 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     );
   }
 
-  // ----------------------------------------------------------
-  // EMAIL FIELD (Doğrulama içeren)
-  // ----------------------------------------------------------
   Widget _emailField(user, UserNotifier notifier) {
     final verified = user?.isEmailVerified ?? false;
     final hasEmail = _emailController.text.trim().isNotEmpty;
@@ -307,7 +277,6 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           keyboardType: TextInputType.emailAddress,
           onChanged: (_) => _validateEmail(),
           decoration: InputDecoration(
-            hintText: "E-posta adresi",
             filled: true,
             fillColor: AppColors.surface,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
@@ -332,11 +301,10 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                 ),
               ),
 
-              // Doğrulama butonu
               if (!verified && _isEmailValid)
                 TextButton(
-                  onPressed: () async {
-                    await _startEmailVerification(
+                  onPressed: () {
+                    _startEmailVerification(
                       _emailController.text.trim(),
                       notifier,
                     );
@@ -372,8 +340,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           children: [
             Text(text),
             const Spacer(),
-            const Icon(Icons.calendar_month,
-                color: AppColors.primaryDarkGreen),
+            const Icon(Icons.calendar_month, color: AppColors.primaryDarkGreen),
           ],
         ),
       ),
@@ -399,22 +366,24 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
         child: const Text(
           "Kaydet",
           style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
       ),
     );
   }
 
   Widget _header() {
-    return Row(
-      children: const [
+    return const Row(
+      children: [
         SizedBox(width: 40),
         Expanded(
           child: Text(
             "Profil Detayları",
             textAlign: TextAlign.center,
-            style:
-            TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
           ),
         ),
         SizedBox(width: 40),

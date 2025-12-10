@@ -149,24 +149,21 @@ class UserNotifier extends StateNotifier<UserState> {
 
 
 
-  // ------------------------------------------------------------------
-  // EMAIL OTP GÖNDER
-  // ------------------------------------------------------------------
+// EMAIL OTP GÖNDER
   Future<void> sendEmailVerification(String email) async {
     print("📧 [USER] Email OTP SEND → $email");
     await repository.sendEmailVerification(email);
   }
 
-  // ------------------------------------------------------------------
-  // EMAIL OTP DOĞRULA
-  // ------------------------------------------------------------------
-  Future<UserModel> verifyEmailOtp(String otp) async {
-    print("📧 [USER] Email OTP VERIFY → $otp");
+// EMAIL OTP DOĞRULA
+  Future<UserModel> verifyEmailOtp(String email, String otp) async {
+    print("📧 [USER] Email OTP VERIFY → email=$email, code=$otp");
 
-    final user = await repository.verifyEmailOtpCode(otp);
+    final user = await repository.verifyEmailOtpCode(email, otp);
+
+    print("📧 [USER] Email OTP VERIFIED → ${user.email}");
 
     state = UserState.ready(user);
-
     return user;
   }
 

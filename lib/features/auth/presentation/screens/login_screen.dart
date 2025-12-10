@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/social_button.dart';
@@ -214,6 +215,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return TextField(
       controller: _phoneController,
       keyboardType: TextInputType.phone,
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,     // sadece rakam
+        LengthLimitingTextInputFormatter(10),       // en fazla 10 rakam
+      ],
       decoration: InputDecoration(
         prefixText: "+90 ",
         hintText: "Telefon numarası",
@@ -227,6 +232,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+
 
   Widget _buildTerms() {
     return Row(

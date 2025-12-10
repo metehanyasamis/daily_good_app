@@ -204,17 +204,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // ───────────────────────────────────────────
       // 4) Normal kullanıcı login/onboarding ekranlarına gidemez
-      // ───────────────────────────────────────────
       const blocked = [
-        "/login", "/intro", "/profileDetail", "/onboarding", "/location-info"
+        "/login",
+        "/intro",
+        "/onboarding",
+        "/location-info"
+        // ❌ "/profileDetail" kaldırıldı — artık serbest
       ];
 
       if (blocked.contains(loc)) {
         debugPrint("🚫 Old user accessing blocked screen → redirect → /home");
         return "/home";
       }
+
 
       debugPrint("✅ No redirect. Continue → $loc");
       return null;
