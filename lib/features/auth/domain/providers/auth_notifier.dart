@@ -106,22 +106,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await repo.login(phone, code);
 
       // -------------------------
-      // 1) Yeni kullanıcı (404 döner)
+      // 1) Yeni kullanıcı
       // -------------------------
       if (user == null) {
-        debugPrint("🆕 [AUTH] Yeni kullanıcı algılandı → setup başlatılıyor");
+        debugPrint("🆕 [AUTH] Yeni kullanıcı algılandı");
 
         await ref.read(appStateProvider.notifier).setLoggedIn(true);
         await ref.read(appStateProvider.notifier).setIsNewUser(true);
-        await ref.read(appStateProvider.notifier).setHasSeenProfileDetails(false);
-        await ref.read(appStateProvider.notifier).setHasSeenOnboarding(false);
 
-        // Token yok → Prefs'e bir şey yazmıyoruz.
-        // User local olarak kaydedilsin (telefon numarası için)
         final newUser = UserModel(
           id: "",
           phone: phone,
         );
+
         ref.read(userNotifierProvider.notifier).saveUserLocally(newUser);
 
         state = const AuthState.authenticated();
@@ -132,21 +129,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // 2) Mevcut kullanıcı
       // -------------------------
 
-      // 💥💥💥 BURASI KRİTİK 💥💥💥
-      // TOKEN BURADA GELİYOR → HEMEN PREFS’E KAYDET
+      // 2A) Token kaydet
       if (user.token != null && user.token!.isNotEmpty) {
         await PrefsService.saveToken(user.token!);
-        debugPrint("🔑 [AUTH] Token kaydedildi → ${user.token}");
+        debugPrint("🔑 Token kaydedildi → ${user.token}");
       } else {
         debugPrint("⚠️ [AUTH] USER TOKEN GELMEDİ! API'yi kontrol edin.");
       }
 
-      ref.read(userNotifierProvider.notifier).saveUser(user);
+      // 2B) AppState: logged in
       await ref.read(appStateProvider.notifier).setLoggedIn(true);
 
-      state = AuthState.authenticated(user);
+      // 2C) User geçici olarak kaydedilir
+      ref.read(userNotifierProvider.notifier).saveUser(user);
+
+      // 2D) 💥 /me çağrısı — temiz profil
+      debugPrint("📡 /me çağrılıyor (login sonrası tam user için)");
+
+      final fullUser = await repo.me();
+
+      if (fullUser != null) {
+        ref.read(userNotifierProvider.notifier).saveUser(fullUser);
+        state = AuthState.authenticated(fullUser);
+      } else {
+        debugPrint("⚠️ [AUTH] /me NULL döndü — backend login/me tutarsız olabilir.");
+        state = AuthState.authenticated(user);
+      }
+
       return "EXISTING";
     } catch (e) {
+      debugPrint("❌ LOGIN ERROR: $e");
       state = AuthState.error(e.toString());
       return "ERROR";
     }
@@ -172,9 +184,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // LOGOUT
   // ---------------------------------------------------------------------------
   Future<void> logout() async {
+    // API logout
     await repo.logout();
-    ref.read(appStateProvider.notifier).setLoggedIn(false);
+
+    // Token temizle
+    await PrefsService.clearToken();
+
+    // AppState reset
+    ref.read(appStateProvider.notifier).resetAfterLogout();
+
+    // UserState reset
     ref.read(userNotifierProvider.notifier).clearUser();
+
+    // Auth state reset
     state = const AuthState.unauthenticated();
+
+    debugPrint("🚀 LOGOUT COMPLETED");
   }
+
 }

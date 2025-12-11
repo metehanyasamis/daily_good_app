@@ -13,6 +13,7 @@ import '../domain/providers/home_state_provider.dart';
 import '../widgets/home_banner_slider.dart';
 import '../widgets/home_category_bar.dart';
 import '../widgets/home_active_order_box.dart';
+import '../widgets/home_email_warning_banner.dart';
 import '../widgets/home_section_title.dart';
 import '../widgets/home_product_list.dart';
 
@@ -171,6 +172,10 @@ class HomeScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: const HomeBannerSlider(),
                 ),
+              ),
+
+              SliverToBoxAdapter(
+                child: const HomeEmailWarningBanner(),
               ),
 
               SliverPersistentHeader(

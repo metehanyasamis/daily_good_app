@@ -18,9 +18,9 @@ class UserRepositoryImpl implements UserRepository {
 
   UserRepositoryImpl(this.api);
 
-  // ----------------------------------------------------------------------
-  // GET /customer/auth/me
-  // ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// GET /customer/auth/me
+// ----------------------------------------------------------------------
   @override
   Future<UserModel> fetchUser() async {
     print("🌐 [API] GET /customer/auth/me");

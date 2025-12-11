@@ -90,7 +90,7 @@ class UserNotifier extends StateNotifier<UserState> {
     try {
       state = const UserState.loading();
 
-      final bool isNewUser = (updated.id.isEmpty || updated.token == null);
+      final bool isNewUser = updated.id.isEmpty;   // 🔥 DOĞRU KONTROL
 
       UserModel savedUser;
 
@@ -107,20 +107,17 @@ class UserNotifier extends StateNotifier<UserState> {
           return;
         }
 
-        // 📌 TOKEN KAYDI (PREFS + APPSTATE) — EN ÖNEMLİ YER!
+        // Token kaydet
         if (savedUser.token != null && savedUser.token!.isNotEmpty) {
           await PrefsService.saveToken(savedUser.token!);
-
-          // ❗❗❗ EKLEMEN GEREKEN SATIR BU
           await ref.read(appStateProvider.notifier).setToken(savedUser.token!);
         }
 
-        // AppState güncellemeleri
+        // 🔥 AppState PROFIL Güncelleme (KRİTİK)
         final appState = ref.read(appStateProvider.notifier);
         await appState.setLoggedIn(true);
-        await appState.setIsNewUser(true);
+        await appState.setIsNewUser(false);
         await appState.setHasSeenProfileDetails(true);
-        await appState.setHasSeenOnboarding(false);
 
         state = UserState.ready(savedUser);
         return;
@@ -132,7 +129,7 @@ class UserNotifier extends StateNotifier<UserState> {
       } on DioException catch (e) {
         final msg = e.response?.data["message"] ?? "Profil güncellenemedi.";
         state = UserState.error(msg);
-        return;  // ❗ throw YOK
+        return;
       }
 
       state = UserState.ready(savedUser);
@@ -142,20 +139,22 @@ class UserNotifier extends StateNotifier<UserState> {
     catch (e) {
       debugPrint("❌ Genel updateUser ERROR: $e");
       state = UserState.error(e.toString());
-      return;  // ❗ throw YOK
+      return;
     }
   }
 
 
-
-
+// ------------------------------------------------------------------
 // EMAIL OTP GÖNDER
+// ------------------------------------------------------------------
   Future<void> sendEmailVerification(String email) async {
     print("📧 [USER] Email OTP SEND → $email");
     await repository.sendEmailVerification(email);
   }
 
+// ------------------------------------------------------------------
 // EMAIL OTP DOĞRULA
+// ------------------------------------------------------------------
   Future<UserModel> verifyEmailOtp(String email, String otp) async {
     print("📧 [USER] Email OTP VERIFY → email=$email, code=$otp");
 
@@ -166,6 +165,7 @@ class UserNotifier extends StateNotifier<UserState> {
     state = UserState.ready(user);
     return user;
   }
+
 
   // ------------------------------------------------------------------
   // TELEFON GÜNCELLE

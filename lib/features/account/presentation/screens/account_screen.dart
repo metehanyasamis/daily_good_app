@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/data/prefs_service.dart';
+import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/email_verification_dialog.dart';
 import '../../../../core/widgets/info_row_widget.dart';
@@ -11,6 +12,7 @@ import '../../../auth/domain/providers/auth_notifier.dart';
 import '../../../saving/model/saving_model.dart';
 import '../../../saving/providers/saving_provider.dart';
 import '../../domain/providers/user_notifier.dart';
+import '../../domain/states/user_state.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -33,7 +35,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
 
-  // -------------------------------------------------------------
+// -------------------------------------------------------------
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -43,13 +45,12 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Vazgeç'),
           ),
           ElevatedButton(
-            style:
-            ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
             child: const Text('Evet, Çıkış Yap'),
           ),
         ],
@@ -58,11 +59,20 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
     if (confirm != true) return;
 
+    // 1) Tüm state'leri temizle
     await ref.read(authNotifierProvider.notifier).logout();
-    await PrefsService.clearAll();
+    await ref.read(appStateProvider.notifier).resetAfterLogout();
 
-    //if (mounted) context.go('/login');
+    // 2) 🔥 Yönlendirmeyi microtask ile yap → dialog tamamen kapansın
+    Future.microtask(() {
+      if (mounted) {
+        context.go('/splash');
+      }
+    });
   }
+
+
+
 
   // -------------------------------------------------------------
   Future<void> _deleteAccount() async {
@@ -137,13 +147,36 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final userState = ref.watch(userNotifierProvider);
-    final user = userState.user;
-
     final saving = ref.watch(savingProvider);
 
-    if (user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+// 1) LOADING
+    if (userState.status == UserStatus.loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
+
+// 2) ERROR
+    if (userState.status == UserStatus.error) {
+      return Scaffold(
+        body: Center(
+          child: Text(
+            "Hata oluştu:\n${userState.errorMessage ?? 'Bilinmeyen hata'}",
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, color: Colors.red),
+          ),
+        ),
+      );
+    }
+
+// 3) SUCCESS
+    final user = userState.user;
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
 
     return Scaffold(
       appBar: AppBar(

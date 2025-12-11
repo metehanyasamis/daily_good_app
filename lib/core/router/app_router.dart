@@ -90,6 +90,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       debugPrint("\n──────────────────────────────────────────────");
       debugPrint("🔀 ROUTER REDIRECT ÇALIŞTI");
+      //debugPrint("📍 Current: $loc");
+
+
+      // ───────────────────────────────────────────
+      // SPLASH → initialize sonrası nereye gidilecek?
+      // ───────────────────────────────────────────
+      if (loc == "/splash") {
+        // App henüz load edilmediyse splash’ta kal
+        if (!app.isInitialized) return null;
+
+        // 1) Login DEĞİLSE → intro/login akışı
+        if (!app.isLoggedIn) {
+          return !app.hasSeenIntro ? "/intro" : "/login";
+        }
+
+        // 2) Yeni kullanıcı onboarding akışı
+        final hasProfile = user?.firstName?.isNotEmpty == true;
+
+        if (app.isNewUser) {
+          if (!hasProfile) return "/profileDetail";
+          if (!app.hasSeenOnboarding) return "/onboarding";
+          if (!app.hasSelectedLocation) return "/location-info";
+          return "/home";
+        }
+
+        // 3) Normal kullanıcı ama konum seçmemiş
+        if (!app.hasSelectedLocation) return "/location-info";
+
+        // 4) Her şey tamamsa → HOME
+        return "/home";
+      }
+
 
       // --------------------------------------------------
       // ALLOW → /location-picker (redirect engellenmesin)
@@ -243,6 +275,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       debugPrint("✅ No redirect. Continue → $loc");
       return null;
+
     },
 
 

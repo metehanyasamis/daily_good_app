@@ -131,8 +131,10 @@ class AuthRepository {
 
     // 2. OPSİYONEL alanları kontrol ederek ekle
 
-    if (user.email != null && user.email!.isNotEmpty) {
-      data["email"] = user.email;
+    // Eğer email boşsa geçici bir email ekle
+    if (user.email == null || user.email!.isEmpty) {
+      final phoneSafe = user.phone!.replaceAll(RegExp(r'[^0-9]'), '');
+      data["email"] = "noemail+$phoneSafe@dailygood.app";
     }
 
     if (user.birthDate != null && user.birthDate!.isNotEmpty) {

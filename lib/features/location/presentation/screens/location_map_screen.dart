@@ -60,18 +60,26 @@ class _LocationMapScreenState extends ConsumerState<LocationMapScreen> {
   /// 📍 3) "Adresim doğru" → Home'a LatLng gönder
   /// ---------------------------------------------------------------
   void _confirmLocation() async {
-    if (_selectedPosition != null) {
+    if (_selectedPosition == null) return;
 
-      final ok = await ref.read(appStateProvider.notifier).setUserLocation(
-        _selectedPosition!.latitude,
-        _selectedPosition!.longitude,
-      );
+    // 1) API + AppState'e kayıt
+    final ok = await ref.read(appStateProvider.notifier).setUserLocation(
+      _selectedPosition!.latitude,
+      _selectedPosition!.longitude,
+    );
 
-      // ❗ SET işlemi başarılıysa yönlendir
-      if (context.mounted) {
-        context.go('/home');  // 🔥 HOME'A GEÇİŞ
+    // 2) Başarısızsa uyarı gösterip çık
+    if (!ok) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Konum güncellenemedi")),
+        );
       }
+      return;
     }
+
+    // 3) Başarılıysa HOME'a yönlendirme
+    if (mounted) context.go('/home');
   }
 
 

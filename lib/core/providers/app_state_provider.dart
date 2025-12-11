@@ -132,6 +132,33 @@ class AppStateNotifier extends StateNotifier<AppState> {
   }
 
   // ---------------------------------------------------------
+  // LOGOUT RESET
+  // ---------------------------------------------------------
+  Future<void> resetAfterLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool("logged_in", false);
+    await prefs.setBool("is_new_user", false);
+    await prefs.setBool("seen_profile_details", false);
+    await prefs.setBool("seen_onboarding", false);
+    await prefs.setBool("selected_location", false);
+    await prefs.remove("auth_token");
+
+    state = const AppState(
+      isInitialized: true,
+      isLoggedIn: false,
+      isNewUser: false,
+      hasSeenIntro: true,
+      hasSeenProfileDetails: false,
+      hasSelectedLocation: false,
+      hasSeenOnboarding: false,
+      latitude: null,
+      longitude: null,
+    );
+  }
+
+
+  // ---------------------------------------------------------
   // NEW USER FLAG
   // ---------------------------------------------------------
   Future<void> setIsNewUser(bool v) async {
@@ -181,7 +208,7 @@ class AppStateNotifier extends StateNotifier<AppState> {
   // ---------------------------------------------------------
   // KONUM SEÇİMİ
   // ---------------------------------------------------------
-  Future<void> setUserLocation(
+  Future<bool> setUserLocation(
       double lat,
       double lng, {
         String address = "Bilinmeyen Adres",
@@ -206,7 +233,7 @@ class AppStateNotifier extends StateNotifier<AppState> {
 
     if (!apiOk) {
       // burada istersen kullanıcıya snackbar da gösterebilirsin
-      return;
+      return false;
     }
 
     // Ancak API 200 OK ise:
@@ -219,6 +246,7 @@ class AppStateNotifier extends StateNotifier<AppState> {
       longitude: lng,
       hasSelectedLocation: true,
     );
+    return true;
   }
 
 }
