@@ -133,7 +133,7 @@ class AuthRepository {
 
     // Eğer email boşsa geçici bir email ekle
     if (user.email == null || user.email!.isEmpty) {
-      final phoneSafe = user.phone!.replaceAll(RegExp(r'[^0-9]'), '');
+      final phoneSafe = user.phone.replaceAll(RegExp(r'[^0-9]'), '');
       data["email"] = "noemail+$phoneSafe@dailygood.app";
     }
 

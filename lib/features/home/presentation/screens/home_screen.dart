@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
@@ -122,9 +121,6 @@ class HomeScreen extends ConsumerWidget {
     final homeState = ref.watch(homeStateProvider);
     final notifier = ref.read(homeStateProvider.notifier);
 
-    // ⚠️ Bu satırı kaldırdık, artık provider'lar kullanılacak:
-    // final List<ProductModel> mockProducts = [];
-
     final List<CategoryFilterOption> homeCategories = [
       CategoryFilterOption.all,
       CategoryFilterOption.food,
@@ -142,40 +138,26 @@ class HomeScreen extends ConsumerWidget {
         preferredSize: const Size.fromHeight(70),
         child: CustomHomeAppBar(
           address: homeState.selectedAddress,
-          onLocationTap: () async {
-            debugPrint("APPBAR CLICKED !!!!");
-            final result = await context.push('/map');
-            print("PUSH RESULT = $result");
-
-            if (result != null) {
-              final latLng = result as LatLng;
-              final address =
-                  "${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}";
-
-              notifier.setAddress(address);
-
-              // 💡 Konum değişince tüm ürün listelerini yenile
-              ref.invalidate(nearbyProductsProvider);
-              // Diğerleri de konum tabanlı filtreleme kullanıyorsa invalidate edilmeli
-            }
+          onLocationTap: () {
+            /// ❌ Home konum değiştirmez
+            /// ℹ️ İleride gerekirse sadece bilgi ekranı açılabilir
           },
           onNotificationsTap: () => context.push('/notifications'),
         ),
       ),
-
       body: Stack(
         children: [
           NestedScrollView(
             headerSliverBuilder: (context, scrolled) => [
-              SliverToBoxAdapter(
+              const SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: const HomeBannerSlider(),
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: HomeBannerSlider(),
                 ),
               ),
 
-              SliverToBoxAdapter(
-                child: const HomeEmailWarningBanner(),
+              const SliverToBoxAdapter(
+                child: HomeEmailWarningBanner(),
               ),
 
               SliverPersistentHeader(
@@ -186,12 +168,10 @@ class HomeScreen extends ConsumerWidget {
                   onSelected: (index) {
                     notifier.setCategory(index);
 
-                    final selectedEnum = homeCategories[index];
-
                     context.push(
                       '/explore',
                       extra: {
-                        'category': selectedEnum,
+                        'category': homeCategories[index],
                         'fromHome': true,
                       },
                     );
@@ -206,11 +186,10 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
             ],
-            // 💡 _HomeContent artık ConsumerWidget olmalı
             body: const _HomeContent(),
           ),
 
-          /// 🟢 Sipariş Takip Float Button
+          /// 🟢 Sipariş Takip FAB
           const FloatingOrderButton(),
         ],
       ),

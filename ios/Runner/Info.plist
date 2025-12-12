@@ -46,12 +46,6 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 
-    <key>io.flutter.embedded_views_preview</key>
-    <true/>
-
-    <key>GMSApiKey</key>
-    <string>AIzaSyC1TEUj1BieHUu0dWs5hWCaYVzX_gdoE04</string>
-
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 
@@ -71,7 +65,16 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 
+		<!-- =============================== -->
+    	<!--           Mapbox               -->
+    	<!-- =============================== -->
+    <key>MBXAccessToken</key>
+    <string>$(MAPBOX_ACCESS_TOKEN)</string>
 
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>armv7</string>
+    </array>
 
 	<!-- =============================== -->
 	<!--           İZİNLER               -->
@@ -85,16 +88,12 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Galerinizden fotoğraf seçebilmeniz için fotoğraf galerisi erişimi gerekiyor.</string>
 
-	<!-- 📍 Konum izni -->
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Size yakın işletmeleri gösterebilmemiz için konum erişimi gerekiyor.</string>
-
-	<!-- 🔔 Bildirim izni -->
-	<key>NSUserTrackingUsageDescription</key>
-	<string>Kişiselleştirilmiş bildirimler gönderebilmemiz için izninize ihtiyacımız var.</string>
-
+	<!-- 🔔 Firebase Push -->
 	<key>FirebaseMessagingAutoInitEnabled</key>
 	<true/>
+
+	<key>NSLocationWhenInUseUsageDescription</key>
+    <string>Yakınınızdaki işletmeleri gösterebilmek için konum bilginize ihtiyaç duyuyoruz.</string>
 
 
 	<!-- =============================== -->
@@ -103,14 +102,13 @@
 
 	<key>CFBundleURLTypes</key>
 	<array>
-	  <dict>
-	    <key>CFBundleURLSchemes</key>
-	    <array>
-	      <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	    </array>
-	  </dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			</array>
+		</dict>
 	</array>
-
 
 	<!-- =============================== -->
 	<!--        ATS (http için)          -->

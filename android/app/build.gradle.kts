@@ -17,7 +17,14 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // 🔑 Mapbox token (local.properties üzerinden)
+        manifestPlaceholders.put(
+            "MAPBOX_ACCESS_TOKEN",
+            project.findProperty("MAPBOX_ACCESS_TOKEN") as String? ?: ""
+        )
     }
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
