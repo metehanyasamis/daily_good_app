@@ -248,8 +248,8 @@ class _CartItemRow extends ConsumerWidget {
           _QtyControl(
             quantity: item.quantity,
             maxReached: maxReached,
-            onDecrement: () => ctrl.decrement(item.id),
-            onIncrement: () => ctrl.increment(item.id),
+            onDecrement: () => ctrl.decrement(item),
+            onIncrement: () => ctrl.increment(item),
           ),
 
           // Sağ: Toplam

@@ -15,79 +15,71 @@ class CartController extends StateNotifier<List<CartItem>> {
     loadCart();
   }
 
-  void clearCart() {
-    state = [];
-  }
-
   String? currentShopId;
 
   Future<void> loadCart() async {
     final items = await _repo.getCart();
     state = items;
-
-    if (items.isNotEmpty) {
-      currentShopId = items.first.shopId;
-    }
+    currentShopId = items.isNotEmpty ? items.first.shopId : null;
   }
 
-
-
-  /// ADIM 1: Aynı işletmeden mi?
   bool isSameStore(String shopId) {
     return currentShopId == null || currentShopId == shopId;
   }
 
-  /// ADIM 2: Sepete ekle (API + UI State)
   Future<bool> addProduct(ProductModel product, int qty) async {
-    final shopId = product.store.id;
-
-    // API çağrısı
-    final ok = await _repo.addOrUpdate(
+    final ok = await _repo.add(
       productId: product.id,
       quantity: qty,
     );
 
     if (!ok) return false;
 
-    // API’den güncel state çek
     await loadCart();
-    currentShopId = shopId;
     return true;
   }
 
-  /// ADIM 3: Replace (farklı mağaza)
-  Future<bool> replaceWith(ProductModel product, int qty) async {
-    state = [];
-
-    final ok = await addProduct(product, qty);
-    return ok;
-  }
-
-  /// Artır
-  Future<void> increment(String id) async {
-    final item = state.firstWhere((e) => e.id == id);
-    await _repo.addOrUpdate(productId: id, quantity: item.quantity + 1);
+  Future<void> increment(CartItem item) async {
+    await _repo.updateQuantity(
+      cartItemId: item.cartItemId,
+      productId: item.productId,
+      quantity: item.quantity + 1,
+    );
     await loadCart();
   }
 
-  /// Azalt
-  Future<void> decrement(String id) async {
-    final item = state.firstWhere((e) => e.id == id);
-
+  Future<void> decrement(CartItem item) async {
     if (item.quantity - 1 <= 0) {
-      state = state.where((e) => e.id != id).toList();
-      return;
+      await _repo.remove(item.cartItemId);
+    } else {
+      await _repo.updateQuantity(
+        cartItemId: item.cartItemId,
+        productId: item.productId,
+        quantity: item.quantity - 1,
+      );
     }
-
-    await _repo.addOrUpdate(productId: id, quantity: item.quantity - 1);
     await loadCart();
   }
 
-  void clear() {
+  Future<void> clearCart() async {
+    for (final item in state) {
+      await _repo.remove(item.cartItemId);
+    }
     state = [];
     currentShopId = null;
   }
+
+  /// ❌ Farklı işletme → sepeti temizle ve yeni ürünü ekle
+  Future<bool> replaceWith(ProductModel product, int qty) async {
+    // 🔥 backend sepeti temizlemeden önce local state temizle
+    state = [];
+    currentShopId = null;
+
+    // sonra yeni ürünü ekle
+    return await addProduct(product, qty);
+  }
 }
+
 
 final cartProvider =
 StateNotifierProvider<CartController, List<CartItem>>((ref) {

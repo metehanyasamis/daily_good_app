@@ -20,7 +20,6 @@ class FavoriteProductResponseModel {
     );
   }
 
-  /// FAVORITE → ProductModel dönüştür
   ProductModel toDomain() {
     return ProductModel(
       id: product.id,

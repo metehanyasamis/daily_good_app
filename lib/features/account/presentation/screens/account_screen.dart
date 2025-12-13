@@ -274,7 +274,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     leading: const Icon(Icons.mail_outline),
                     title: const Text("Bize Ulaşın"),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/support'),
+                    onTap: () => context.push('/contact'),
                   ),
                   ListTile(
                     leading: const Icon(Icons.logout),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/cart/domain/providers/cart_provider.dart';
+import '../utils/address_formatter.dart';
 
 class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String address;
@@ -27,106 +28,141 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cartCount = ref.watch(cartCountProvider);
     final double topPadding = MediaQuery.of(context).padding.top;
+    final shortAddress = formatShortAddress(address);
 
     return Container(
-      color: Colors.transparent,
       padding: EdgeInsets.only(
         top: topPadding + 8,
         left: 16,
         right: 16,
         bottom: 8,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          /// ---------------------------------------------
-          /// 🟢 Sol taraf → Logo veya Override
-          /// ---------------------------------------------
-          leadingOverride ??
-              Image.asset(
-                'assets/logos/dailyGood_tekSaatLogo.png',
-                height: 45,
-              ),
-
-          const SizedBox(width: 6),
-
-          /// ------------------------- Orta: Adres kapsülü
-          GestureDetector(
-            onTap: onLocationTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF7FAF7),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.primaryDarkGreen, width: 1),
-              ),
+      child: SizedBox(
+        height: 48,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            /// =========================
+            /// 🟡 ORTA — ADRES (GERÇEK ORTA)
+            /// =========================
+            GestureDetector(
+              onTap: onLocationTap,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.location_on,
-                      size: 18, color: AppColors.primaryDarkGreen),
-                  const SizedBox(width: 6),
-                  Text(
-                    address,
-                    style: const TextStyle(
-                      color: AppColors.primaryDarkGreen,
-                      fontWeight: FontWeight.w600,
+                  const Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color: AppColors.primaryDarkGreen,
+                  ),
+                  const SizedBox(width: 4),
+
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.40,
+                    ),
+                    child: Text(
+                      shortAddress,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.primaryDarkGreen,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14, // 🔒 SABİT
+                      ),
                     ),
                   ),
-                  const Icon(Icons.keyboard_arrow_down,
-                      color: AppColors.primaryDarkGreen, size: 20),
+
+                  const SizedBox(width: 2),
+
+                  const Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 18,
+                    color: AppColors.primaryDarkGreen,
+                  ),
                 ],
               ),
             ),
-          ),
 
-          /// ------------------------- Sağ taraf: Notification + Cart
-          Row(
-            children: [
-              IconButton(
-                onPressed: onNotificationsTap,
-                icon: const Icon(
-                  Icons.notifications_none_rounded,
-                  color: AppColors.primaryDarkGreen,
-                ),
-              ),
+            /// =========================
+            /// 🟢 SOL — LOGO
+            /// =========================
+            Positioned(
+              left: 0,
+              child: leadingOverride ??
+                  Image.asset(
+                    'assets/logos/dailyGood_tekSaatLogo.png',
+                    height: 42,
+                  ),
+            ),
 
-              Stack(
-                clipBehavior: Clip.none,
+            /// =========================
+            /// 🔴 SAĞ — BİLDİRİM + SEPET
+            /// =========================
+            Positioned(
+              right: 0,
+              child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => context.push('/cart'),
+                    onPressed: onNotificationsTap,
                     icon: const Icon(
-                      Icons.shopping_cart_outlined,
+                      Icons.notifications_none_rounded,
                       color: AppColors.primaryDarkGreen,
+                      size: 22,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
                     ),
                   ),
-                  if (cartCount > 0)
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Container(
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent,
-                          borderRadius: BorderRadius.circular(10),
+
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        onPressed: () => context.push('/cart'),
+                        icon: const Icon(
+                          Icons.shopping_cart_outlined,
+                          color: AppColors.primaryDarkGreen,
+                          size: 22,
                         ),
-                        child: Text(
-                          '$cartCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
                         ),
                       ),
-                    ),
+                      if (cartCount > 0)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$cartCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

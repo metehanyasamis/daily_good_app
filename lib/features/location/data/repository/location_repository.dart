@@ -12,19 +12,16 @@ class LocationRepository {
   Future<bool> updateCustomerLocation({
     required double latitude,
     required double longitude,
-    String? address,
+    required String address,
   }) async {
     debugPrint("📍 Konum API isteği → PUT /customer/location/update");
 
     try {
-      final Map<String, dynamic> body = {
-        "latitude": latitude.toString(),     // ✅ STRING
-        "longitude": longitude.toString(),   // ✅ STRING
+      final body = {
+        "latitude": latitude.toString(),   // backend STRING bekliyor
+        "longitude": longitude.toString(),
+        "address": address,
       };
-
-      if (address != null && address.isNotEmpty) {
-        body["address"] = address;           // address zaten string → sorun yok
-      }
 
       debugPrint("📤 Gönderilen BODY: $body");
 
@@ -39,7 +36,7 @@ class LocationRepository {
     } on DioException catch (e) {
       debugPrint("❌ LOCATION ERROR STATUS: ${e.response?.statusCode}");
       debugPrint("❌ LOCATION ERROR DATA: ${e.response?.data}");
-      rethrow;
+      return false;
     }
   }
 }

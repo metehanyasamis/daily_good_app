@@ -8,6 +8,9 @@ import '../../features/account/presentation/screens/profile_details_screen.dart'
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/intro_screen.dart';
+import '../../features/contact/presentation/contact_screen.dart';
+import '../../features/contact/presentation/contact_success_screen.dart';
+import '../../features/location/presentation/screens/location_picker_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -17,16 +20,12 @@ import '../../features/favorites/presentation/screens/favorites_screen.dart';
 import '../../features/account/presentation/screens/account_screen.dart';
 
 import '../../features/location/presentation/screens/location_info_screen.dart';
-import '../../features/location/presentation/screens/location_map_screen.dart';
 
 import '../../features/stores/data/model/store_summary.dart';
 import '../../features/product/presentation/screens/product_detail_screen.dart';
 
 // STORE
 import '../../features/stores/presentation/screens/store_detail_screen.dart';
-
-import '../../features/support/presentation/support_screen.dart';
-import '../../features/support/presentation/support_success_screen.dart';
 
 import '../../features/notification/presentation/screens/notification_screen.dart';
 import '../../features/orders/presentation/screens/order_history_screen.dart';
@@ -315,7 +314,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/location-picker',
-        builder: (_, state) => const LocationMapScreen(),
+        builder: (_, state) => const LocationPickerScreen(),
       ),
 
       GoRoute(
@@ -365,8 +364,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const OrderSuccessScreen(),
       ),
       GoRoute(
-        path: '/order-tracking',
-        builder: (_, _) => const OrderTrackingScreen(),
+        path: '/order-tracking/:id',
+        builder: (context, state) {
+          final orderId = state.pathParameters['id']!;
+          return OrderTrackingScreen(orderId: orderId);
+        },
       ),
       GoRoute(
         path: '/thank-you',
@@ -376,10 +378,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/order-history',
         builder: (_, _) => const OrderHistoryScreen(),
       ),
-      GoRoute(path: '/support', builder: (_, _) => const SupportScreen()),
+      GoRoute(path: '/contact', builder: (_, _) => const ContactScreen()),
       GoRoute(
-        path: '/support-success',
-        builder: (_, _) => const SupportSuccessScreen(),
+        path: '/contact-success',
+        builder: (_, _) => const ContactSuccessScreen(),
       ),
 
       // ---------------- SHELL ROUTE ----------------

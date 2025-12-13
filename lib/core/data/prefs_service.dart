@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/location/domain/address_state.dart';
+
 class PrefsService {
   static const _kAuthToken = 'auth_token';
   static const _kUserData = 'user_data';
@@ -126,4 +128,46 @@ class PrefsService {
     final p = await _prefs;
     await p.remove(key);
   }
+
+// -------------------------------------------------------------
+// 📍 ADDRESS
+// -------------------------------------------------------------
+  static const _kAddressTitle = 'address_title';
+  static const _kAddressLat = 'address_lat';
+  static const _kAddressLng = 'address_lng';
+  static const _kAddressSelected = 'address_selected';
+
+  static Future<void> saveAddress({
+    required String title,
+    required double lat,
+    required double lng,
+  }) async {
+    final p = await _prefs;
+    await p.setString(_kAddressTitle, title);
+    await p.setDouble(_kAddressLat, lat);
+    await p.setDouble(_kAddressLng, lng);
+    await p.setBool(_kAddressSelected, true);
+
+    print("💾 [Prefs] Address saved → $title ($lat, $lng)");
+  }
+
+  static Future<AddressState?> readAddress() async {
+    final p = await _prefs;
+
+    final title = p.getString(_kAddressTitle);
+    final lat = p.getDouble(_kAddressLat);
+    final lng = p.getDouble(_kAddressLng);
+    final selected = p.getBool(_kAddressSelected) ?? false;
+
+    if (title == null || lat == null || lng == null) return null;
+
+    return AddressState(
+      title: title,
+      lat: lat,
+      lng: lng,
+      isSelected: selected,
+    );
+  }
+
+
 }

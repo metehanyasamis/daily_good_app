@@ -116,7 +116,7 @@ class UserNotifier extends StateNotifier<UserState> {
         // 🔥 AppState PROFIL Güncelleme (KRİTİK)
         final appState = ref.read(appStateProvider.notifier);
         await appState.setLoggedIn(true);
-        await appState.setIsNewUser(false);
+        //await appState.setIsNewUser(false);
         await appState.setHasSeenProfileDetails(true);
 
         state = UserState.ready(savedUser);

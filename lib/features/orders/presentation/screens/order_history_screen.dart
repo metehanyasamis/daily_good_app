@@ -34,74 +34,103 @@ class OrderHistoryScreen extends ConsumerWidget {
       ),
 
       // ---------------- DATA ----------------
-      data: (orders) {
-        // orders: List<OrderListItem>
-        if (orders.isEmpty) {
+        data: (summary) {
+          final orders = summary.orders;
+
+          if (orders.isEmpty) {
+            return Scaffold(
+              appBar: _buildAppBar(),
+              body: const Center(
+                child: Text('Henüz geçmiş siparişiniz bulunmamaktadır.'),
+              ),
+            );
+          }
+
+          final Map<String, List<OrderListItem>> grouped = {};
+
+          for (final order in orders) {
+            final key = DateFormat('MMMM yyyy', 'tr_TR').format(order.createdAt);
+            grouped.putIfAbsent(key, () => []).add(order);
+          }
+
           return Scaffold(
             appBar: _buildAppBar(),
-            body: const Center(
-              child: Text(
-                'Henüz geçmiş siparişiniz bulunmamaktadır.',
-                style: TextStyle(fontSize: 16, color: Colors.black54),
-              ),
+            backgroundColor: Colors.grey.shade100,
+            body: Column(
+              children: [
+                // 🔥 TOPLAM TASARRUF & KARBON (backend)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _metric(
+                        "Toplam Tasarruf",
+                        "${summary.totalSavings.toStringAsFixed(0)} ₺",
+                      ),
+                      _metric(
+                        "Karbon Kazancı",
+                        "${summary.carbonFootprintSaved.toStringAsFixed(1)} kg",
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    children: grouped.entries.map((entry) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              entry.key[0].toUpperCase() + entry.key.substring(1),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          ...entry.value.map(
+                                (order) => GestureDetector(
+                              onTap: () =>
+                                  context.push('/orders/${order.id}'),
+                              child: _buildOrderCard(
+                                context: context,
+                                order: order,
+                                dateFormatter: dateFormatter,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
             ),
           );
         }
-
-        // 🔹 Siparişleri aya göre grupla
-        final Map<String, List<OrderListItem>> grouped = {};
-
-        for (final order in orders) {
-          final key =
-          DateFormat('MMMM yyyy', 'tr_TR').format(order.createdAt);
-          grouped.putIfAbsent(key, () => []).add(order);
-        }
-
-        return Scaffold(
-          appBar: _buildAppBar(),
-          backgroundColor: Colors.grey.shade100,
-          body: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            children: grouped.entries.map((entry) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 🔸 Ay başlığı
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      // ilk harfi büyük yap
-                      entry.key[0].toUpperCase() + entry.key.substring(1),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-
-                  // 🔹 Sipariş kartları
-                  ...entry.value.map(
-                        (order) => GestureDetector(
-                      onTap: () {
-                        // Detay ekranına navigasyon → backend’den GET /customer/orders/{id}
-                        context.push('/orders/${order.id}');
-                      },
-                      child: _buildOrderCard(
-                        context: context,
-                        order: order,
-                        dateFormatter: dateFormatter,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        );
-      },
     );
   }
+
+  // ---------------- METRICS HELPER ----------------
+
+  Widget _metric(String label, String value) {
+    return Column(
+      children: [
+        Text(value,
+            style: const TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: Colors.black54)),
+      ],
+    );
+  }
+
 
   // ---------------- APPBAR ----------------
   PreferredSizeWidget _buildAppBar() {

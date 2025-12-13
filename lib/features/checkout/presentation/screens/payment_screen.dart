@@ -6,7 +6,6 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
 import '../../../cart/domain/models/cart_item.dart'; // varsa, yoksa doğru yolu kullan
 import '../../../orders/data/models/create_order_request.dart';
-import '../../../orders/data/models/order_details_response.dart';
 import '../../../orders/data/repository/order_repository.dart';
 
 class PaymentScreen extends ConsumerStatefulWidget {
@@ -135,8 +134,6 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
     try {
       final repo = ref.read(orderRepositoryProvider);
-
-      // Varsayım: tüm sepet aynı store’dan geliyor → ilk item üzerinden alıyoruz.
       final first = cartItems.first;
 
       final request = CreateOrderRequest(
@@ -144,50 +141,36 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         totalAmount: totalAmount,
         paymentMethod: 'credit_card',
         paymentData: {
-          // Şimdilik dummy; backend gerek duyana göre doldurulur
-          'card_holder': _cardNameController.text,
-          'card_last4': _cardNumberController.text.length >= 4
-              ? _cardNumberController.text
+          "card_last4": _cardNumberController.text
               .replaceAll(' ', '')
-              .substring(_cardNumberController.text.length - 4)
-              : '',
+              .substring(_cardNumberController.text.length - 4),
         },
-        items: cartItems
-            .map(
-              (c) => CreateOrderItemRequest(
-            productId: c.id,
+        items: cartItems.map((c) {
+          return CreateOrderItemRequest(
+            productId: c.productId, // 🔥 DOĞRU
             quantity: c.quantity,
             unitPrice: c.price,
             totalPrice: c.price * c.quantity,
-          ),
-        )
-            .toList(),
+          );
+        }).toList(),
       );
 
-      final OrderDetailResponse createdOrder =
-      await repo.createOrder(request);
+      final order = await repo.createOrder(request);
 
-      // İstersen burada OrdersNotifier'a local olarak da ekleyebilirsin,
-      // ama ana truth backend olduğu için şart değil.
+      ref.read(cartProvider.notifier).clearCart();
 
       if (!mounted) return;
-
-      // Başarılı → animasyonlu ekrana gidiyoruz.
-      // Route'unda order id kullanmak istersen extra ile gönderebilirsin.
-      context.go('/order-success', extra: createdOrder.id);
+      context.go('/order-success', extra: order.id);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ödeme sırasında bir hata oluştu:\n$e'),
-        ),
+        SnackBar(content: Text('Ödeme başarısız: $e')),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
+
 
   Widget _buildSummaryCard(double totalAmount) {
     return Container(

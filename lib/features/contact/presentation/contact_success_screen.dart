@@ -1,10 +1,12 @@
+// lib/features/contact/presentation/contact_success_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
 
-class SupportSuccessScreen extends StatelessWidget {
-  const SupportSuccessScreen({super.key});
+class ContactSuccessScreen extends StatelessWidget {
+  const ContactSuccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,20 +16,23 @@ class SupportSuccessScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         centerTitle: true,
         title: const Text("Bize Ulaşın"),
-        automaticallyImplyLeading: false, // 🔥 GERİ TUŞU KALDIRILDI
+        automaticallyImplyLeading: false, // ⛔ geri butonu yok
       ),
       body: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 40),
 
-            // 🟢 Başarı İkonu
-            Icon(Icons.check_circle_rounded,
-                size: 90, color: AppColors.primaryDarkGreen),
+            /// ✅ BAŞARI İKONU
+            const Icon(
+              Icons.check_circle_rounded,
+              size: 90,
+              color: AppColors.primaryDarkGreen,
+            ),
 
             const SizedBox(height: 24),
 
-            // 🟢 Başlık
+            /// ✅ BAŞLIK
             const Text(
               "Mesajın Başarıyla Gönderildi!",
               textAlign: TextAlign.center,
@@ -40,7 +45,7 @@ class SupportSuccessScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // 🟢 Açıklama metni
+            /// ✅ AÇIKLAMA
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 32),
               child: Text(
@@ -57,7 +62,7 @@ class SupportSuccessScreen extends StatelessWidget {
 
             const Spacer(),
 
-            // 🟢 Alt buton
+            /// ✅ ALT BUTON
             Padding(
               padding: const EdgeInsets.all(20),
               child: CustomButton(

@@ -34,7 +34,9 @@ class CartResponseModel {
   /// Domain’e dönüşüm → CartItem
   CartItem toDomain() {
     return CartItem(
-      id: product.id,
+      cartItemId: id,
+      productId: product.id,
+
       name: product.name,
       shopId: store.id,
       shopName: store.name,

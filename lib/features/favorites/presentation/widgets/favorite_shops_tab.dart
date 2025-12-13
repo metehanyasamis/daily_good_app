@@ -3,142 +3,159 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/fav_button.dart';
-import '../../../favorites/providers/favorites_provider.dart';
+import '../../domain/favorites_notifier.dart';
+import '../../../stores/data/model/store_summary.dart';
 
 class FavoriteShopsTab extends ConsumerWidget {
   const FavoriteShopsTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final favorites = ref.watch(favoritesProvider);
-    final favoriteShops = favorites.favoriteShops;
+    // ✅ Sadece stores değişince rebuild
+    final shops = ref.watch(
+      favoritesProvider.select((s) => s.stores),
+    );
 
-    if (favoriteShops.isEmpty) return _buildEmptyState(context);
+    if (shops.isEmpty) return const _EmptyShopsState();
 
-    return ListView.builder(
-      padding: EdgeInsets.fromLTRB(
-        12,
-        12,
-        12,
-        MediaQuery.of(context).padding.bottom + 80,
+    return RefreshIndicator(
+      onRefresh: () => ref.read(favoritesProvider.notifier).loadAll(),
+      child: ListView.builder(
+        padding: EdgeInsets.fromLTRB(
+          12,
+          12,
+          12,
+          MediaQuery.of(context).padding.bottom + 80,
+        ),
+        itemCount: shops.length,
+        itemBuilder: (context, index) {
+          final shop = shops[index];
+          return _ShopCard(shop: shop);
+        },
       ),
-      itemCount: favoriteShops.length,
-      itemBuilder: (context, index) {
-        final shop = favoriteShops[index];
-
-        return GestureDetector(
-          onTap: () => context.push('/stores-detail', extra: shop),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        bottomLeft: Radius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Container(
-                          width: 70,
-                          height: 70,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                          ),
-                          child: ClipOval(
-                            child: Image.network(
-                              shop.imageUrl,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              shop.name,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              shop.address,
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.star,
-                                  size: 14,
-                                  color: AppColors.primaryDarkGreen,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  shop.overallRating?.toStringAsFixed(1) ?? "0.0",
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                                const SizedBox(width: 10),
-                                Icon(
-                                  Icons.place,
-                                  size: 14,
-                                  color: AppColors.primaryDarkGreen,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${shop.distanceKm?.toStringAsFixed(1) ?? "0.0"} km',
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // ❤️ Favori butonu sağ üst
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: FavButton(id: shop.id, isStore: true)
-                  ,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
+}
 
-  Widget _buildEmptyState(BuildContext context) {
+class _ShopCard extends StatelessWidget {
+  final StoreSummary shop;
+  const _ShopCard({required this.shop});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/stores-detail', extra: shop),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: _ShopAvatar(url: shop.imageUrl),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: _ShopInfo(shop: shop),
+                  ),
+                ),
+              ],
+            ),
+
+            // ❤️ Favori butonu sağ üst (aynı)
+            Positioned(
+              top: 6,
+              right: 6,
+              child: FavButton(id: shop.id, isStore: true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShopAvatar extends StatelessWidget {
+  final String url;
+  const _ShopAvatar({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 70,
+      height: 70,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+      ),
+      child: ClipOval(
+        child: url.isEmpty
+            ? const Icon(Icons.storefront, color: Colors.black26, size: 28)
+            : Image.network(url, fit: BoxFit.cover),
+      ),
+    );
+  }
+}
+
+class _ShopInfo extends StatelessWidget {
+  final StoreSummary shop;
+  const _ShopInfo({required this.shop});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          shop.name,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          shop.address,
+          style: const TextStyle(color: Colors.grey, fontSize: 13),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Icon(Icons.star, size: 14, color: AppColors.primaryDarkGreen),
+            const SizedBox(width: 4),
+            Text(
+              shop.overallRating?.toStringAsFixed(1) ?? "0.0",
+              style: const TextStyle(fontSize: 13),
+            ),
+            const SizedBox(width: 10),
+            Icon(Icons.place, size: 14, color: AppColors.primaryDarkGreen),
+            const SizedBox(width: 4),
+            Text(
+              '${shop.distanceKm?.toStringAsFixed(1) ?? "0.0"} km',
+              style: const TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyShopsState extends StatelessWidget {
+  const _EmptyShopsState();
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -154,9 +171,10 @@ class FavoriteShopsTab extends ConsumerWidget {
             Text(
               'Henüz favori işletmen yok 🍽️\nHemen keşfetmeye başla!',
               textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(height: 1.5),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(height: 1.5),
             ),
           ],
         ),

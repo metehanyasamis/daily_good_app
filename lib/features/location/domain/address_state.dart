@@ -7,9 +7,9 @@ class AddressState extends Equatable {
   final bool isSelected;
 
   const AddressState({
-    this.title = 'Konum Seç',
-    this.lat = 41.0082,
-    this.lng = 28.9784,
+    this.title = 'Kadıköy, İstanbul',
+    this.lat = 40.9917,
+    this.lng = 29.0275,
     this.isSelected = false,
   });
 

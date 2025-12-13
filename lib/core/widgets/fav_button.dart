@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../features/favorites/providers/favorites_provider.dart';
+import '../../features/favorites/domain/favorites_notifier.dart';
 
 class FavButton extends ConsumerWidget {
   final String id;
@@ -15,25 +14,36 @@ class FavButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final fav = ref.watch(favoritesProvider);
-
-    final isFav = isStore
-        ? fav.favoriteShops.any((s) => s.id == id)
-        : fav.favoriteProducts.any((p) => p.id == id);
+    final isFav = ref.watch(
+      favoritesProvider.select((state) {
+        return isStore
+            ? state.storeIds.contains(id)
+            : state.productIds.contains(id);
+      }),
+    );
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
+        final notifier = ref.read(favoritesProvider.notifier);
+
         if (isStore) {
-          ref.read(favoritesProvider.notifier).toggleStoreFavorite(id);
+          notifier.toggleStore(id);
         } else {
-          ref.read(favoritesProvider.notifier).toggleProductFavorite(id);
+          notifier.toggleProduct(id);
         }
       },
-      child: Icon(
-        isFav ? Icons.favorite : Icons.favorite_border,
-        color: isFav ? Colors.red : Colors.grey,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 160),
+        transitionBuilder: (child, animation) =>
+            ScaleTransition(scale: animation, child: child),
+        child: Icon(
+          isFav ? Icons.favorite : Icons.favorite_border,
+          key: ValueKey(isFav),
+          color: isFav ? Colors.redAccent : Colors.grey,
+          size: 22,
+        ),
       ),
     );
   }
 }
-

@@ -11,9 +11,11 @@ class FloatingOrderButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasActiveOrder = ref.watch(orderHistoryProvider).maybeWhen(
-      data: (orders) => orders.any((o) => o.status == "pending"),
+      data: (summary) =>
+          summary.orders.any((o) => o.status == 'pending'),
       orElse: () => false,
     );
+
 
     if (!hasActiveOrder) return const SizedBox.shrink();
 

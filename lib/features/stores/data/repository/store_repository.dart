@@ -47,4 +47,47 @@ class StoreRepository {
       return ReviewModel.fromResponse(storeId, response);
     }).toList();
   }
+
+  // ---------------------------------------------------------
+// 🔥 KONUMA GÖRE MAĞAZA LİSTESİ — GET /stores
+// ---------------------------------------------------------
+// lib/features/stores/data/repository/store_repository.dart
+
+  Future<List<StoreSummary>> getStoresByLocation({
+    required double latitude,
+    required double longitude,
+    String sortBy = 'distance', // distance | rating | created_at
+    String sortOrder = 'asc',
+    int page = 1,
+    int perPage = 15,
+    String? search,
+    String? category,
+  }) async {
+    final query = <String, dynamic>{
+      'latitude': latitude,
+      'longitude': longitude,
+      'sort_by': sortBy,
+      'sort_order': sortOrder,
+      'page': page,
+      'per_page': perPage,
+    };
+
+    if (search != null && search.isNotEmpty) {
+      query['search'] = search;
+    }
+
+    if (category != null && category.isNotEmpty) {
+      query['category'] = category;
+    }
+
+    final res = await _dio.get(
+      '/stores',
+      queryParameters: query,
+    );
+
+    final List data = res.data['data'] ?? [];
+    return data.map((e) => StoreSummary.fromJson(e)).toList();
+  }
+
+
 }

@@ -29,7 +29,7 @@ class OrderDetailScreen extends ConsumerWidget {
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           TextButton(
-            onPressed: () => context.push('/support'),
+            onPressed: () => context.push('/contact'),
             child: const Text('Yardım', style: TextStyle(color: Colors.white)),
           ),
         ],

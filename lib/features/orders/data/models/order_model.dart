@@ -168,48 +168,6 @@ class OrderItem {
 }
 
 // -----------------------------------------------------------------------------
-// GET /customer/orders cevabının "data" alanı için wrapper
-// -----------------------------------------------------------------------------
-class OrderSummaryResponse {
-  final int totalOrders;
-  final double totalSavings;
-  final double carbonFootprintSaved;
-  final List<OrderItem> orders;
-
-  OrderSummaryResponse({
-    required this.totalOrders,
-    required this.totalSavings,
-    required this.carbonFootprintSaved,
-    required this.orders,
-  });
-
-  factory OrderSummaryResponse.fromJson(Map<String, dynamic> json) {
-    final totalOrders = (json['total_orders'] as num?)?.toInt() ?? 0;
-    final totalSavings =
-        (json['total_savings'] as num?)?.toDouble() ?? 0.0;
-    final carbon = (json['carbon_footprint_saved'] as num?)?.toDouble() ?? 0.0;
-
-    final list = (json['orders'] as List?) ?? [];
-    final carbonPerOrder =
-    totalOrders > 0 ? (carbon / totalOrders) : 0.0;
-
-    final orders = list
-        .map((e) => OrderItem.fromListJson(
-      e as Map<String, dynamic>,
-      carbonPerOrder: carbonPerOrder,
-    ))
-        .toList();
-
-    return OrderSummaryResponse(
-      totalOrders: totalOrders,
-      totalSavings: totalSavings,
-      carbonFootprintSaved: carbon,
-      orders: orders,
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
 // POST /customer/orders için item request modeli
 // -----------------------------------------------------------------------------
 class OrderRequestItem {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -30,12 +31,10 @@ class _LocationPickerScreenState
     _map = mapboxMap;
   }
 
-  void _onCameraChanged(_) {
+  void _onCameraChanged(CameraChangedEventData event) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () async {
-      if (_map == null) return;
-
-      setState(() => _loading = true);
+      if (_map == null || !mounted) return;
 
       final cam = await _map!.getCameraState();
       final center = cam.center.coordinates;
@@ -44,10 +43,9 @@ class _LocationPickerScreenState
         lat: center.lat.toDouble(),
         lng: center.lng.toDouble(),
       );
-
-      setState(() => _loading = false);
     });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +54,7 @@ class _LocationPickerScreenState
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: BackButton(),
         title: const Text(
           'Konum Seç',
           style: TextStyle(
@@ -71,16 +70,18 @@ class _LocationPickerScreenState
       body: Stack(
         children: [
           /// 🗺️ HARİTA
-          MapWidget(
-            styleUri: MapboxStyles.MAPBOX_STREETS,
-            cameraOptions: CameraOptions(
-              center: Point(
-                coordinates: Position(address.lng, address.lat),
+          Positioned.fill(
+            child: MapWidget(
+              styleUri: MapboxStyles.MAPBOX_STREETS,
+              cameraOptions: CameraOptions(
+                center: Point(
+                  coordinates: Position(address.lng, address.lat),
+                ),
+                zoom: 15,
               ),
-              zoom: 15,
+              onMapCreated: _onMapCreated,
+              onCameraChangeListener: _onCameraChanged,
             ),
-            onMapCreated: _onMapCreated,
-            onCameraChangeListener: _onCameraChanged,
           ),
 
           /// 📍 SABİT PIN
@@ -145,7 +146,23 @@ class _LocationPickerScreenState
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _loading
+                        ? null
+                        : () async {
+                      setState(() => _loading = true);
+
+                      final ok = await ref
+                          .read(addressProvider.notifier)
+                          .confirmLocation();
+
+                      if (!mounted) return;
+
+                      setState(() => _loading = false);
+
+                      if (ok) {
+                        context.go('/home'); // 🔥 NET
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
                       AppColors.primaryDarkGreen,
