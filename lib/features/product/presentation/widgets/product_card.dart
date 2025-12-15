@@ -34,7 +34,7 @@ class ProductCard extends StatelessWidget {
     final storeLogoUrl = _tryGetStoreLogoUrl(product);
 
     return GestureDetector(
-      onTap: onTap ?? () => context.push('/product/${product.id}'),
+      onTap: onTap ?? () => context.push('/product-detail/${product.id}'),
       child: Container(
         margin: const EdgeInsets.only(left: 10, right: 10, bottom: 20),
         decoration: BoxDecoration(
@@ -47,229 +47,228 @@ class ProductCard extends StatelessWidget {
             ),
           ],
         ),
-        child: IntrinsicHeight(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ------------------------------------------------------------
-              // BANNER
-              // ------------------------------------------------------------
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-                child: Stack(
-                  children: [
-                    _NetworkImageOrPlaceholder(
-                      url: product.imageUrl,
-                      height: 125,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ------------------------------------------------------------
+            // BANNER
+            // ------------------------------------------------------------
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+              child: Stack(
+                children: [
+                  _NetworkImageOrPlaceholder(
+                    url: product.imageUrl,
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
 
-                    // SOLD / STOCK LABEL (sold out vs son x)
+                  // SOLD / STOCK LABEL (sold out vs son x)
+                  Positioned(
+                    top: 10,
+                    left: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        stockLabel,
+                        style: const TextStyle(
+                          color: AppColors.primaryDarkGreen,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // DISCOUNT BADGE (eski kartta yoktu ama istersen kalsın)
+                  if (discount > 0)
                     Positioned(
                       top: 10,
-                      left: 0,
+                      right: 54, // fav ile çakışmasın
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
+                          horizontal: 8,
+                          vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
-                          borderRadius: const BorderRadius.only(
-                            topRight: Radius.circular(12),
-                            bottomRight: Radius.circular(12),
-                          ),
+                          color: AppColors.primaryDarkGreen,
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          stockLabel,
+                          "-$discount%",
                           style: const TextStyle(
-                            color: AppColors.primaryDarkGreen,
-                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
                         ),
                       ),
                     ),
 
-                    // DISCOUNT BADGE (eski kartta yoktu ama istersen kalsın)
-                    if (discount > 0)
-                      Positioned(
-                        top: 10,
-                        right: 54, // fav ile çakışmasın
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryDarkGreen,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            "-$discount%",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
+                  // FAVORITE
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: FavButton(id: product.id),
+                  ),
 
-                    // FAVORITE
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: FavButton(id: product.id),
-                    ),
-
-                    // STORE LOGO + STORE NAME (banner üstüne binen kısım)
-                    Positioned(
-                      bottom: 10,
-                      left: 10,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.white,
-                            child: ClipOval(
-                              child: _NetworkImageOrPlaceholder(
-                                url: storeLogoUrl,
-                                width: 40,
-                                height: 40,
-                                fit: BoxFit.cover,
-                                fallbackIcon: Icons.store,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            product.store.name,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(0, 0),
-                                  blurRadius: 4,
-                                  color: Colors.black87,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // ------------------------------------------------------------
-              // CONTENT: name + pickup + price
-              // ------------------------------------------------------------
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // LEFT
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            product.name,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            pickupText,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-
-                    // RIGHT (prices)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                  // STORE LOGO + STORE NAME (banner üstüne binen kısım)
+                  Positioned(
+                    bottom: 10,
+                    left: 10,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          '${oldPrice.toStringAsFixed(2)} ₺',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey,
-                            decoration: TextDecoration.lineThrough,
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: Colors.white,
+                          child: ClipOval(
+                            child: _NetworkImageOrPlaceholder(
+                              url: storeLogoUrl,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                              fallbackIcon: Icons.store,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(width: 8),
                         Text(
-                          '${newPrice.toStringAsFixed(2)} ₺',
+                          product.store.name,
                           style: const TextStyle(
-                            fontSize: 18,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.primaryDarkGreen,
+                            fontSize: 16,
+                            shadows: [
+                              Shadow(
+                                offset: Offset(0, 0),
+                                blurRadius: 4,
+                                color: Colors.black87,
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
 
-              const SizedBox(height: 6),
+            const SizedBox(height: 8),
 
-              // ------------------------------------------------------------
-              // BOTTOM LINE: distance (rating backend’de yok şu an)
-              // ------------------------------------------------------------
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.place,
-                      size: 14,
-                      color: AppColors.primaryDarkGreen,
+            // ------------------------------------------------------------
+            // CONTENT: name + pickup + price
+            // ------------------------------------------------------------
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // LEFT
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.name,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          pickupText,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      product.store.distanceKm != null
-                          ? '${product.store.distanceKm!.toStringAsFixed(1)} km'
-                          : '-',
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                        fontSize: 12,
+                  ),
+                  const SizedBox(width: 10),
+
+                  // RIGHT (prices)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${oldPrice.toStringAsFixed(2)} ₺',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey,
+                          decoration: TextDecoration.lineThrough,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${newPrice.toStringAsFixed(2)} ₺',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryDarkGreen,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+
+            const SizedBox(height: 2),
+
+            // ------------------------------------------------------------
+            // BOTTOM LINE: distance (rating backend’de yok şu an)
+            // ------------------------------------------------------------
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.place,
+                    size: 14,
+                    color: AppColors.primaryDarkGreen,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    product.store.distanceKm != null
+                        ? '${product.store.distanceKm!.toStringAsFixed(1)} km'
+                        : '-',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4), // 👈 overflow tamponu
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/custom_button.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
 import '../../../cart/domain/models/cart_item.dart'; // varsa, yoksa doğru yolu kullan
 import '../../../orders/data/models/create_order_request.dart';
 import '../../../orders/data/repository/order_repository.dart';
+import '../widgets/credit_card_form.dart';
+import '../widgets/credit_card_helpers.dart';
 
 class PaymentScreen extends ConsumerStatefulWidget {
   const PaymentScreen({super.key});
@@ -68,52 +71,35 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: Colors.grey.shade100,
+
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
         child: Column(
           children: [
-            _buildSummaryCard(totalAmount),
-            const SizedBox(height: 16),
+            // _buildSummaryCard(totalAmount),
+            const SizedBox(height: 25),
             _buildCardPreview(),
-            const SizedBox(height: 12),
+            const SizedBox(height: 25),
             _buildFormFields(),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isProcessing
-                    ? null
-                    : () => _onPayPressed(context, cartItems, totalAmount),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryDarkGreen,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isProcessing
-                    ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator.adaptive(
-                    strokeWidth: 2,
-                    valueColor:
-                    AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-                    : Text(
-                  'Ödemeyi Tamamla (${totalAmount.toStringAsFixed(2)} ₺)',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
+
+      // 🔥 ESKİ VE DOĞRU CTA BURAYA
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: CustomButton(
+          text: _isProcessing ? 'İşlem yapılıyor...' : 'Ödemeyi Tamamla',
+          price: totalAmount,
+          showPrice: true,
+          onPressed: _isProcessing
+              ? () {}
+              : () => _onPayPressed(context, cartItems, totalAmount),
+        ),
+      ),
+
     );
+
   }
 
   double _calculateTotal(List<CartItem> items) {
@@ -212,35 +198,25 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
   Widget _buildCardPreview() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      height: 190,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primaryDarkGreen, AppColors.primaryDarkGreen],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primaryLightGreen,
+            AppColors.primaryDarkGreen
+          ],
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryDarkGreen.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'Daily Good Kartı',
-            style: TextStyle(color: Colors.white, fontSize: 14),
-          ),
-          const SizedBox(height: 18),
           Text(
             _cardNumberController.text.isEmpty
-                ? '**** **** **** ****'
-                : _cardNumberController.text,
+                ? '••••   ••••   ••••   ••••'
+                : formatCardNumberForPreview(_cardNumberController.text),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 20,
@@ -248,21 +224,21 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 _cardNameController.text.isEmpty
-                    ? 'KART SAHİBİ'
-                    : _cardNameController.text,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ? 'CARD HOLDER'
+                    : _cardNameController.text.toUpperCase(),
+                style: const TextStyle(color: Colors.white70),
               ),
               Text(
                 _expiryController.text.isEmpty
-                    ? 'AA/YY'
+                    ? 'MM/YY'
                     : _expiryController.text,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
+                style: const TextStyle(color: Colors.white70),
               ),
             ],
           ),
@@ -274,74 +250,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   Widget _buildFormFields() {
     return Form(
       key: _formKey,
-      child: Column(
-        children: [
-          TextFormField(
-            controller: _cardNumberController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Kart Numarası',
-              border: OutlineInputBorder(),
-            ),
-            validator: (v) {
-              if (v == null || v.replaceAll(' ', '').length < 12) {
-                return 'Geçerli bir kart numarası girin';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _cardNameController,
-            decoration: const InputDecoration(
-              labelText: 'Kart Üzerindeki İsim',
-              border: OutlineInputBorder(),
-            ),
-            validator: (v) {
-              if (v == null || v.isEmpty) {
-                return 'Kart sahibinin adını girin';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _expiryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Son Kullanma (AA/YY)',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Zorunlu';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _cvvController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'CVV',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.length < 3) {
-                      return 'En az 3 hane';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
+      child: CreditCardForm(
+        holder: _cardNameController,
+        number: _cardNumberController,
+        expiry: _expiryController,
+        cvv: _cvvController,
+        onChanged: () => setState(() {}),
       ),
     );
   }

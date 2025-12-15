@@ -50,7 +50,7 @@ class HomeProductList extends StatelessWidget {
                 if (onProductTap != null) {
                   onProductTap!(product);
                 } else {
-                  context.push('/product-detail', extra: product);
+                  context.push('/product-detail/${product.id}');
                 }
               },
             ),

@@ -30,7 +30,8 @@ class ProductRepository {
     bool? yarin,
   }) async {
     final params = <String, dynamic>{
-      if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
+      //if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
+      'category_id': 1, // 🔥 GEÇİCİ – görseller için
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
       if (search != null && search.isNotEmpty) 'name': search,

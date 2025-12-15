@@ -81,11 +81,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: routerNotifier,  // ❗ BU SAYEDE REDIRECT ARTIK ÇALIŞACAK
 
     redirect: (context, state) {
+
       final app = ref.read(appStateProvider);
       final userState = ref.read(userNotifierProvider);
       final user = userState.user;
 
       final loc = state.uri.toString();
+      if (loc.startsWith('/order-tracking')) return null;
+      if (loc.startsWith('/store-detail')) return null;
+
 
       debugPrint("\n──────────────────────────────────────────────");
       debugPrint("🔀 ROUTER REDIRECT ÇALIŞTI");

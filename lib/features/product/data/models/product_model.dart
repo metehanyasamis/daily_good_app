@@ -38,7 +38,7 @@ class ProductModel {
       listPrice: (json["list_price"] as num?)?.toDouble() ?? 0,
       salePrice: (json["sale_price"] as num?)?.toDouble() ?? 0,
       stock: json["stock"] ?? 0,
-      imageUrl: json["image_url"] ?? "",
+      imageUrl: normalizeImageUrl(json["image_url"]),
 
       /// STORE null gelirse app çökmemesi için fallback ekledik
       store: json["store"] != null
@@ -59,4 +59,27 @@ class ProductModel {
       createdAt: DateTime.tryParse(json["created_at"] ?? "") ?? DateTime.now(),
     );
   }
+}
+
+
+String normalizeImageUrl(dynamic raw) {
+  if (raw == null) return "";
+
+  final url = raw.toString().trim();
+  if (url.isEmpty) return "";
+
+  // ❌ storage + https://... gibi BOZUK URL
+  if (url.contains('/storage/http')) {
+    final idx = url.indexOf('/storage/');
+    return url.substring(idx + 9); // '/storage/'.length = 9
+  }
+
+
+  // ✅ zaten tam URL
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  // ✅ sadece path geldiyse
+  return 'https://dailygood.dijicrea.net/storage/$url';
 }

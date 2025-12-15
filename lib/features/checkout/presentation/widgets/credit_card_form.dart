@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'credit_card_helpers.dart';
 
 class CreditCardForm extends StatelessWidget {
-  final TextEditingController holderController;
-  final TextEditingController numberController;
-  final TextEditingController expiryController;
-  final TextEditingController cvvController;
+  final TextEditingController holder;
+  final TextEditingController number;
+  final TextEditingController expiry;
+  final TextEditingController cvv;
   final VoidCallback onChanged;
 
   const CreditCardForm({
     super.key,
-    required this.holderController,
-    required this.numberController,
-    required this.expiryController,
-    required this.cvvController,
+    required this.holder,
+    required this.number,
+    required this.expiry,
+    required this.cvv,
     required this.onChanged,
   });
 
@@ -20,67 +22,85 @@ class CreditCardForm extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        TextFormField(
-          controller: holderController,
-          decoration: const InputDecoration(
-            labelText: 'Kart Sahibi',
-            filled: true,
-            fillColor: Colors.white,
-          ),
-          validator: (v) => (v ?? '').isEmpty ? 'Kart sahibini girin' : null,
+        _field(
+          controller: holder,
+          label: 'Kart Sahibi',
           onChanged: (_) => onChanged(),
+          validator: (v) =>
+          (v ?? '').trim().isEmpty ? 'Kart sahibini girin' : null,
         ),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: numberController,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Kart Numarası',
-            hintText: '0000 0000 0000 0000',
-            filled: true,
-            fillColor: Colors.white,
-          ),
-          validator: (v) {
-            final d = (v ?? '').replaceAll(' ', '');
-            if (d.length < 13) return 'Geçerli kart numarası girin';
-            return null;
-          },
+        _field(
+          controller: number,
+          label: 'Kart Numarası',
+          hint: '0000 0000 0000 0000',
+          keyboard: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            cardNumberFormatter(number),
+          ],
           onChanged: (_) => onChanged(),
+          validator: (v) =>
+          v!.replaceAll(' ', '').length == 16 ? null : '16 haneli olmalı',
         ),
         const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
-              child: TextFormField(
-                controller: expiryController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Son Kullanım',
-                  hintText: 'AA/YY',
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                validator: (v) => (v ?? '').length < 4 ? 'AA/YY girin' : null,
+              child: _field(
+                controller: expiry,
+                label: 'Son Kullanım',
+                hint: 'MM/YY',
+                keyboard: TextInputType.number,
+                inputFormatters: [expiryFormatter(expiry)],
                 onChanged: (_) => onChanged(),
+                validator: (v) =>
+                RegExp(r'^(0[1-9]|1[0-2])\/\d{2}$').hasMatch(v ?? '')
+                    ? null
+                    : 'MM/YY',
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: TextFormField(
-                controller: cvvController,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'CVV',
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                validator: (v) => (v ?? '').length < 3 ? 'CVV girin' : null,
+              child: _field(
+                controller: cvv,
+                label: 'CVV',
+                keyboard: TextInputType.number,
+                obscure: true,
+                validator: (v) =>
+                (v ?? '').length >= 3 ? null : 'En az 3 hane',
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _field({
+    required TextEditingController controller,
+    required String label,
+    String? hint,
+    TextInputType? keyboard,
+    List<TextInputFormatter>? inputFormatters,
+    bool obscure = false,
+    FormFieldValidator<String>? validator,
+    ValueChanged<String>? onChanged,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboard,
+      inputFormatters: inputFormatters,
+      obscureText: obscure,
+      validator: validator,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 }

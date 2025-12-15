@@ -17,13 +17,10 @@ class ExploreMapScreen extends ConsumerStatefulWidget {
   const ExploreMapScreen({super.key});
 
   @override
-  ConsumerState<ExploreMapScreen> createState() =>
-      _ExploreMapScreenState();
+  ConsumerState<ExploreMapScreen> createState() => _ExploreMapScreenState();
 }
 
-class _ExploreMapScreenState
-    extends ConsumerState<ExploreMapScreen> {
-
+class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
   StoreSummary? _selectedStore;
 
   @override
@@ -31,23 +28,27 @@ class _ExploreMapScreenState
     final address = ref.watch(addressProvider);
     final storesAsync = ref.watch(exploreStoreProvider);
 
+    if (!address.isSelected) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       extendBody: true,
-
       appBar: CustomHomeAppBar(
         address: address.title,
         onLocationTap: () => context.push('/location-picker'),
         onNotificationsTap: () {},
       ),
-
       body: storesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text("Hata: $err")),
         data: (stores) {
           return Stack(
             children: [
-              /// 🗺️ MAP + MARKERS
+              /// 🗺️ MAP
               StoreMarkerLayer(
                 address: address,
                 stores: stores,
@@ -69,7 +70,7 @@ class _ExploreMapScreenState
                   ),
                 ),
 
-              /// 🔘 Harita → Liste
+              /// 🔘 MAP → LIST
               CustomToggleButton(
                 label: "Liste",
                 icon: Icons.list,

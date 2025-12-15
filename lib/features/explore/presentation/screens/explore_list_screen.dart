@@ -9,119 +9,13 @@ import '../../../location/domain/address_notifier.dart';
 
 import '../../../product/data/models/product_model.dart';
 import '../../../product/domain/products_notifier.dart';
+import '../../../product/domain/products_state.dart';
 import '../../../product/presentation/widgets/product_card.dart';
 import '../../../stores/data/model/store_summary.dart';
 
 import '../widgets/category_filter_option.dart';
 import '../widgets/explore_filter_sheet.dart';
 import '../widgets/category_filter_sheet.dart';
-
-/*
-class ExploreListScreen extends ConsumerWidget {
-  const ExploreListScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final address = ref.watch(addressProvider);
-    final storesAsync = ref.watch(exploreStoreProvider);
-    final exploreState = ref.watch(exploreStateProvider);
-    final exploreNotifier = ref.read(exploreStateProvider.notifier);
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CustomHomeAppBar(
-        address: address.title,
-        onLocationTap: () => context.push('/location-picker'),
-        onNotificationsTap: () {},
-      ),
-      body: storesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text("Hata: $err")),
-        data: (stores) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  /// 🔎 FILTER BAR
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    child: Row(
-                      children: [
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.swap_vert),
-                          label: const Text("Sırala"),
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              builder: (_) => ExploreFilterSheet(
-                                selected: exploreState.sort,
-                                onApply: exploreNotifier.setSort,
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.category),
-                          label: const Text("Kategori"),
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              builder: (_) => CategoryFilterSheet(
-                                selected: exploreState.category,
-                                onApply: exploreNotifier.setCategory,
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  /// 📃 LIST
-                  Expanded(
-                    child: stores.isEmpty
-                        ? const Center(
-                      child: Text(
-                        "Yakınında aktif mağaza bulunamadı.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 15),
-                      ),
-                    )
-                        : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(
-                        16,
-                        8,
-                        16,
-                        120,
-                      ),
-                      itemCount: stores.length,
-                      separatorBuilder: (_, __) =>
-                      const SizedBox(height: 12),
-                      itemBuilder: (_, i) =>
-                          _StoreListTile(store: stores[i]),
-                    ),
-                  ),
-                ],
-              ),
-
-              /// 🔁 LIST ↔ MAP TOGGLE (HER ZAMAN VAR)
-              CustomToggleButton(
-                label: "Harita",
-                icon: Icons.map,
-                onPressed: () => context.go('/explore-map'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-*/
 
 enum SortDirection {
   ascending,
@@ -155,10 +49,23 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(productsProvider.notifier).loadOnce();
+    });
+
+    ref.listen<ProductsState>(productsProvider, (prev, next) {
+      if (prev?.products != next.products) {
+        _applyFilters(next.products);
+      }
+    });
+
     if (widget.initialCategory != null) {
       selectedCategory = widget.initialCategory!;
     }
   }
+
+
 
   void _applyFilters(List<ProductModel> allProducts) {
     List<ProductModel> temp = List.from(allProducts);
@@ -229,7 +136,7 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
       );
     }
 
-    _applyFilters(productsState.products);
+   // _applyFilters(productsState.products);
 
     return Scaffold(
       backgroundColor: AppColors.background,

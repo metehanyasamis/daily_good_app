@@ -1,3 +1,5 @@
+import 'package:daily_good/features/product/data/models/product_model.dart';
+
 import '../../../stores/data/model/store_summary.dart';
 
 class StoreInProductDetail {
@@ -27,7 +29,7 @@ class StoreInProductDetail {
       phone: json['phone'] ?? "",
       latitude: double.tryParse(json['latitude'].toString()) ?? 0,
       longitude: double.tryParse(json['longitude'].toString()) ?? 0,
-      bannerImage: json['banner_image'] ?? "",
+      bannerImage: normalizeImageUrl(json['banner_image']),
     );
   }
 
