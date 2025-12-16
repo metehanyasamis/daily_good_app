@@ -21,7 +21,6 @@ import '../../features/account/presentation/screens/account_screen.dart';
 
 import '../../features/location/presentation/screens/location_info_screen.dart';
 
-import '../../features/stores/data/model/store_summary.dart';
 import '../../features/product/presentation/screens/product_detail_screen.dart';
 
 // STORE
@@ -340,16 +339,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // ---------------- STORE DETAIL ----------------
+
       GoRoute(
-        path: '/store-detail',
+        path: '/store-detail/:id',
         pageBuilder: (_, state) {
-          final store = state.extra as StoreSummary;
+          final storeId = state.pathParameters['id']!;
           return buildAnimatedPage(
             key: state.pageKey,
-            child: StoreDetailScreen(storeId: store.id),
+            child: StoreDetailScreen(storeId: storeId),
           );
         },
       ),
+
 
       // ---------------- PAYMENT & CART ----------------
       GoRoute(

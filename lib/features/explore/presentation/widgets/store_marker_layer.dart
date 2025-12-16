@@ -44,9 +44,8 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
     );
 
     await _moveCamera();
-    await _drawAddressCircle();
-    await _drawStores();
   }
+
 
   // ------------------------------------------------
   // CAMERA
@@ -102,24 +101,35 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
     for (final store in widget.stores) {
       if (store.latitude == null || store.longitude == null) continue;
 
-      final a = await _manager!.create(
+      final pos = Position(store.longitude!, store.latitude!);
+
+      // 1️⃣ GİZLİ – BÜYÜK HITBOX
+      final hit = await _manager!.create(
         CircleAnnotationOptions(
-          geometry: Point(
-            coordinates: Position(
-              store.longitude!,
-              store.latitude!,
-            ),
-          ),
+          geometry: Point(coordinates: pos),
+          circleRadius: 22,
+          circleColor: Colors.transparent.value,
+        ),
+      );
+
+      // 2️⃣ GÖRÜNÜR – MAVİ NOKTA
+      final visible = await _manager!.create(
+        CircleAnnotationOptions(
+          geometry: Point(coordinates: pos),
           circleRadius: 8,
-          circleColor: const Color(0xFF1E88E5).value, // mavi store
+          circleColor: const Color(0xFF1E88E5).value,
           circleStrokeColor: Colors.white.value,
           circleStrokeWidth: 2,
         ),
       );
 
-      _storeById[a.id] = store;
+      // 🔥 İKİ ID DE AYNI STORE’A BAĞLANIYOR
+      _storeById[hit.id] = store;
+      _storeById[visible.id] = store;
     }
+
   }
+
 
   // ------------------------------------------------
   // UPDATE
@@ -150,10 +160,20 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
       child: MapWidget(
         styleUri: MapboxStyles.MAPBOX_STREETS,
         onMapCreated: _onMapCreated,
+
+        // 🔥 BURASI HAYAT KURTARIR
+        onStyleLoadedListener: (_) async {
+          debugPrint('🗺️ MAP STYLE LOADED');
+
+          await _drawAddressCircle();
+          await _drawStores();
+        },
+
         onTapListener: (_) => widget.onMapTap(),
       ),
     );
   }
+
 }
 
 // ------------------------------------------------
@@ -170,11 +190,16 @@ class _StoreClickListener implements OnCircleAnnotationClickListener {
 
   @override
   bool onCircleAnnotationClick(CircleAnnotation annotation) {
+    debugPrint('🟢 CIRCLE CLICK: ${annotation.id}');
+
     final store = storeMap[annotation.id];
     if (store != null) {
+      debugPrint('✅ STORE: ${store.name}');
       onStoreSelected(store);
       return true;
     }
+
+    debugPrint('❌ STORE NOT FOUND');
     return false;
   }
 }

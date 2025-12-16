@@ -7,6 +7,7 @@ import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../../core/widgets/custom_toggle_button.dart';
 
 import '../../../location/domain/address_notifier.dart';
+import '../../../product/data/repository/product_repository.dart';
 import '../../../stores/data/model/store_summary.dart';
 import '../../domain/providers/explore_store_provider.dart';
 import '../widgets/half_store_sheet.dart';
@@ -46,6 +47,17 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text("Hata: $err")),
         data: (stores) {
+
+
+          // 👇👇👇 TAM BURAYA
+          debugPrint('🟦 MAP STORES COUNT: ${stores.length}');
+          for (final s in stores) {
+            debugPrint(
+              '📍 STORE: ${s.name} lat=${s.latitude} lng=${s.longitude}',
+            );
+          }
+          // 👆👆👆
+
           return Stack(
             children: [
               /// 🗺️ MAP
@@ -62,13 +74,20 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
               if (_selectedStore != null)
                 Positioned(
                   left: 16,
-                  right: 16,
-                  bottom: 110,
-                  child: MiniStoreCard(
-                    store: _selectedStore!,
+                  right: MediaQuery.of(context).size.width * 0.27, // 👈 liste butonu boşluğu
+                  bottom: (MediaQuery.of(context).padding.bottom > 0
+                      ? MediaQuery.of(context).padding.bottom
+                      : 20) +
+                      80, // 👈 toggle yüksekliği
+                  child: GestureDetector(
                     onTap: () => _openHalfStoreSheet(_selectedStore!),
+                    child: MiniStoreCard(
+                      store: _selectedStore!,
+                      onTap: () => _openHalfStoreSheet(_selectedStore!),
+                    ),
                   ),
                 ),
+
 
               /// 🔘 MAP → LIST
               CustomToggleButton(
@@ -84,15 +103,23 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
   }
 
   void _openHalfStoreSheet(StoreSummary store) {
+    final productRepo = ref.read(productRepositoryProvider);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => HalfStoreSheet(
         store: store,
+        productsFuture: productRepo.fetchProducts(
+          search: store.name, // 👈 GEÇİCİ AMA ÇALIŞIR
+          perPage: 5,         // sheet için yeterli
+        ),
         onStoreTap: () =>
-            context.push('/store-detail', extra: store),
+            context.push('/store-detail/${store.id}'),
       ),
     );
   }
+
+
 }

@@ -1,3 +1,4 @@
+import 'package:daily_good/core/widgets/dismiss_keyboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -60,44 +61,46 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
     final totalAmount = _calculateTotal(cartItems);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryDarkGreen,
-        title: const Text(
-          'Ödeme',
-          style: TextStyle(color: Colors.white),
+    return DismissKeyboard(
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: AppColors.primaryDarkGreen,
+          title: const Text(
+            'Ödeme',
+            style: TextStyle(color: Colors.white),
+          ),
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      backgroundColor: Colors.grey.shade100,
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        child: Column(
-          children: [
-            // _buildSummaryCard(totalAmount),
-            const SizedBox(height: 25),
-            _buildCardPreview(),
-            const SizedBox(height: 25),
-            _buildFormFields(),
-          ],
+        backgroundColor: Colors.grey.shade100,
+      
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          child: Column(
+            children: [
+              // _buildSummaryCard(totalAmount),
+              const SizedBox(height: 25),
+              _buildCardPreview(),
+              const SizedBox(height: 25),
+              _buildFormFields(),
+            ],
+          ),
         ),
-      ),
-
-      // 🔥 ESKİ VE DOĞRU CTA BURAYA
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: CustomButton(
-          text: _isProcessing ? 'İşlem yapılıyor...' : 'Ödemeyi Tamamla',
-          price: totalAmount,
-          showPrice: true,
-          onPressed: _isProcessing
-              ? () {}
-              : () => _onPayPressed(context, cartItems, totalAmount),
+      
+        // 🔥 ESKİ VE DOĞRU CTA BURAYA
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: CustomButton(
+            text: _isProcessing ? 'İşlem yapılıyor...' : 'Ödemeyi Tamamla',
+            price: totalAmount,
+            showPrice: true,
+            onPressed: _isProcessing
+                ? () {}
+                : () => _onPayPressed(context, cartItems, totalAmount),
+          ),
         ),
+      
       ),
-
     );
 
   }

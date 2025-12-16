@@ -20,48 +20,95 @@ class MiniStoreCard extends StatelessWidget {
         elevation: 6,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          height: 70,
-          padding: const EdgeInsets.all(12),
+          height: 66, // 👈 eskiyle aynı
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade300),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // LOGO
               CircleAvatar(
-                backgroundImage: NetworkImage(store.imageUrl),
-                radius: 20,
+                radius: 18,
+                backgroundColor: Colors.grey.shade200,
+                backgroundImage: store.imageUrl.isNotEmpty
+                    ? NetworkImage(store.imageUrl)
+                    : null,
+                onBackgroundImageError: (_, __) {
+                  // sessizce düş, UI bozulmasın
+                },
+                child: store.imageUrl.isEmpty
+                    ? const Icon(Icons.store, size: 18, color: Colors.grey)
+                    : null,
               ),
+
+
               const SizedBox(width: 10),
+
+              // INFO
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // NAME + RATING (AYNI SATIR)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            store.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14.5,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (store.overallRating != null &&
+                            store.overallRating! > 0) ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.star,
+                              color: Colors.amber, size: 15),
+                          Text(
+                            store.overallRating!.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    // SUBTEXT (eski hissi koruyoruz)
                     Text(
-                      store.name,
+                      'Bugün teslim al',
                       style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        color: Colors.grey,
+                        fontSize: 12,
+                        height: 1.1,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (store.overallRating != null)
-                      Row(
-                        children: [
-                          const Icon(Icons.star,
-                              size: 14, color: Colors.amber),
-                          const SizedBox(width: 4),
-                          Text(
-                            store.overallRating!.toStringAsFixed(1),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right),
+
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right,
+                  size: 22, color: Colors.black54),
             ],
           ),
         ),
@@ -69,4 +116,3 @@ class MiniStoreCard extends StatelessWidget {
     );
   }
 }
-

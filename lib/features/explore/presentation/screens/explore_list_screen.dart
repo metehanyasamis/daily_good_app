@@ -54,11 +54,14 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
       ref.read(productsProvider.notifier).loadOnce();
     });
 
+    /*
     ref.listen<ProductsState>(productsProvider, (prev, next) {
       if (prev?.products != next.products) {
         _applyFilters(next.products);
       }
     });
+
+     */
 
     if (widget.initialCategory != null) {
       selectedCategory = widget.initialCategory!;
@@ -129,6 +132,12 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
   Widget build(BuildContext context) {
     final address = ref.watch(addressProvider);
     final productsState = ref.watch(productsProvider);
+
+    ref.listen<ProductsState>(productsProvider, (prev, next) {
+      if (prev?.products != next.products) {
+        _applyFilters(next.products);
+      }
+    });
 
     if (productsState.isLoading) {
       return const Scaffold(
@@ -238,10 +247,9 @@ class _StoreListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => context.push(
-        '/store-detail',
-        extra: store,
-      ),
+      onTap: () {
+        context.push('/store-detail/${store.id}');
+      },
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(

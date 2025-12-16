@@ -145,8 +145,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           ),
           const SizedBox(height: 12),
           InkWell(
-            onTap: () =>
-                context.push('/stores-detail', extra: store.id),
+            onTap: () {
+              context.push('/store-detail/${store.id}');
+            },
             child: Row(
               children: [
                 Image.network(

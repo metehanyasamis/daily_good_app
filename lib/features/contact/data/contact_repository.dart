@@ -1,30 +1,23 @@
-// lib/features/contact/data/contact_repository.dart
-
-import 'dart:convert';
-import '../../../core/network/api_client.dart';
+import 'package:dio/dio.dart';
 import 'contact_message_model.dart';
 
 class ContactRepository {
-  final ApiClient api;
+  final Dio dio;
 
-  ContactRepository(this.api);
+  ContactRepository(this.dio);
 
   Future<void> sendMessage(ContactMessage msg) async {
-    final body = {
-      "subject": msg.subjects, // array<string>
-      if (msg.orderId != null) "order_id": msg.orderId,
-      if (msg.message != null && msg.message!.isNotEmpty)
-        "message": msg.message,
-    };
+    final formData = msg.toFormData();
 
-    final res = await api.post(
+    final response = await dio.post(
       "/customer/contact",
-      body: body,
+      data: formData,
     );
 
-    final decoded = jsonDecode(res.body);
-    if (decoded["success"] != true) {
-      throw Exception(decoded["message"] ?? "Contact gönderilemedi");
+    final data = response.data;
+
+    if (data == null || data["success"] != true) {
+      throw Exception(data?["message"] ?? "Contact gönderilemedi");
     }
   }
 }

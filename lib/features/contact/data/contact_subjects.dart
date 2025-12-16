@@ -1,9 +1,10 @@
 // lib/features/contact/data/contact_subjects.dart
 
-const List<String> contactSubjects = [
-  "Mağaza teslim alma zamanı kapalıydı",
-  "Siparişim ile ilgili sorun yaşadım",
-  "Teslim almaya gittiğimde paketim hazır değildi",
-  "Güvenlik endişem var",
-  "Diğer",
-];
+const Map<String, String> contactSubjects = {
+  "order_problem": "Siparişimle ilgili bir sorun var",
+  "payment_problem": "Ödeme ile ilgili sorun",
+  "account_problem": "Hesap ile ilgili",
+  "suggestion": "Öneri / Geri Bildirim",
+  "other": "Diğer",
+};
+
