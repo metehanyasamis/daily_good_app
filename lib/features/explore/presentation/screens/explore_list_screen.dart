@@ -11,7 +11,6 @@ import '../../../product/data/models/product_model.dart';
 import '../../../product/domain/products_notifier.dart';
 import '../../../product/domain/products_state.dart';
 import '../../../product/presentation/widgets/product_card.dart';
-import '../../../stores/data/model/store_summary.dart';
 
 import '../widgets/category_filter_option.dart';
 import '../widgets/explore_filter_sheet.dart';
@@ -44,38 +43,73 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
   CategoryFilterOption selectedCategory = CategoryFilterOption.all;
   final TextEditingController _searchController = TextEditingController();
 
+  late final ProviderSubscription<ProductsState> _productsSub;
+
   List<ProductModel> filteredProducts = [];
 
+  // --------------------------------------------------
+  // INIT
+  // --------------------------------------------------
   @override
   void initState() {
     super.initState();
 
+    debugPrint('🧩 ExploreListScreen initState HASH=${hashCode}');
+
+    // 🔥 TEK YERDEN FETCH
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(productsProvider.notifier).loadOnce();
+      final address = ref.read(addressProvider);
+      if (!address.isSelected) return;
+
+      debugPrint('🚀 initState → loadOnce');
+
+      ref.read(productsProvider.notifier).loadOnce(
+        latitude: address.lat,
+        longitude: address.lng,
+      );
     });
 
-    /*
-    ref.listen<ProductsState>(productsProvider, (prev, next) {
-      if (prev?.products != next.products) {
+    // 🔥 PROVIDER → LOCAL STATE SYNC
+    _productsSub = ref.listenManual<ProductsState>(
+      productsProvider,
+          (prev, next) {
+        if (!mounted) return;
+
+        debugPrint(
+          '📦 PRODUCTS CHANGE '
+              'prev=${prev?.products.length ?? 0} '
+              'next=${next.products.length}',
+        );
+
         _applyFilters(next.products);
-      }
-    });
+      },
+    );
 
-     */
+    // İlk state doluysa
+    final initial = ref.read(productsProvider).products;
+    if (initial.isNotEmpty) {
+      _applyFilters(initial);
+    }
 
     if (widget.initialCategory != null) {
       selectedCategory = widget.initialCategory!;
     }
   }
 
+  @override
+  void dispose() {
+    debugPrint('💀 ExploreListScreen dispose HASH=${hashCode}');
+    _productsSub.close();
+    _searchController.dispose();
+    super.dispose();
+  }
 
-
+  // --------------------------------------------------
+  // FILTER
+  // --------------------------------------------------
   void _applyFilters(List<ProductModel> allProducts) {
     List<ProductModel> temp = List.from(allProducts);
 
-    // --------------------------------------------------
-    // 🔍 SEARCH (3+ karakter)
-    // --------------------------------------------------
     final q = _searchController.text.trim().toLowerCase();
     if (q.length >= 3) {
       temp = temp.where((p) {
@@ -84,37 +118,21 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
       }).toList();
     }
 
-    // --------------------------------------------------
-    // 🟩 CATEGORY
-    // ❌ ProductModel'de kategori YOK → şimdilik PAS
-    // --------------------------------------------------
-    // if (selectedCategory != CategoryFilterOption.all) {
-    //   temp = temp.where((p) => p.category == selectedCategory).toList();
-    // }
-
-    // --------------------------------------------------
-    // 🔽 SORT
-    // --------------------------------------------------
     temp.sort((a, b) {
       int result;
 
       switch (selectedFilter) {
         case ExploreFilterOption.recommended:
-        // Yeni eklenenler üstte
           result = b.createdAt.compareTo(a.createdAt);
           break;
-
         case ExploreFilterOption.price:
           result = a.salePrice.compareTo(b.salePrice);
           break;
-
         case ExploreFilterOption.distance:
           result = (a.store.distanceKm ?? 999)
               .compareTo(b.store.distanceKm ?? 999);
           break;
-
         case ExploreFilterOption.rating:
-        // ❌ Backend'de rating yok → sabit
           result = 0;
           break;
       }
@@ -122,30 +140,31 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
       return sortDirection == SortDirection.ascending ? result : -result;
     });
 
-    // --------------------------------------------------
     setState(() {
       filteredProducts = temp;
     });
   }
 
+  // --------------------------------------------------
+  // BUILD (PURE)
+  // --------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final address = ref.watch(addressProvider);
     final productsState = ref.watch(productsProvider);
 
-    ref.listen<ProductsState>(productsProvider, (prev, next) {
-      if (prev?.products != next.products) {
-        _applyFilters(next.products);
-      }
-    });
+    debugPrint(
+      '🟢 EXPLORE LIST BUILD '
+          'products=${productsState.products.length} '
+          'filtered=${filteredProducts.length} '
+          'loading=${productsState.isLoadingList}',
+    );
 
-    if (productsState.isLoading) {
+    if (productsState.isLoadingList && filteredProducts.isEmpty) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
-   // _applyFilters(productsState.products);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -199,6 +218,9 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     );
   }
 
+  // --------------------------------------------------
+  // HEADER (AYNI)
+  // --------------------------------------------------
   SliverPersistentHeader _buildHeader() {
     return SliverPersistentHeader(
       pinned: true,
@@ -207,7 +229,10 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
         selectedSort: selectedFilter,
         sortDirection: sortDirection,
         selectedCategory: selectedCategory,
-        onSearchChanged: (_) => setState(() {}),
+        onSearchChanged: (_) {
+          final all = ref.read(productsProvider).products;
+          _applyFilters(all);
+        },
         onSortChanged: (opt) {
           setState(() {
             if (opt == selectedFilter) {
@@ -220,6 +245,9 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
               sortDirection = SortDirection.ascending;
             }
           });
+
+          final all = ref.read(productsProvider).products;
+          _applyFilters(all);
         },
         onCategoryTap: () async {
           final res = await showModalBottomSheet<CategoryFilterOption>(
@@ -233,93 +261,14 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
 
           if (res != null) {
             setState(() => selectedCategory = res);
+            final all = ref.read(productsProvider).products;
+            _applyFilters(all);
           }
         },
       ),
     );
   }
 }
-
-class _StoreListTile extends StatelessWidget {
-  final StoreSummary store;
-  const _StoreListTile({required this.store});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        context.push('/store-detail/${store.id}');
-      },
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade300),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                store.imageUrl,
-                width: 52,
-                height: 52,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                const Icon(Icons.store, size: 40),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    store.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    store.address,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  if (store.distanceKm != null)
-                    Text(
-                      "${store.distanceKm!.toStringAsFixed(1)} km uzaklıkta",
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.green,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: Colors.black54),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 
 class ExploreHeaderDelegate extends SliverPersistentHeaderDelegate {
   final TextEditingController controller;

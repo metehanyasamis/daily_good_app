@@ -60,6 +60,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final homeNotifier = ref.read(homeStateProvider.notifier);
     final addressState = ref.watch(addressProvider);
 
+    // 🔥 EKLENEN KISIM (BURASI ÖNEMLİ)
+    final hasAnyData = homeState.sectionProducts.values
+        .any((list) => list.isNotEmpty);
+
+    if (!hasAnyData) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    // 🔥 EKLENEN KISIM BİTTİ
+
     final List<CategoryFilterOption> homeCategories = [
       CategoryFilterOption.all,
       CategoryFilterOption.food,

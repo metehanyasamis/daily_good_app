@@ -1,5 +1,6 @@
 // lib/features/product/domain/products_notifier.dart
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repository/product_repository.dart';
 import 'products_state.dart';
@@ -27,7 +28,11 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     bool? bugun,
     bool? yarin,
   }) async {
-    if (state.initialized) return;
+    // 🔐 ÇİFT KORUMA
+    if (state.initialized || state.isLoadingList) {
+      debugPrint('⛔ loadOnce SKIP (initialized=${state.initialized}, loading=${state.isLoadingList})');
+      return;
+    }
 
     await _fetchList(
       categoryId: categoryId,
@@ -42,6 +47,7 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
       markInitialized: true,
     );
   }
+
 
   Future<void> refresh({
     String? categoryId,
