@@ -60,6 +60,14 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     bool? bugun,
     bool? yarin,
   }) async {
+
+    debugPrint(
+        '📡 BACKEND REFRESH → '
+            'categoryId=$categoryId '
+            'lat=$latitude '
+            'lng=$longitude'
+    );
+
     await _fetchList(
       categoryId: categoryId,
       latitude: latitude,

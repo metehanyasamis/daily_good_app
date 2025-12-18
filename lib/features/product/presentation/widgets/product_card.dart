@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/time_formatter.dart';
 import '../../../../core/widgets/fav_button.dart';
 import '../../data/models/product_model.dart';
 
@@ -25,7 +26,6 @@ class ProductCard extends StatelessWidget {
         ? ((oldPrice - newPrice) / oldPrice * 100).round()
         : 0;
 
-    final pickupText = _pickupText(product.startHour, product.endHour);
 
     final stockLabel = _stockLabel(product.stock);
 
@@ -200,7 +200,10 @@ class ProductCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          pickupText,
+                          TimeFormatter.range(
+                            product.startHour,
+                            product.endHour,
+                          ),
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[700],
@@ -208,6 +211,7 @@ class ProductCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+
                       ],
                     ),
                   ),
@@ -274,12 +278,6 @@ class ProductCard extends StatelessWidget {
     );
   }
 
-  String _pickupText(String start, String end) {
-    if (start.isEmpty && end.isEmpty) return 'Teslim saati bilgisi yok';
-    if (start.isEmpty) return 'Teslim: $end';
-    if (end.isEmpty) return 'Teslim: $start';
-    return 'Teslim: $start - $end';
-  }
 
   String _stockLabel(int stock) {
     if (stock <= 0) return 'Tükendi';

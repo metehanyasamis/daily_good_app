@@ -193,8 +193,7 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
                       final p = filteredProducts[i];
                       return ProductCard(
                         product: p,
-                        onTap: () =>
-                            context.push('/product-detail', extra: p),
+                        onTap: () => context.push('/product-detail/${p.id}'),
                       );
                     },
                     childCount: filteredProducts.length,
@@ -218,6 +217,28 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     );
   }
 
+  String? mapCategoryToCategoryId(CategoryFilterOption c) {
+    switch (c) {
+      case CategoryFilterOption.all:
+        return null;
+      case CategoryFilterOption.food:
+        return 'food';
+      case CategoryFilterOption.bakery:
+        return 'bakery';
+      case CategoryFilterOption.breakfast:
+        return 'breakfast';
+      case CategoryFilterOption.market:
+        return 'market';
+      case CategoryFilterOption.vegetarian:
+        return 'vegetarian';
+      case CategoryFilterOption.vegan:
+        return 'vegan';
+      case CategoryFilterOption.glutenFree:
+        return 'gluten_free';
+    }
+  }
+
+
   // --------------------------------------------------
   // HEADER (AYNI)
   // --------------------------------------------------
@@ -229,10 +250,14 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
         selectedSort: selectedFilter,
         sortDirection: sortDirection,
         selectedCategory: selectedCategory,
+
+        // 🔍 SEARCH → local filter
         onSearchChanged: (_) {
           final all = ref.read(productsProvider).products;
           _applyFilters(all);
         },
+
+        // 🔃 SORT → local filter
         onSortChanged: (opt) {
           setState(() {
             if (opt == selectedFilter) {
@@ -249,6 +274,8 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
           final all = ref.read(productsProvider).products;
           _applyFilters(all);
         },
+
+        // 🔥 CATEGORY → BACKEND REFRESH
         onCategoryTap: () async {
           final res = await showModalBottomSheet<CategoryFilterOption>(
             context: context,
@@ -259,11 +286,31 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
             ),
           );
 
-          if (res != null) {
-            setState(() => selectedCategory = res);
-            final all = ref.read(productsProvider).products;
-            _applyFilters(all);
+          if (res == null) return;
+
+          debugPrint('🟡 UI CATEGORY SELECTED → $res');
+          setState(() => selectedCategory = res);
+
+          final address = ref.read(addressProvider);
+          if (!address.isSelected) {
+            debugPrint('❌ ADDRESS NOT SELECTED → SKIP FETCH');
+            return;
           }
+
+          final categoryId = mapCategoryToCategoryId(res);
+
+          debugPrint(
+            '📡 BACKEND REFRESH → '
+                'lat=${address.lat}, '
+                'lng=${address.lng}, '
+                'categoryId=$categoryId',
+          );
+
+          await ref.read(productsProvider.notifier).refresh(
+            latitude: address.lat,
+            longitude: address.lng,
+            categoryId: categoryId,
+          );
         },
       ),
     );

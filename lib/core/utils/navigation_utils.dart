@@ -1,33 +1,92 @@
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:io' show Platform;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart';
 
-import '../../features/stores/data/model/store_detail_model.dart';
+Future<void> openMap({
+  double? latitude,
+  double? longitude,
+  String? address,
+  String? label,
+}) async {
+  Uri? uri;
 
-/// Açıklama:
-/// openMap() - cihazın harita uygulamasında navigasyon başlatır.
-///
-/// [lat] ve [lng] koordinatlarını kullanır.
-/// Opsiyonel [label] parametresi, hedef ismini gösterir.
-/// Google Maps, Apple Maps (iOS) veya Web fallback destekler.
-Future<void> openMap(double lat, double lng, {String? label}) async {
-  final encodedLabel = Uri.encodeComponent(label ?? 'Konum');
+  // ===============================
+  // ANDROID
+  // ===============================
+  if (Platform.isAndroid) {
+    // 1️⃣ KOORDİNAT VARSA
+    if (latitude != null && longitude != null) {
+      final encodedLabel = Uri.encodeComponent(label ?? 'Konum');
 
-  final Uri uri = Platform.isIOS
-      ? Uri.parse("http://maps.apple.com/?q=$encodedLabel&ll=$lat,$lng")
-      : Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
+      // 🔥 1. deneme → Google Maps Navigation
+      final googleNav = Uri.parse(
+        'google.navigation:q=$latitude,$longitude',
+      );
+
+      if (await canLaunchUrl(googleNav)) {
+        await launchUrl(
+          googleNav,
+          mode: LaunchMode.externalApplication,
+        );
+        return;
+      }
+
+      // 🔥 2. deneme → geo intent
+      final geoUri = Uri.parse(
+        'geo:$latitude,$longitude?q=$latitude,$longitude($encodedLabel)',
+      );
+
+      if (await canLaunchUrl(geoUri)) {
+        await launchUrl(
+          geoUri,
+          mode: LaunchMode.externalApplication,
+        );
+        return;
+      }
+
+      // 🔥 3. deneme → WEB fallback (GARANTİ)
+      uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
+      );
+    }
+
+    // 2️⃣ ADRES FALLBACK
+    if (uri == null && address != null && address.isNotEmpty) {
+      final encoded = Uri.encodeComponent(address);
+      uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$encoded',
+      );
+    }
+  }
+
+  // ===============================
+  // IOS
+  // ===============================
+  else if (Platform.isIOS) {
+    if (latitude != null && longitude != null) {
+      final encodedLabel = Uri.encodeComponent(label ?? 'Konum');
+      uri = Uri.parse(
+        'http://maps.apple.com/?ll=$latitude,$longitude&q=$encodedLabel',
+      );
+    } else if (address != null && address.isNotEmpty) {
+      final encoded = Uri.encodeComponent(address);
+      uri = Uri.parse(
+        'http://maps.apple.com/?q=$encoded',
+      );
+    }
+  }
+
+  // ===============================
+  // FINAL LAUNCH
+  // ===============================
+  if (uri == null) return;
 
   if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
   } else {
-    throw Exception('Harita açılamadı: $uri');
+    debugPrint('❌ Map launch failed (final): $uri');
   }
-}
-
-/// BusinessModel için kolay çağırım
-Future<void> openBusinessMap(StoreDetailModel business) async {
-  await openMap(
-    business.latitude,
-    business.longitude,
-    label: business.name,
-  );
 }

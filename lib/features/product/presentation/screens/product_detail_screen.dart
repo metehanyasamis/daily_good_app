@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
@@ -10,9 +11,13 @@ import '../../../../core/widgets/know_more_full.dart';
 import '../../../../core/widgets/floating_cart_button.dart';
 import '../../../../core/widgets/product_bottom_bar.dart';
 
+import '../../../../core/widgets/store_delivery_info_card.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
 import '../../../cart/presentation/widgets/cart_warning_modal.dart';
 
+import '../../../stores/data/model/store_detail_model.dart';
+import '../../../stores/domain/providers/store_detail_provider.dart';
+import '../../../stores/presentation/widgets/store_map_card.dart';
 import '../../domain/products_notifier.dart';
 import '../../data/models/product_model.dart';
 
@@ -28,31 +33,55 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 class _ProductDetailScreenState
     extends ConsumerState<ProductDetailScreen> {
   int qty = 1;
+
+
   @override
   void initState() {
     super.initState();
 
-    /// 🔥 Detay ilk kez açılıyorsa fetch et
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final notifier = ref.read(productsProvider.notifier);
-      final state = ref.read(productsProvider);
+      final productsNotifier = ref.read(productsProvider.notifier);
+      final productState = ref.read(productsProvider);
 
-      if (state.selectedProduct == null ||
-          state.selectedProduct!.id != widget.productId) {
-        notifier.fetchDetail(widget.productId);
+      if (productState.selectedProduct == null ||
+          productState.selectedProduct!.id != widget.productId) {
+        productsNotifier.fetchDetail(widget.productId);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(productsProvider);
-    final product = state.selectedProduct;
+    final productState = ref.watch(productsProvider);
+    final product = productState.selectedProduct;
 
-    if (state.isLoadingDetail || product == null) {
+    if (product == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
+    }
+
+    // 🔥 TEK DOĞRU KAYNAK
+    final storeId = product.store.id;
+
+    // 🔥 FAMILY DOĞRU KULLANIM
+    final storeState = ref.watch(storeDetailProvider(storeId));
+
+    if (storeState.loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (storeState.error != null) {
+      return Scaffold(
+        body: Center(child: Text("Hata: ${storeState.error}")),
+      );
+    }
+
+    final store = storeState.detail;
+    if (store == null) {
+      return const SizedBox.shrink();
     }
 
     return Scaffold(
@@ -70,7 +99,18 @@ class _ProductDetailScreenState
               const KnowMoreFull(),
               _storeDeliveryCard(product),
               _ratingCard(product),
-              _mapCard(product),
+
+
+              SliverToBoxAdapter(
+                child: StoreMapCard(
+                  storeId: store.id,
+                  latitude: store.latitude,
+                  longitude: store.longitude,
+                  address: store.address,
+                ),
+              ),
+
+
               const SliverToBoxAdapter(child: SizedBox(height: 140)),
             ],
           ),
@@ -170,12 +210,12 @@ class _ProductDetailScreenState
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    "Teslim: ${p.startHour} - ${p.endHour}",
+                    "${p.deliveryTimeLabel}",
                     style: TextStyle(
                       color: Colors.grey.shade700,
                       fontSize: 13,
                     ),
-                  ),
+                  )
                 ],
               ),
             ),
@@ -309,46 +349,39 @@ class _ProductDetailScreenState
   // STORE DELIVERY
   // ---------------------------------------------------------------------------
 
-  SliverToBoxAdapter _storeDeliveryCard(ProductModel p) {
+  SliverToBoxAdapter _storeDeliveryCard(
+      ProductModel p, {
+        String? storeWorkingHoursLabel,
+      }) {
     final s = p.store;
 
+    debugPrint(
+      "🏪 STORE DEBUG → "
+          "name=${s.name} | "
+          "rating=${s.overallRating} | "
+          "reviews=${s.totalReviews}",
+    );
+
     return SliverToBoxAdapter(
-      child: _card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Teslim alma bilgileri",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              s.name,
-              style: const TextStyle(fontSize: 16),
-            ),
-            if (s.distanceKm != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  "${s.distanceKm!.toStringAsFixed(1)} km uzaklıkta",
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ),
-          ],
-        ),
+      child: StoreDeliveryInfoCard(
+        store: s,
+        onStoreTap: () => context.push('/store-detail/${s.id}'),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // MAPCARD
-  // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// MAP CARD (STABLE - DEBUG READY)
+// ---------------------------------------------------------------------------
+/*
+  SliverToBoxAdapter mapCard(StoreDetailModel store) {
+    debugPrint(
+      "🗺️ MAP CARD BUILD → "
+          "id=${store.id} | lat=${store.latitude} | lng=${store.longitude}",
+    );
 
-  SliverToBoxAdapter _mapCard(ProductModel p) {
-    final s = p.store;
-
-    // Konum yoksa harita göstermeyelim
-    if (s.latitude == null || s.longitude == null) {
+    if (store.latitude == 0 || store.longitude == 0) {
+      debugPrint("⚠️ MAP SKIPPED → invalid coordinates");
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
@@ -360,10 +393,7 @@ class _ProductDetailScreenState
           children: [
             const Text(
               "Konum",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
 
@@ -372,29 +402,73 @@ class _ProductDetailScreenState
               child: SizedBox(
                 height: 220,
                 child: MapWidget(
-                  key: ValueKey("store-map-${s.id}"),
-                  cameraOptions: CameraOptions(
-                    center: Point(
-                      coordinates: Position(
-                        s.longitude!,
-                        s.latitude!,
-                      ),
-                    ),
-                    zoom: 14,
+                  key: ValueKey(
+                    "store-map-${store.id}-${store.latitude}-${store.longitude}",
                   ),
-                  onMapCreated: (mapboxMap) async {
-                    await mapboxMap.annotations.createPointAnnotationManager()
-                      ..create(
+
+                  onMapCreated: (MapboxMap mapboxMap) async {
+                    debugPrint("✅ MAP CREATED → store=${store.id}");
+
+                    try {
+                      // 1️⃣ STYLE
+                      debugPrint("🎨 Loading style...");
+                      await mapboxMap.loadStyleURI(
+                        MapboxStyles.MAPBOX_STREETS,
+                      );
+
+                      // küçük bekleme (native surface)
+                      await Future.delayed(const Duration(milliseconds: 300));
+
+                      // 2️⃣ CAMERA
+                      debugPrint("🎥 Setting camera...");
+                      await mapboxMap.setCamera(
+                        CameraOptions(
+                          center: Point(
+                            coordinates: Position(
+                              store.longitude,
+                              store.latitude,
+                            ),
+                          ),
+                          zoom: 15,
+                        ),
+                      );
+
+                      // 3️⃣ ANNOTATION MANAGER
+                      debugPrint("📍 Creating annotation manager...");
+                      final pointManager = await mapboxMap.annotations
+                          .createPointAnnotationManager();
+
+                      await pointManager.deleteAll();
+
+                      // 4️⃣ MARKER IMAGE
+                      debugPrint("🖼️ Loading marker asset...");
+                      final data = await rootBundle
+                          .load('assets/icons/store_marker.png');
+                      final bytes = data.buffer.asUint8List();
+
+                      // 5️⃣ MARKER
+                      debugPrint("📌 Creating marker...");
+                      await pointManager.create(
                         PointAnnotationOptions(
                           geometry: Point(
                             coordinates: Position(
-                              s.longitude!,
-                              s.latitude!,
+                              store.longitude,
+                              store.latitude,
                             ),
                           ),
-                          iconImage: "marker-15",
+                          image: bytes,
+                          iconSize: 0.22,
+                          iconAnchor: IconAnchor.BOTTOM,
                         ),
                       );
+
+                      debugPrint(
+                        "✅ MARKER SET → ${store.latitude}, ${store.longitude}",
+                      );
+                    } catch (e, s) {
+                      debugPrint("❌ MAP ERROR → $e");
+                      debugPrint("📛 STACK → $s");
+                    }
                   },
                 ),
               ),
@@ -402,7 +476,6 @@ class _ProductDetailScreenState
 
             const SizedBox(height: 8),
 
-            // 📍 Adres
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -414,7 +487,7 @@ class _ProductDetailScreenState
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    s.address,
+                    store.address,
                     style: const TextStyle(fontSize: 14),
                   ),
                 ),
@@ -425,6 +498,8 @@ class _ProductDetailScreenState
       ),
     );
   }
+*/
+
 
   // ---------------------------------------------------------------------------
   // BOTTOM BAR

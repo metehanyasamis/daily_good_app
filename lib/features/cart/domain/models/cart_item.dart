@@ -1,11 +1,16 @@
 class CartItem {
-  final String cartItemId; // 🔥 backend cart item id
+  final String cartItemId;
   final String productId;
 
   final String name;
   final String shopId;
   final String shopName;
   final String image;
+
+  // 🆕 NAVIGATION DATA
+  final String? shopAddress;
+  final double? shopLatitude;
+  final double? shopLongitude;
 
   final double price;
   final double originalPrice;
@@ -18,6 +23,12 @@ class CartItem {
     required this.shopId,
     required this.shopName,
     required this.image,
+
+    // 👇 yeni
+    this.shopAddress,
+    this.shopLatitude,
+    this.shopLongitude,
+
     required this.price,
     required this.originalPrice,
     required this.quantity,
@@ -30,6 +41,11 @@ class CartItem {
     shopId: shopId,
     shopName: shopName,
     image: image,
+
+    shopAddress: shopAddress,
+    shopLatitude: shopLatitude,
+    shopLongitude: shopLongitude,
+
     price: price,
     originalPrice: originalPrice,
     quantity: quantity ?? this.quantity,

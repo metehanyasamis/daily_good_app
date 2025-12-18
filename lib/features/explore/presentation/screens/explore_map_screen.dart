@@ -74,19 +74,17 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
               if (_selectedStore != null)
                 Positioned(
                   left: 16,
-                  right: MediaQuery.of(context).size.width * 0.27, // 👈 liste butonu boşluğu
+                  right: MediaQuery.of(context).size.width * 0.27,
                   bottom: (MediaQuery.of(context).padding.bottom > 0
                       ? MediaQuery.of(context).padding.bottom
                       : 20) +
-                      80, // 👈 toggle yüksekliği
-                  child: GestureDetector(
+                      80,
+                  child: MiniStoreCard(
+                    store: _selectedStore!,
                     onTap: () => _openHalfStoreSheet(_selectedStore!),
-                    child: MiniStoreCard(
-                      store: _selectedStore!,
-                      onTap: () => _openHalfStoreSheet(_selectedStore!),
-                    ),
                   ),
                 ),
+
 
 
               /// 🔘 MAP → LIST
@@ -112,9 +110,10 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
       builder: (_) => HalfStoreSheet(
         store: store,
         productsFuture: productRepo.fetchProducts(
-          search: store.name, // 👈 GEÇİCİ AMA ÇALIŞIR
-          perPage: 5,         // sheet için yeterli
+          storeId: store.id, // ✅ NET VE DOĞRU
+          perPage: 10,       // sheet için makul
         ),
+
         onStoreTap: () =>
             context.push('/store-detail/${store.id}'),
       ),

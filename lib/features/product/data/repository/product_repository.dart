@@ -1,5 +1,5 @@
 // lib/features/product/data/repository/product_repository.dart
-// ⚠️ Sende zaten var. Aşağıdaki imzayı birebir buna çevir ki notifier uyusun.
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/dio_provider.dart';
 import '../models/product_list_response.dart';
@@ -16,6 +16,7 @@ class ProductRepository {
 
   Future<ProductListResponse> fetchProducts({
     String? categoryId,
+    String? storeId, // ✅ EKLENDİ
     double? latitude,
     double? longitude,
     String? search, // name
@@ -29,9 +30,18 @@ class ProductRepository {
     bool? bugun,
     bool? yarin,
   }) async {
+
+    debugPrint(
+        '🟣 PRODUCT FETCH PARAMS → '
+            'categoryId=$categoryId '
+            'lat=$latitude '
+            'lng=$longitude'
+    );
+
     final params = <String, dynamic>{
       //if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
       'category_id': 1, // 🔥 GEÇİCİ – görseller için
+      if (storeId != null) 'store_id': storeId, // ✅ ASIL OLAY
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
       if (search != null && search.isNotEmpty) 'name': search,

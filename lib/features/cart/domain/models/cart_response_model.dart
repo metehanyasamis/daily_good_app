@@ -41,10 +41,17 @@ class CartResponseModel {
       shopId: store.id,
       shopName: store.name,
       image: brand.logo,
+
+      // 🆕 navigation
+      shopAddress: store.address,
+      shopLatitude: double.tryParse(store.latitude),
+      shopLongitude: double.tryParse(store.longitude),
+
       price: unitPrice,
       originalPrice: product.listPrice,
       quantity: quantity,
     );
+
   }
 }
 

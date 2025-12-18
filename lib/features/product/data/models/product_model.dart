@@ -1,3 +1,4 @@
+import '../../../../core/utils/time_formatter.dart';
 import '../../../stores/data/model/store_summary.dart';
 
 class ProductModel {
@@ -39,8 +40,6 @@ class ProductModel {
       salePrice: (json["sale_price"] as num?)?.toDouble() ?? 0,
       stock: json["stock"] ?? 0,
       imageUrl: normalizeImageUrl(json["image_url"]),
-
-      /// STORE null gelirse app çökmemesi için fallback ekledik
       store: json["store"] != null
           ? StoreSummary.fromJson(json["store"])
           : StoreSummary(
@@ -49,17 +48,22 @@ class ProductModel {
         address: "",
         imageUrl: "",
       ),
-
       startHour: json["start_hour"] ?? "",
       endHour: json["end_hour"] ?? "",
       startDate: json["start_date"] ?? "",
       endDate: json["end_date"] ?? "",
-
-      /// created_at null olursa crash olmasın
-      createdAt: DateTime.tryParse(json["created_at"] ?? "") ?? DateTime.now(),
+      createdAt:
+      DateTime.tryParse(json["created_at"] ?? "") ?? DateTime.now(),
     );
   }
+
+  /// ✅ UI için temiz teslim saati
+  /// "11:50:00 - 02:11:00" -> "11:50 - 02:11"
+  String get deliveryTimeLabel {
+    return TimeFormatter.range(startHour, endHour);
+  }
 }
+
 
 
 String normalizeImageUrl(dynamic raw) {

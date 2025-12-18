@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/dio_provider.dart';
@@ -7,7 +8,7 @@ import '../../../review/data/models/review_response_model.dart';
 import '../../../review/domain/models/review_model.dart';
 import '../model/store_detail_model.dart';
 
-/// 🔥 DIŞTA DURACAK — class içinde değil
+/// 🔥 PROVIDER
 final storeRepositoryProvider = Provider<StoreRepository>((ref) {
   return StoreRepository(ref.watch(dioProvider));
 });
@@ -18,28 +19,41 @@ class StoreRepository {
   StoreRepository(this._dio);
 
   // ---------------------------------------------------------
-  // 1️⃣ MAĞAZA LİSTESİ (ÖZET) — GET /stores
+  // 1️⃣ MAĞAZA LİSTESİ
   // ---------------------------------------------------------
   Future<List<StoreSummary>> getStores() async {
-    final res = await _dio.get("/stores");
+    debugPrint('📡 GET /stores (simple)');
 
-    final List data = res.data["data"] ?? [];
+    final res = await _dio.get('/stores');
+
+    debugPrint('📥 RESPONSE /stores → ${res.data}');
+
+    final List data = res.data['data'] ?? [];
     return data.map((e) => StoreSummary.fromJson(e)).toList();
   }
 
   // ---------------------------------------------------------
-  // 2️⃣ MAĞAZA DETAY (GET /stores/:id)
+  // 2️⃣ MAĞAZA DETAY
   // ---------------------------------------------------------
   Future<StoreDetailModel> getStoreDetail(String storeId) async {
-    final res = await _dio.get("/stores/$storeId");
+    debugPrint('📡 GET /stores/$storeId');
+
+    final res = await _dio.get('/stores/$storeId');
+
+    debugPrint('📥 STORE DETAIL RESPONSE → ${res.data}');
+
     return StoreDetailModel.fromJson(res.data['data']);
   }
 
   // ---------------------------------------------------------
-  // 3️⃣ MAĞAZA YORUMLARI (GET /stores/:id/reviews)
+  // 3️⃣ MAĞAZA YORUMLARI
   // ---------------------------------------------------------
   Future<List<ReviewModel>> getStoreReviews(String storeId) async {
-    final res = await _dio.get("/stores/$storeId/reviews");
+    debugPrint('📡 GET /stores/$storeId/reviews');
+
+    final res = await _dio.get('/stores/$storeId/reviews');
+
+    debugPrint('📥 REVIEWS RESPONSE → ${res.data}');
 
     final List data = res.data['data'] ?? [];
     return data.map((e) {
@@ -49,14 +63,12 @@ class StoreRepository {
   }
 
   // ---------------------------------------------------------
-// 🔥 KONUMA GÖRE MAĞAZA LİSTESİ — GET /stores
-// ---------------------------------------------------------
-// lib/features/stores/data/repository/store_repository.dart
-
+  // 4️⃣ KONUMA + KATEGORİYE GÖRE MAĞAZALAR
+  // ---------------------------------------------------------
   Future<List<StoreSummary>> getStoresByLocation({
     required double latitude,
     required double longitude,
-    String sortBy = 'distance', // distance | rating | created_at
+    String sortBy = 'distance',
     String sortOrder = 'asc',
     int page = 1,
     int perPage = 15,
@@ -80,14 +92,23 @@ class StoreRepository {
       query['category'] = category;
     }
 
+    // 🔥 KRİTİK DEBUG
+    debugPrint('🟢 STORES REQUEST QUERY');
+    debugPrint('➡️ $query');
+    debugPrint('🟣 CATEGORY PARAM → ${query['category']}');
+
     final res = await _dio.get(
       '/stores',
       queryParameters: query,
     );
 
+    debugPrint('📥 STORES RESPONSE');
+    debugPrint(res.data.toString());
+
+    debugPrint('📥 STORES RESPONSE COUNT → ${(res.data['data'] as List?)?.length}');
+
+
     final List data = res.data['data'] ?? [];
     return data.map((e) => StoreSummary.fromJson(e)).toList();
   }
-
-
 }

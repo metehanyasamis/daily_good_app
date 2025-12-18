@@ -1,6 +1,6 @@
-import 'package:daily_good/features/stores/data/model/working_hours_model.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/navigation_link.dart';
 import '../../../product/data/models/product_model.dart';
 import '../../data/model/store_detail_model.dart';
 
@@ -74,19 +74,23 @@ class StoreDetailsContent extends StatelessWidget {
                     )
                   ],
                 ),
+
                 const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.access_time_outlined,
-                        size: 16, color: AppColors.primaryDarkGreen),
-                    const SizedBox(width: 4),
-                    Text(
-                      storeDetail.workingHours?.toDisplayString() ??
-                          "Bilinmiyor",
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ],
+
+                NavigationLink(
+                  address: storeDetail.address,
+                  latitude: storeDetail.latitude,
+                  longitude: storeDetail.longitude,
+                  label: storeDetail.name,
+                  textStyle: const TextStyle(
+                    color: AppColors.primaryDarkGreen,
+                    decoration: TextDecoration.underline,
+                    fontSize: 13,
+                  ),
                 ),
+
+                const SizedBox(height: 6),
+
               ],
             ),
           ),

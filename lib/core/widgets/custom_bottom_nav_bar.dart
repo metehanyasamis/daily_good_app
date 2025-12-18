@@ -55,7 +55,7 @@ class CustomBottomNavBar extends StatelessWidget {
     // 👇 her item’a özel genişlik (en uzun yazı ANASAYFA)
     final double width = selected
         ? (index == 0
-        ? 150 // ANASAYFA için
+        ? 130 // ANASAYFA için
         : index == 3
         ? 120 // HESAP için
         : 115) // diğerleri
