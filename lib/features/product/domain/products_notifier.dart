@@ -1,4 +1,5 @@
 // lib/features/product/domain/products_notifier.dart
+// Güncelleme: loadOnce / refresh artık sortBy / sortOrder alıyor ve repo'ya geçiriyor.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,10 +28,13 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     bool? yeni,
     bool? bugun,
     bool? yarin,
+    String sortBy = 'created_at',
+    String sortOrder = 'desc',
   }) async {
     // 🔐 ÇİFT KORUMA
     if (state.initialized || state.isLoadingList) {
-      debugPrint('⛔ loadOnce SKIP (initialized=${state.initialized}, loading=${state.isLoadingList})');
+      debugPrint(
+          '⛔ loadOnce SKIP (initialized=${state.initialized}, loading=${state.isLoadingList})');
       return;
     }
 
@@ -45,9 +49,10 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
       bugun: bugun,
       yarin: yarin,
       markInitialized: true,
+      sortBy: sortBy,
+      sortOrder: sortOrder,
     );
   }
-
 
   Future<void> refresh({
     String? categoryId,
@@ -59,14 +64,11 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     bool? yeni,
     bool? bugun,
     bool? yarin,
+    String sortBy = 'created_at',
+    String sortOrder = 'desc',
   }) async {
-
     debugPrint(
-        '📡 BACKEND REFRESH → '
-            'categoryId=$categoryId '
-            'lat=$latitude '
-            'lng=$longitude'
-    );
+        '📡 BACKEND REFRESH → categoryId=$categoryId lat=$latitude lng=$longitude sortBy=$sortBy sortOrder=$sortOrder');
 
     await _fetchList(
       categoryId: categoryId,
@@ -79,6 +81,8 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
       bugun: bugun,
       yarin: yarin,
       markInitialized: true,
+      sortBy: sortBy,
+      sortOrder: sortOrder,
     );
   }
 
@@ -93,6 +97,8 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     bool? bugun,
     bool? yarin,
     bool markInitialized = false,
+    String sortBy = 'created_at',
+    String sortOrder = 'desc',
   }) async {
     state = state.copyWith(isLoadingList: true, clearError: true);
 
@@ -102,6 +108,10 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
         latitude: latitude,
         longitude: longitude,
         search: search,
+        perPage: 15,
+        page: 1,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
         hemenYaninda: hemenYaninda,
         sonSans: sonSans,
         yeni: yeni,

@@ -1,4 +1,5 @@
 // lib/features/product/data/repository/product_repository.dart
+// Güncelleme: query param anahtarları API dokümantasyonu ile uyumlu (categoryId), sort_by / sort_order kullanılıyor.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,7 +36,9 @@ class ProductRepository {
   }) async {
     debugPrint(
       '🟣 PRODUCT FETCH PARAMS → '
+          'categoryId=$categoryId '
           'lat=$latitude lng=$longitude '
+          'sortBy=$sortBy sortOrder=$sortOrder '
           'hemenYaninda=$hemenYaninda '
           'sonSans=$sonSans '
           'yeni=$yeni '
@@ -44,6 +47,7 @@ class ProductRepository {
     );
 
     final params = <String, dynamic>{
+      if (categoryId != null) 'categoryId': categoryId, // API dokümanındaki isim
       if (storeId != null) 'store_id': storeId,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
@@ -77,7 +81,6 @@ class ProductRepository {
     return ProductModel.fromJson(res.data['data']);
   }
 
-
   Future<Map<HomeSection, List<ProductModel>>> fetchHomeSections({
     required double latitude,
     required double longitude,
@@ -97,15 +100,10 @@ class ProductRepository {
     return {
       HomeSection.hemenYaninda:
       ProductListResponse.fromRawList(data['hemen_yaninda']),
-      HomeSection.sonSans:
-      ProductListResponse.fromRawList(data['son_sans']),
-      HomeSection.yeni:
-      ProductListResponse.fromRawList(data['yeni']),
-      HomeSection.bugun:
-      ProductListResponse.fromRawList(data['bugun']),
-      HomeSection.yarin:
-      ProductListResponse.fromRawList(data['yarin']),
+      HomeSection.sonSans: ProductListResponse.fromRawList(data['son_sans']),
+      HomeSection.yeni: ProductListResponse.fromRawList(data['yeni']),
+      HomeSection.bugun: ProductListResponse.fromRawList(data['bugun']),
+      HomeSection.yarin: ProductListResponse.fromRawList(data['yarin']),
     };
   }
-
 }

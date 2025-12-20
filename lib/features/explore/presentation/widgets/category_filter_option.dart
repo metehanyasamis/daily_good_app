@@ -12,6 +12,8 @@ enum CategoryFilterOption {
   glutenFree,
 }
 
+
+
 // Kategorileri kullanıcı dostu etiketlere çeviren fonksiyon
 String categoryLabel(CategoryFilterOption c) {
   switch (c) {
@@ -33,6 +35,8 @@ String categoryLabel(CategoryFilterOption c) {
       return "Glutensiz";
   }
 }
+
+
 
 // Kategori Filtre Butonu için kullanılan Widget
 class CategoryFilterOptionWidget extends StatelessWidget {
