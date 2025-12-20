@@ -6,16 +6,17 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../../core/widgets/floating_order_button.dart';
 
+import '../../../category/domain/category_notifier.dart';
 import '../../../location/domain/address_notifier.dart';
+
 import '../data/models/home_state.dart';
 import '../domain/providers/home_state_provider.dart';
+
 import '../widgets/home_active_order_box.dart';
 import '../widgets/home_banner_slider.dart';
 import '../widgets/home_category_bar.dart';
-import '../widgets/home_email_warning_banner.dart';
 import '../widgets/home_product_list.dart';
 import '../widgets/home_section_title.dart';
-import '../../../explore/presentation/widgets/category_filter_option.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -31,25 +32,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
 
     Future.microtask(() {
-      final notifier = ref.read(homeStateProvider.notifier);
-      final addressState = ref.read(addressProvider);
+      debugPrint("🏠 [HOME] initState");
 
-      // Konum seçilmemişse hiçbir şey çağırma
-      if (!addressState.isSelected) return;
+      // 1️⃣ Category load (auth gerekmiyor)
+      ref.read(categoryProvider.notifier).load();
 
-      final lat = addressState.lat;
-      final lng = addressState.lng;
+      // 2️⃣ Address kontrol
+      final address = ref.read(addressProvider);
+      debugPrint("📍 [HOME] address.isSelected = ${address.isSelected}");
 
-      notifier.loadSection(HomeSection.hemenYaninda,
-          latitude: lat, longitude: lng);
-      notifier.loadSection(HomeSection.sonSans,
-          latitude: lat, longitude: lng);
-      notifier.loadSection(HomeSection.yeni,
-          latitude: lat, longitude: lng);
-      notifier.loadSection(HomeSection.bugun,
-          latitude: lat, longitude: lng);
-      notifier.loadSection(HomeSection.yarin,
-          latitude: lat, longitude: lng);
+      if (!address.isSelected) {
+        debugPrint("⛔ [HOME] Konum seçilmedi → home load yok");
+        return;
+      }
+
+      // 3️⃣ HOME TEK ÇAĞRI
+      ref.read(homeStateProvider.notifier).loadHome(
+        latitude: address.lat,
+        longitude: address.lng,
+      );
     });
   }
 
@@ -57,32 +58,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeStateProvider);
-    final homeNotifier = ref.read(homeStateProvider.notifier);
     final addressState = ref.watch(addressProvider);
+    final categoryState = ref.watch(categoryProvider);
+    final categories = categoryState.categories;
 
-    // 🔥 EKLENEN KISIM (BURASI ÖNEMLİ)
-    final hasAnyData = homeState.sectionProducts.values
-        .any((list) => list.isNotEmpty);
-
-    if (!hasAnyData) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-    // 🔥 EKLENEN KISIM BİTTİ
-
-    final List<CategoryFilterOption> homeCategories = [
-      CategoryFilterOption.all,
-      CategoryFilterOption.food,
-      CategoryFilterOption.bakery,
-      CategoryFilterOption.breakfast,
-      CategoryFilterOption.market,
-      CategoryFilterOption.vegetarian,
-      CategoryFilterOption.vegan,
-      CategoryFilterOption.glutenFree,
-    ];
+    debugPrint(
+      "🏠 [HOME BUILD] sections="
+          "${homeState.sectionProducts.map((k,v)=>MapEntry(k.name,v.length))}",
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -104,26 +87,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: HomeBannerSlider(),
                 ),
               ),
-              const SliverToBoxAdapter(
-                child: HomeEmailWarningBanner(),
-              ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: HomeCategoryBar(
-                  categories: homeCategories,
-                  selectedIndex: homeState.selectedCategoryIndex,
-                  onSelected: (index) {
-                    homeNotifier.setCategory(index);
-                    context.push(
-                      '/explore',
-                      extra: {
-                        'category': homeCategories[index],
-                        'fromHome': true,
-                      },
-                    );
-                  },
+
+              if (categories.isNotEmpty)
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: HomeCategoryBar(
+                    categories: categories,
+                    selectedIndex: homeState.selectedCategoryIndex,
+                    onSelected: (index) {
+                      ref
+                          .read(homeStateProvider.notifier)
+                          .setCategory(index);
+
+                      context.push(
+                        '/explore',
+                        extra: {
+                          'categoryId': categories[index].id,
+                          'fromHome': true,
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
+
               if (homeState.hasActiveOrder)
                 SliverToBoxAdapter(
                   child: HomeActiveOrderBox(
@@ -140,17 +126,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-
-// ============================================================================
-// HOME CONTENT
-// ============================================================================
-
 class HomeContent extends ConsumerWidget {
   const HomeContent({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final homeState = ref.watch(homeStateProvider);
+
+    final isLoading =
+    homeState.loadingSections.values.any((v) => v);
+
+    final hasAnyData =
+    homeState.sectionProducts.values.any((l) => l.isNotEmpty);
+
+    debugPrint(
+      "📄 [HOME CONTENT] "
+          "loading=${homeState.loadingSections} "
+          "sizes=${homeState.sectionProducts.map((k,v)=>MapEntry(k.name,v.length))}",
+    );
+
+    if (isLoading && !hasAnyData) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     final hemenYaninda =
         homeState.sectionProducts[HomeSection.hemenYaninda] ?? const [];
@@ -168,34 +165,19 @@ class HomeContent extends ConsumerWidget {
         bottom: kBottomNavigationBarHeight + 24,
       ),
       children: [
-        // --------------------------------------------------
-        // HEMEN YANIMDA
-        // --------------------------------------------------
         const HomeSectionTitle(title: "Hemen Yanımda"),
         HomeProductList(products: hemenYaninda),
 
-        // --------------------------------------------------
-        // SON ŞANS
-        // --------------------------------------------------
         const HomeSectionTitle(title: "Son Şans"),
         HomeProductList(products: sonSans),
 
-        // --------------------------------------------------
-        // YENİ MEKANLAR
-        // --------------------------------------------------
-        const HomeSectionTitle(title: "Yeni Mekanlar"),
+        const HomeSectionTitle(title: "Yeni"),
         HomeProductList(products: yeni),
 
-        // --------------------------------------------------
-        // BUGÜN AL
-        // --------------------------------------------------
-        const HomeSectionTitle(title: "Bugün Al"),
+        const HomeSectionTitle(title: "Bugün"),
         HomeProductList(products: bugun),
 
-        // --------------------------------------------------
-        // YARIN AL
-        // --------------------------------------------------
-        const HomeSectionTitle(title: "Yarın Al"),
+        const HomeSectionTitle(title: "Yarın"),
         HomeProductList(products: yarin),
 
         const SizedBox(height: 32),

@@ -19,9 +19,8 @@ FutureProvider.autoDispose<List<StoreSummary>>((ref) async {
     latitude: address.lat,
     longitude: address.lng,
     sortBy: explore.sort.name,
-    category: explore.category.name == 'all'
-        ? null
-        : explore.category.name,
+    categoryId: explore.categoryId, // 🔥 direkt backend ID
     perPage: 50,
   );
 });
+

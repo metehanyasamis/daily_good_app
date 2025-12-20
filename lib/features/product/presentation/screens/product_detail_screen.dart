@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/fav_button.dart';
@@ -15,7 +14,6 @@ import '../../../../core/widgets/store_delivery_info_card.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
 import '../../../cart/presentation/widgets/cart_warning_modal.dart';
 
-import '../../../stores/data/model/store_detail_model.dart';
 import '../../../stores/domain/providers/store_detail_provider.dart';
 import '../../../stores/presentation/widgets/store_map_card.dart';
 import '../../domain/products_notifier.dart';

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../product/data/repository/product_repository.dart';
@@ -17,50 +18,33 @@ class HomeStateNotifier extends StateNotifier<HomeState> {
     state = state.copyWith(hasActiveOrder: value);
   }
 
-  Future<void> loadSection(
-      HomeSection section, {
-        required double latitude,
-        required double longitude,
-      }) async {
-    if (state.loadingSections[section] == true) return;
+  Future<void> loadHome({
+    required double latitude,
+    required double longitude,
+  }) async {
+    debugPrint("🏠 [HOME] loadHome");
 
     state = state.copyWith(
       loadingSections: {
-        ...state.loadingSections,
-        section: true,
+        for (var s in HomeSection.values) s: true,
       },
     );
 
-    try {
-      final res = await repo.fetchProducts(
-        latitude: latitude,
-        longitude: longitude,
-        hemenYaninda: section == HomeSection.hemenYaninda,
-        sonSans: section == HomeSection.sonSans,
-        yeni: section == HomeSection.yeni,
-        bugun: section == HomeSection.bugun,
-        yarin: section == HomeSection.yarin,
-      );
+    final sections = await repo.fetchHomeSections(
+      latitude: latitude,
+      longitude: longitude,
+    );
 
-      state = state.copyWith(
-        sectionProducts: {
-          ...state.sectionProducts,
-          section: res.products,
-        },
-      );
-    } catch (e) {
-      // istersek log, snackbar vs
-    } finally {
-      state = state.copyWith(
-        loadingSections: {
-          ...state.loadingSections,
-          section: false,
-        },
-      );
-    }
+    state = state.copyWith(
+      sectionProducts: sections,
+      loadingSections: {
+        for (var s in HomeSection.values) s: false,
+      },
+    );
   }
-
 }
+
+
 
 final homeStateProvider =
 StateNotifierProvider<HomeStateNotifier, HomeState>((ref) {

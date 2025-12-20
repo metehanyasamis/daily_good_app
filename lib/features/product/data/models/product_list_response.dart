@@ -12,4 +12,10 @@ class ProductListResponse {
 
     return ProductListResponse(products: list);
   }
+
+  static List<ProductModel> fromRawList(dynamic raw) {
+    if (raw == null || raw is! List) return [];
+    return raw.map((e) => ProductModel.fromJson(e)).toList();
+  }
 }
+

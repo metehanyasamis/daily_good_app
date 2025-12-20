@@ -73,7 +73,7 @@ class StoreRepository {
     int page = 1,
     int perPage = 15,
     String? search,
-    String? category,
+    String? categoryId,
   }) async {
     final query = <String, dynamic>{
       'latitude': latitude,
@@ -88,9 +88,6 @@ class StoreRepository {
       query['search'] = search;
     }
 
-    if (category != null && category.isNotEmpty) {
-      query['category'] = category;
-    }
 
     // 🔥 KRİTİK DEBUG
     debugPrint('🟢 STORES REQUEST QUERY');

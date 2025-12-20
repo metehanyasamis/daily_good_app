@@ -12,6 +12,7 @@ import '../../../product/domain/products_notifier.dart';
 import '../../../product/domain/products_state.dart';
 import '../../../product/presentation/widgets/product_card.dart';
 
+import '../../domain/providers/explore_state_provider.dart';
 import '../widgets/category_filter_option.dart';
 import '../widgets/explore_filter_sheet.dart';
 import '../widgets/category_filter_sheet.dart';
@@ -54,46 +55,38 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
   void initState() {
     super.initState();
 
-    debugPrint('🧩 ExploreListScreen initState HASH=${hashCode}');
-
-    // 🔥 TEK YERDEN FETCH
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final address = ref.read(addressProvider);
       if (!address.isSelected) return;
 
-      debugPrint('🚀 initState → loadOnce');
+      // 🔥 HOME'DAN GELEN CATEGORY ID
+      final routeState = GoRouterState.of(context);
+      final extra = routeState.extra as Map<String, dynamic>?;
 
-      ref.read(productsProvider.notifier).loadOnce(
-        latitude: address.lat,
-        longitude: address.lng,
-      );
+      final categoryId = extra?['categoryId'] as String?;
+
+      if (categoryId != null) {
+        debugPrint('🏷️ HOME → EXPLORE categoryId = $categoryId');
+
+        ref.read(exploreStateProvider.notifier)
+            .setCategoryId(categoryId);
+
+        // 🔥 BACKEND FETCH
+        ref.read(productsProvider.notifier).refresh(
+          latitude: address.lat,
+          longitude: address.lng,
+          categoryId: categoryId,
+        );
+      } else {
+        // Normal explore açılışı
+        ref.read(productsProvider.notifier).loadOnce(
+          latitude: address.lat,
+          longitude: address.lng,
+        );
+      }
     });
 
-    // 🔥 PROVIDER → LOCAL STATE SYNC
-    _productsSub = ref.listenManual<ProductsState>(
-      productsProvider,
-          (prev, next) {
-        if (!mounted) return;
 
-        debugPrint(
-          '📦 PRODUCTS CHANGE '
-              'prev=${prev?.products.length ?? 0} '
-              'next=${next.products.length}',
-        );
-
-        _applyFilters(next.products);
-      },
-    );
-
-    // İlk state doluysa
-    final initial = ref.read(productsProvider).products;
-    if (initial.isNotEmpty) {
-      _applyFilters(initial);
-    }
-
-    if (widget.initialCategory != null) {
-      selectedCategory = widget.initialCategory!;
-    }
   }
 
   @override
@@ -487,4 +480,3 @@ class ExploreHeaderDelegate extends SliverPersistentHeaderDelegate {
     return true;
   }
 }
-

@@ -18,6 +18,7 @@ class ProfileDetailsScreen extends ConsumerStatefulWidget {
 class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   final _nameController = TextEditingController();
   final _surnameController = TextEditingController();
+  final _emailController = TextEditingController();
   bool _initialized = false;
   DateTime? _selectedBirthDate;
 
@@ -25,6 +26,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   void dispose() {
     _nameController.dispose();
     _surnameController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -35,6 +37,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     final u = state.user!;
     _nameController.text = u.firstName ?? "";
     _surnameController.text = u.lastName ?? "";
+    _emailController.text = u.email ?? "";
     _selectedBirthDate =
     u.birthDate != null ? DateTime.tryParse(u.birthDate!) : null;
   }
@@ -69,14 +72,16 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     final u = state.user!;
     final first = _nameController.text.trim();
     final last = _surnameController.text.trim();
+    final email = _emailController.text.trim();
 
-    if (first.isEmpty || last.isEmpty) {
-      return _showError("Ad ve Soyad zorunludur.");
+    if (first.isEmpty || last.isEmpty || email.isEmpty) {
+      return _showError("Lütfen Zorunlu Alanları Doldurunuz.");
     }
 
     final updated = u.copyWith(
       firstName: first,
       lastName: last,
+      email: email,
       birthDate: _selectedBirthDate != null
           ? _selectedBirthDate!.toIso8601String().split("T").first
           : null,
@@ -144,6 +149,10 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                 _readonlyPhone(user?.phone ?? ""),
                 const SizedBox(height: 20),
 
+                _label("E-posta *"),
+                _input(_emailController),
+                const SizedBox(height: 20),
+
                 _label("Doğum Tarihi (opsiyonel)"),
                 _birthDateTile(),
                 const SizedBox(height: 30),
@@ -189,6 +198,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       readOnly: true,
       controller: TextEditingController(text: value),
       decoration: InputDecoration(
+        hintText: value,
         filled: true,
         fillColor: AppColors.surface,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
