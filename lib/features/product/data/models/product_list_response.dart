@@ -7,7 +7,7 @@ class ProductListResponse {
 
   factory ProductListResponse.fromJson(Map<String, dynamic> json) {
     final list = (json["data"] as List)
-        .map((e) => ProductModel.fromJson(e))
+        .map((e) => ProductModel.fromJsonMap(e))
         .toList();
 
     return ProductListResponse(products: list);
@@ -15,7 +15,7 @@ class ProductListResponse {
 
   static List<ProductModel> fromRawList(dynamic raw) {
     if (raw == null || raw is! List) return [];
-    return raw.map((e) => ProductModel.fromJson(e)).toList();
+    return raw.map((e) => ProductModel.fromJsonMap(e)).toList();
   }
 }
 

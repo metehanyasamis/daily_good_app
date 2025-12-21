@@ -1,3 +1,6 @@
+// lib/features/stores/data/model/store_detail_model.dart
+import 'package:flutter/material.dart';
+
 import '../../../product/data/models/product_model.dart';
 import '../../../review/data/models/review_response_model.dart';
 import '../../../review/domain/models/review_model.dart';
@@ -13,9 +16,9 @@ Map<String, dynamic>? asMap(dynamic v) {
   return null;
 }
 
-List asList(dynamic v) {
+List<dynamic> asList(dynamic v) {
   if (v is List) return v;
-  return const [];
+  return const <dynamic>[];
 }
 
 /// ------------------------------------------------------------
@@ -64,62 +67,71 @@ class StoreDetailModel {
   });
 
   factory StoreDetailModel.fromJson(Map<String, dynamic> json) {
-    // 🔎 DEBUG (istersen açık bırak)
-    /*
-    debugPrint(
-      "🧪 STORE JSON TYPES → "
-      "brand=${json['brand']?.runtimeType} | "
-      "working_hours=${json['working_hours']?.runtimeType} | "
-      "average_ratings=${json['average_ratings']?.runtimeType} | "
-      "products=${json['products']?.runtimeType} | "
-      "reviews=${json['reviews']?.runtimeType}",
-    );
-    */
+    // NOTE:
+    // API uses keys like `banner_image_url` and `image_url` (see docs).
+    // Use safe parsing and fallbacks.
+    final String banner = json['banner_image_url']?.toString() ??
+        json['banner_image']?.toString() ??
+        json['image_url']?.toString() ??
+        '';
+
+    final String image = json['image_url']?.toString() ??
+        json['banner_image_url']?.toString() ??
+        json['image']?.toString() ??
+        '';
+
+    // SAFELY PARSE PRODUCTS (backend bazen liste/objede tutarsızlık yapabiliyor)
+    final rawProducts = asList(json['products']);
+    final parsedProducts = rawProducts.map<ProductModel?>((e) {
+      try {
+        // ProductModel.fromJson kabul ediyor: Map veya List -> dinamik olarak işliyor
+        return ProductModel.fromJsonMap(e);
+      } catch (err, st) {
+        debugPrint('STORE DETAIL: failed to parse product -> $err\n$st');
+        return null;
+      }
+    }).whereType<ProductModel>().toList();
+
+    // SAFELY PARSE REVIEWS
+    final rawReviews = asList(json['reviews']);
+    final parsedReviews = rawReviews.map<ReviewModel?>((e) {
+      try {
+        final m = asMap(e);
+        if (m == null) {
+          debugPrint('STORE DETAIL: skipping non-map review item: ${e.runtimeType}');
+          return null;
+        }
+        final response = ReviewResponseModel.fromJson(m);
+        return ReviewModel.fromResponse(json['id']?.toString() ?? '', response);
+      } catch (err, st) {
+        debugPrint('STORE DETAIL: failed to parse review -> $err\n$st');
+        return null;
+      }
+    }).whereType<ReviewModel>().toList();
 
     return StoreDetailModel(
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       address: json['address'] ?? '',
-      imageUrl: json['image_url'] ?? '',
-
+      imageUrl: image,
       latitude: double.tryParse(json['latitude']?.toString() ?? '') ?? 0.0,
       longitude: double.tryParse(json['longitude']?.toString() ?? '') ?? 0.0,
-
-      bannerImageUrl: json['banner_image'] ?? '',
+      bannerImageUrl: banner,
       isFavorite: json['is_favorite'] == true,
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
-
-      // 🟢 SAFE OBJECT PARSE
       brand: asMap(json['brand']) != null
           ? StoreBrandModel.fromJson(asMap(json['brand'])!)
           : null,
-
       workingHours: asMap(json['working_hours']) != null
           ? WorkingHoursModel.fromJson(asMap(json['working_hours'])!)
           : null,
-
-      overallRating:
-      (json['overall_rating'] as num?)?.toDouble() ?? 0.0,
+      overallRating: (json['overall_rating'] as num?)?.toDouble() ?? 0.0,
       totalReviews: json['total_reviews'] ?? 0,
-
       averageRatings: asMap(json['average_ratings']) != null
-          ? AverageRatingsModel.fromJson(
-        asMap(json['average_ratings'])!,
-      )
+          ? AverageRatingsModel.fromJson(asMap(json['average_ratings'])!)
           : null,
-
-      // 🟢 SAFE LIST PARSE
-      products: asList(json['products'])
-          .map((e) => ProductModel.fromJson(e))
-          .toList(),
-
-      reviews: asList(json['reviews']).map((e) {
-        final response = ReviewResponseModel.fromJson(e);
-        return ReviewModel.fromResponse(
-          json['id']?.toString() ?? '',
-          response,
-        );
-      }).toList(),
+      products: parsedProducts,
+      reviews: parsedReviews,
     );
   }
 }
@@ -145,10 +157,8 @@ class AverageRatingsModel {
       service: (json['service'] as num?)?.toDouble() ?? 0.0,
       productQuantity:
       (json['product_quantity'] as num?)?.toDouble() ?? 0.0,
-      productTaste:
-      (json['product_taste'] as num?)?.toDouble() ?? 0.0,
-      productVariety:
-      (json['product_variety'] as num?)?.toDouble() ?? 0.0,
+      productTaste: (json['product_taste'] as num?)?.toDouble() ?? 0.0,
+      productVariety: (json['product_variety'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

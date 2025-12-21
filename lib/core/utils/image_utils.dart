@@ -1,21 +1,32 @@
+// lib/core/utils/image_utils.dart (veya uygun bir util dosyan)
+// İstersen mevcut normalizeImageUrl yerine bunu kullanabilirsin.
+
 String? sanitizeImageUrl(String? raw) {
   if (raw == null) return null;
-  final s = raw.trim();
+  final s = raw.toString().trim();
   if (s.isEmpty) return null;
 
-  // 1. Durum: İç içe geçmiş bozuk URL yapısını ayıkla
-  // Eğer string içinde bir yerde 'http' başlıyorsa (başta değilse bile),
-  // o noktadan sonrasını alıyoruz.
-  if (s.contains('http') && s.lastIndexOf('http') > 0) {
-    return s.substring(s.lastIndexOf('http'));
+  // Eğer birden fazla 'http'/'https' varsa sonuncusunu al (ör: .../storage/https://via...)
+  final httpsIndex = s.lastIndexOf('https://');
+  final httpIndex = s.lastIndexOf('http://');
+  String candidate = s;
+  if (httpsIndex > 0) {
+    candidate = s.substring(httpsIndex);
+  } else if (httpIndex > 0) {
+    candidate = s.substring(httpIndex);
   }
 
-  // 2. Durum: Zaten temiz bir tam URL (Kategorilerdeki gibi)
-  if (s.startsWith('http://') || s.startsWith('https://')) {
-    return s;
-  }
+  // Parse ve validasyon
+  final uri = Uri.tryParse(candidate);
+  if (uri == null) return null;
+  if (!(uri.scheme == 'http' || uri.scheme == 'https')) return null;
 
-  // 3. Durum: Sadece dosya yolu (relative path) gelmesi
-  final cleanPath = s.startsWith('/') ? s.substring(1) : s;
-  return 'https://dailygood.dijicrea.net/storage/$cleanPath';
+  // Opsiyonel: problem çıkaran veya güvenilmeyen hostları engelle
+  final blockedHosts = <String>{
+    'via.placeholder.com', // dev ortamda DNS sorunu oluyorsa bloke edilebilir
+    // 'example-problem-host.com', // ihtiyaç varsa ekleyin
+  };
+  if (blockedHosts.contains(uri.host)) return null;
+
+  return candidate;
 }

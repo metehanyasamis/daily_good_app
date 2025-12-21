@@ -120,7 +120,7 @@ class ProductRepository {
 
     final res = await _dio.get('/products/category', queryParameters: params);
 
-    final data = res.data['data'];
+    final dynamic data = res.data != null ? res.data['data'] : null;
     final List<ProductModel> out = [];
 
     if (data == null) {
@@ -128,37 +128,81 @@ class ProductRepository {
       return out;
     }
 
+    // Local helper to try to parse a single "item" into ProductModel and push to out.
+    void _tryParseItem(dynamic item, String ctx) {
+      try {
+
+        debugPrint(' denenen item: $item');
+
+        if (item == null) {
+          debugPrint('PRODUCT REPO: skip null item in $ctx');
+          return;
+        }
+
+        if (item is ProductModel) {
+          out.add(item);
+          return;
+        }
+
+        // Many server responses are Map<String, dynamic>
+        if (item is Map<String, dynamic>) {
+          out.add(ProductModel.fromJsonMap(item));
+          return;
+        }
+
+        // If item is a List (nested), try first element if it's a Map
+        if (item is List && item.isNotEmpty) {
+          final first = item.first;
+          if (first is ProductModel) {
+            out.add(first);
+            return;
+          } else if (first is Map<String, dynamic>) {
+            out.add(ProductModel.fromJsonMap(first));
+            return;
+          } else {
+            debugPrint('PRODUCT REPO: nested list item has unsupported first type in $ctx -> ${first.runtimeType}');
+            return;
+          }
+        }
+
+        // If it's a JSON-like decoded object but typed as LinkedHashMap (non-generic), handle generically
+        if (item is Map) {
+          // attempt to cast to Map<String, dynamic>
+          final castMap = Map<String, dynamic>.from(item);
+          out.add(ProductModel.fromJsonMap(castMap));
+          return;
+        }
+
+        debugPrint('PRODUCT REPO: unexpected item type in $ctx -> ${item.runtimeType} : $item');
+      } catch (e, st) {
+        debugPrint('PRODUCT REPO: parse error for item in $ctx -> $e\n$st');
+        debugPrint('🔥 PARSE FAIL in $ctx! Hata: $e');
+        debugPrint('🔥 HATALI ITEM DATA: $item');
+      }
+    }
+
+    // If server returned grouped object (hemen_yaninda, yeni, etc.)
     if (data is Map) {
       debugPrint('PRODUCT REPO: fetchProductsFlat -> grouped data keys=${data.keys.toList()}');
       data.forEach((key, val) {
+        if (val == null) return;
         if (val is List) {
           for (final item in val) {
-            try {
-              if (item is ProductModel) {
-                out.add(item);
-              } else {
-                out.add(ProductModel.fromJson(item as Map<String, dynamic>));
-              }
-            } catch (e, st) {
-              debugPrint('PRODUCT REPO: parse error for item in group $key -> $e\n$st');
-            }
+            _tryParseItem(item, 'group:$key');
           }
+        } else if (val is Map) {
+          // some groups might be a single object instead of list — attempt parse
+          _tryParseItem(val, 'group:$key');
         } else {
-          // ignore non-list group values
+          debugPrint('PRODUCT REPO: ignoring non-list/non-map group value for key=$key -> ${val.runtimeType}');
         }
       });
-    } else if (data is List) {
+    }
+    // If server returned a flat list of products
+    else if (data is List) {
       debugPrint('PRODUCT REPO: fetchProductsFlat -> list length=${data.length}');
       for (final item in data) {
-        try {
-          if (item is ProductModel) {
-            out.add(item);
-          } else {
-            out.add(ProductModel.fromJson(item as Map<String, dynamic>));
-          }
-        } catch (e, st) {
-          debugPrint('PRODUCT REPO: parse error for list item -> $e\n$st');
-        }
+        _tryParseItem(item, 'list');
       }
     } else {
       debugPrint('PRODUCT REPO: fetchProductsFlat -> unexpected data type ${data.runtimeType}');
@@ -170,7 +214,26 @@ class ProductRepository {
 
   Future<ProductModel> getProductDetail(String id) async {
     final res = await _dio.get('/products/$id');
-    return ProductModel.fromJson(res.data['data']);
+
+    // BURAYA EKLE: Ham veriyi ve tipini görelim
+    debugPrint('🚨 RAW DETAIL DATA: ${res.data['data']}');
+    debugPrint('🚨 RAW DETAIL TYPE: ${res.data['data'].runtimeType}');
+
+    final data = res.data['data'];
+    debugPrint('📦 REPO DEBUG: data type = ${data.runtimeType}');
+
+    if (data is List && data.isNotEmpty) {
+      debugPrint('ℹ️ INFO: Veri liste olarak geldi, ilki alınıyor.');
+      debugPrint('⚠️ UYARI: Detay verisi List geldi, ilk eleman zorlanıyor.');
+      return ProductModel.fromJsonMap(data.first);
+    }
+
+    if (data == null) {
+      debugPrint('❌ ERROR: Data null geldi!');
+      throw FormatException('Product detail data is null for id=$id');
+    }
+
+    return ProductModel.fromJsonMap(data);
   }
 
   Future<Map<HomeSection, List<ProductModel>>> fetchHomeSections({

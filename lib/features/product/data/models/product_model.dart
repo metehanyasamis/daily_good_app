@@ -1,3 +1,5 @@
+// (uyarladım: dosya yolunu proje yapına göre düzenle)
+import 'package:flutter/material.dart';
 import '../../../../core/utils/time_formatter.dart';
 import '../../../stores/data/model/store_summary.dart';
 
@@ -32,61 +34,100 @@ class ProductModel {
     required this.createdAt,
   });
 
-  factory ProductModel.fromJson(Map<String, dynamic> json) {
+  /// Güvenli parse helper: raw List gelirse ilk elemanı kullan, Map gelirse doğrudan parse et.
+  static ProductModel parse(dynamic raw) {
+    debugPrint('TRACE MODEL: ProductModel.parse called with type=${raw.runtimeType}');
+    if (raw is List) {
+      debugPrint('⚠️ ProductModel.parse received a List, using first element. length=${raw.length}');
+      if (raw.isEmpty) throw FormatException('Empty list when parsing ProductModel');
+      raw = raw.first;
+    }
+
+    if (raw is! Map<String, dynamic>) {
+      // Bazı durumlarda Map<String, Object?> olabilir, buna da izin ver
+      if (raw is Map) {
+        // cast safely by creating Map<String, dynamic>
+        final map = <String, dynamic>{};
+        raw.forEach((k, v) {
+          map[k.toString()] = v;
+        });
+        return ProductModel.fromJsonMap(map);
+      }
+
+      debugPrint('❌ ProductModel.parse expected Map but got ${raw.runtimeType}: $raw');
+      throw FormatException('Invalid product json type: ${raw.runtimeType}');
+    }
+
+    return ProductModel.fromJsonMap(raw);
+  }
+
+  // Ayrı metod: zaten Map ise burayı kullan
+  factory ProductModel.fromJsonMap(Map<String, dynamic> json) {
+
+
+    debugPrint("🔍 PARSING START: ID=${json['id']} NAME=${json['name']}");
+    debugPrint("🔍 STORE DATA TYPE: ${json['store'].runtimeType} DATA: ${json['store']}");
+
+
+    final dynamic storeData = json["store"];
+    StoreSummary resolvedStore;
+
+
+    if (storeData != null && storeData is Map<String, dynamic>) {
+      resolvedStore = StoreSummary.fromJson(storeData);
+    } else {
+      debugPrint("⚠️ WARNING: Store verisi Map değil! (${storeData.runtimeType})");
+      resolvedStore = StoreSummary(id: "", name: "Mağaza Bilgisi Yok", address: "", imageUrl: "");
+    }
+
     return ProductModel(
-      id: json["id"].toString(),
-      name: json["name"] ?? "",
+      id: json["id"]?.toString() ?? "",
+      name: json["name"] ?? "İsimsiz Ürün",
       listPrice: (json["list_price"] as num?)?.toDouble() ?? 0,
       salePrice: (json["sale_price"] as num?)?.toDouble() ?? 0,
-      stock: json["stock"] ?? 0,
+      stock: (json["stock"] as num?)?.toInt() ?? 0,
       imageUrl: normalizeImageUrl(json["image_url"]),
-      store: json["store"] != null
-          ? StoreSummary(
-        id: json["store"]["id"]?.toString() ?? "",
-        name: json["store"]["name"] ?? "",
-        address: json["store"]["address"] ?? "",
-        // Store'un kendi görselini de normalize ediyoruz
-        imageUrl: normalizeImageUrl(json["store"]["image_url"] ?? json["store"]["banner_image_url"]),
-      )
-          : StoreSummary(id: "", name: "", address: "", imageUrl: ""),
-      startHour: json["start_hour"] ?? "",
-      endHour: json["end_hour"] ?? "",
-      startDate: json["start_date"] ?? "",
-      endDate: json["end_date"] ?? "",
-      createdAt:
-      DateTime.tryParse(json["created_at"] ?? "") ?? DateTime.now(),
+      store: resolvedStore,
+      startHour: json["start_hour"]?.toString() ?? "00:00:00",
+      endHour: json["end_hour"]?.toString() ?? "00:00:00",
+      startDate: json["start_date"]?.toString() ?? "",
+      endDate: json["end_date"]?.toString() ?? "",
+      createdAt: DateTime.tryParse(json["created_at"]?.toString() ?? "") ?? DateTime.now(),
     );
   }
 
-  /// ✅ UI için temiz teslim saati
-  /// "11:50:00 - 02:11:00" -> "11:50 - 02:11"
+  // Mevcut getter vb.
   String get deliveryTimeLabel {
-    return TimeFormatter.range(startHour, endHour);
+    // Debug logu kalsın, hangi üründe ne geldiğini terminalden izleriz
+    debugPrint('🕒 TIME DEBUG [ID:$id]: start="$startHour", end="$endHour"');
+
+    // "00:00:00" backend'in boş gönderdiği durumlarda senin atadığın default değerdi
+    if (startHour.isEmpty ||
+        endHour.isEmpty ||
+        startHour == "00:00:00" ||
+        endHour == "00:00:00") {
+      return "Teslimat saati belirtilmedi";
+    }
+
+    try {
+      // TimeFormatter içindeki substring veya split işlemleri burada patlayabilir
+      return TimeFormatter.range(startHour, endHour);
+    } catch (e) {
+      // Eğer TimeFormatter çökerse uygulama kapanmasın, ham saati gösterelim
+      debugPrint("❌ TIME FORMATTER ERROR on Product $id: $e");
+      return "$startHour - $endHour";
+    }
   }
 }
 
-
-
 String normalizeImageUrl(dynamic raw) {
   if (raw == null) return "";
-
   final url = raw.toString().trim();
   if (url.isEmpty) return "";
-
-  // 1. Durum: İç içe geçmiş bozuk URL kontrolü
-  // Eğer string içinde "http" ifadesi birden fazla geçiyorsa veya
-  // storage kelimesinden sonra tekrar http geliyorsa en sondaki http'yi al.
   if (url.contains('http') && url.lastIndexOf('http') > 0) {
     return url.substring(url.lastIndexOf('http'));
   }
-
-  // 2. Durum: Zaten tek bir tam URL ise
-  if (url.startsWith('http')) {
-    return url;
-  }
-
-  // 3. Durum: Sadece dosya yolu (path) ise
-  // Başındaki eğik çizgiyi temizle ki çift slash olmasın
+  if (url.startsWith('http')) return url;
   final cleanPath = url.startsWith('/') ? url.substring(1) : url;
   return 'https://dailygood.dijicrea.net/storage/$cleanPath';
 }

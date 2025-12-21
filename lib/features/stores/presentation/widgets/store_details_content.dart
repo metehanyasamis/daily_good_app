@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/image_utils.dart';
 import '../../../../core/widgets/navigation_link.dart';
 import '../../../product/data/models/product_model.dart';
 import '../../data/model/store_detail_model.dart';
@@ -30,7 +31,7 @@ class StoreDetailsContent extends StatelessWidget {
           const SizedBox(height: 20),
           _infoCard(),
           const SizedBox(height: 20),
-          _ratingCard(ratings),
+          //_ratingCard(ratings),
         ],
       ),
     );
@@ -146,41 +147,87 @@ class StoreDetailsContent extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      product.imageUrl,
-                      width: 44,
-                      height: 44,
-                      fit: BoxFit.cover,
-                    ),
+                    child: Builder(builder: (ctx) {
+                      // product.imageUrl modelde String (boş olabilir) — sanitizeImageUrl null dönebilir
+                      final safeUrl = sanitizeImageUrl(product.imageUrl?.isNotEmpty == true ? product.imageUrl : null);
+
+                      if (safeUrl == null) {
+                        // asset placeholder kullan
+                        return Image.asset(
+                          'assets/images/sample_food3.jpg',
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                        );
+                      }
+
+                      // network image with safe errorBuilder + loadingBuilder
+                      return Image.network(
+                        safeUrl,
+                        width: 44,
+                        height: 44,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: Center(
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          // log için
+                          debugPrint('IMAGE LOAD ERROR for ${product.imageUrl} -> $error');
+                          // kesinlikle uzun hata metni döndürme, sadece asset placeholder göster
+                          return Image.asset(
+                            'assets/images/sample_food3.jpg',
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                          );
+                        },
+                      );
+                    }),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(product.name,
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      product.name ?? '',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        "${product.listPrice} ₺",
+                        "${product.listPrice?.toStringAsFixed(2) ?? '-'} ₺",
                         style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                            decoration: TextDecoration.lineThrough),
+                          fontSize: 12,
+                          color: Colors.grey,
+                          decoration: TextDecoration.lineThrough,
+                        ),
                       ),
                       Text(
-                        "${product.salePrice} ₺",
+                        "${product.salePrice?.toStringAsFixed(2) ?? '-'} ₺",
                         style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryDarkGreen),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryDarkGreen,
+                        ),
                       ),
                     ],
-                  )
+                  ),
                 ],
-              ),
-            ),
+              ),            ),
           );
         }),
       ],
@@ -205,6 +252,8 @@ class StoreDetailsContent extends StatelessWidget {
     );
   }
 
+
+  /*
   Widget _ratingCard(AverageRatingsModel? ratings) {
     if (ratings == null) return const SizedBox();
     return Container(
@@ -248,4 +297,8 @@ class StoreDetailsContent extends StatelessWidget {
       ),
     );
   }
+
+   */
 }
+
+

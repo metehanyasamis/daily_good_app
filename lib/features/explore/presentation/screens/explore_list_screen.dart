@@ -506,7 +506,13 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
                       debugPrint('SLIVER BUILD: index=$i id=${p.id} name=${p.name}');
                       return ProductCard(
                         product: p,
-                        onTap: () => context.push('/product-detail/${p.id}'),
+                        // onTap: () => context.push('/product-detail/${p.id}'), // eskisi
+
+                        // yerine:
+                        onTap: () {
+                          debugPrint('TRACE: ProductCard tapped → index=$i id=${p.id} name=${p.name}');
+                          context.push('/product-detail/${p.id}');
+                        },
                       );
                     },
                     childCount: filteredProducts.length,
