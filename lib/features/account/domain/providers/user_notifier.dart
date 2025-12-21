@@ -1,7 +1,5 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/providers/app_state_provider.dart';
 import '../../../auth/data/repositories/auth_repository.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/user_repository.dart';
@@ -82,61 +80,41 @@ class UserNotifier extends StateNotifier<UserState> {
   // PROFIL UPDATE VEYA REGISTER (ANA REFACTOR BURASI)
   // ------------------------------------------------------------------
   Future<void> updateUser(UserModel updated) async {
-    debugPrint("🔄 [USER] updateUser çağrıldı. UserID: ${updated.id}");
+    final previousUser = state.user; // Mevcut halini yedekle
 
     try {
-      state = const UserState.loading();
+      state = state.copyWith(status: UserStatus.loading);
 
-      final bool isNewUser = updated.id.isEmpty;   // 🔥 DOĞRU KONTROL
+      // 1. Backend'e gönder
+      final savedUser = await repository.updateUser(updated);
 
-      UserModel savedUser;
+      // 2. 🔥 HİBRİT GÜNCELLEME:
+      // Backend her şeyi dönmeyebilir. Backend'den gelen veriyi (savedUser),
+      // bizim gönderdiğimiz verideki (updated) sabitlerle birleştirelim.
+      final finalUser = savedUser.copyWith(
+        // Eğer backend email'i boş dönerse, eskisini koru
+        email: (savedUser.email == null || savedUser.email!.isEmpty)
+            ? updated.email
+            : savedUser.email,
 
-      // --------------------- NEW USER ---------------------
-      if (isNewUser) {
-        debugPrint("🆕 Yeni kullanıcı → registerUser çağırılıyor");
+        // Eğer backend birthDate'i null dönerse, bizim seçtiğimizi koru
+        birthDate: savedUser.birthDate ?? updated.birthDate,
 
-        try {
-          savedUser = await authRepository.registerUser(updated);
-        } on DioException catch (e) {
-          final msg = e.response?.data["message"] ??
-              "Kayıt olurken bir hata oluştu.";
-          state = UserState.error(msg);
-          return;
-        }
+        // Token ve doğrulama durumlarını da mutlaka koru
+        token: savedUser.token ?? previousUser?.token,
+        isEmailVerified: savedUser.isEmailVerified,
+        isPhoneVerified: savedUser.isPhoneVerified,
+      );
 
-        // Token kaydet
-        if (savedUser.token != null && savedUser.token!.isNotEmpty) {
-          await PrefsService.saveToken(savedUser.token!);
-          await ref.read(appStateProvider.notifier).setToken(savedUser.token!);
-        }
+      state = UserState.ready(finalUser);
+      debugPrint("✔️ Profil hibrit olarak güncellendi.");
 
-        // 🔥 AppState PROFIL Güncelleme (KRİTİK)
-        final appState = ref.read(appStateProvider.notifier);
-        await appState.setLoggedIn(true);
-        //await appState.setIsNewUser(false);
-        await appState.setHasSeenProfileDetails(true);
-
-        state = UserState.ready(savedUser);
-        return;
+    } catch (e) {
+      debugPrint("❌ Update Error: $e");
+      if (previousUser != null) {
+        state = UserState.ready(previousUser);
       }
-
-      // --------------------- UPDATE USER ---------------------
-      try {
-        savedUser = await repository.updateUser(updated);
-      } on DioException catch (e) {
-        final msg = e.response?.data["message"] ?? "Profil güncellenemedi.";
-        state = UserState.error(msg);
-        return;
-      }
-
-      state = UserState.ready(savedUser);
-      debugPrint("✔️ Profil güncellendi");
-    }
-
-    catch (e) {
-      debugPrint("❌ Genel updateUser ERROR: $e");
-      state = UserState.error(e.toString());
-      return;
+      rethrow;
     }
   }
 
@@ -152,15 +130,27 @@ class UserNotifier extends StateNotifier<UserState> {
 // ------------------------------------------------------------------
 // EMAIL OTP DOĞRULA
 // ------------------------------------------------------------------
-  Future<UserModel> verifyEmailOtp(String email, String otp) async {
-    print("📧 [USER] Email OTP VERIFY → email=$email, code=$otp");
+  Future<bool> verifyEmailOtp(String email, String otp) async {
+    try {
+      print("📧 [USER] Email OTP VERIFY → email=$email, code=$otp");
 
-    final user = await repository.verifyEmailOtpCode(email, otp);
+      // 1. Doğrulamayı yap
+      await repository.verifyEmailOtpCode(email, otp);
 
-    print("📧 [USER] Email OTP VERIFIED → ${user.email}");
+      // 2. 🔥 EN GARANTİ YOL: Backend'den en güncel profil bilgilerini tekrar çek
+      // Böylece email_verified_at kesinlikle dolu gelir.
+      final updatedUser = await repository.fetchUser();
 
-    state = UserState.ready(user);
-    return user;
+      // 3. State'i yeni gelen veriyle güncelle
+      state = UserState.ready(updatedUser);
+
+      print("📧 [USER] Email OTP VERIFIED & STATE UPDATED → ${updatedUser.email}");
+      return true;
+    } catch (e) {
+      print("❌ [USER] Email OTP VERIFY ERROR → $e");
+      // Hata durumunda state'i bozma, sadece false dön ki UI hata (kırmızı) göstersin
+      return false;
+    }
   }
 
 

@@ -19,6 +19,8 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('PRODUCT CARD BUILD: id=${product.id} name=${product.name} — context mounted?');
+
     final oldPrice = product.listPrice;
     final newPrice = product.salePrice;
 

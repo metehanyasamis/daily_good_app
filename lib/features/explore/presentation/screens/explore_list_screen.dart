@@ -1,10 +1,14 @@
-// Refactored ExploreListScreen
-// - Backend-driven category & sort sheets (Apply button, space for custom nav bar)
-// - Safe handling of sortByMapProvider types (String? vs String)
-// - Products -> filteredProducts sync via ref.listen and initial application
-// - Robust initState handling for extras (home -> explore)
-// NOTE: This file depends on your existing providers/widgets (addressProvider, productsProvider,
-// categoryProvider, sortByMapProvider, exploreStateProvider, ProductCard, CategoryFilterSheet, ExploreFilterSheet).
+// lib/features/explore/presentation/screens/explore_list_screen.dart
+// Full refactor: safe provider reads, backend-driven sort/category sheets, sanitize usage,
+// avoid bottom-bar overlap for sheets, robust init + filtering behavior.
+//
+// NOTE: This file expects these symbols to exist in your project:
+//  - addressProvider, productsProvider, categoryProvider, exploreStateProvider, sortByMapProvider
+//  - ProductModel, ProductCard, CategoryFilterOption, ExploreFilterOption
+//  - CustomHomeAppBar, CustomToggleButton, CategoryFilterSheet, ExploreFilterSheet
+//
+// If some provider/type names differ, adapt imports/usages accordingly.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -43,10 +47,9 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
   SortDirection sortDirection = SortDirection.ascending;
 
   CategoryFilterOption selectedCategory = CategoryFilterOption.all;
-  String? selectedCategoryId; // backend id if any
+  String? selectedCategoryId; // backend category id if available
 
   final TextEditingController _searchController = TextEditingController();
-
   List<ProductModel> filteredProducts = [];
 
   // ---------------------------
@@ -60,6 +63,7 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
       final address = ref.read(addressProvider);
       if (!address.isSelected) return;
 
+      // parse route extra from home -> explore navigation
       final routeState = GoRouterState.of(context);
       final dynamic extra = routeState.extra;
       String? categoryId;
@@ -71,15 +75,15 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
         categoryId = extra.toString();
       }
 
-      if (categoryId != null) {
-        debugPrint('🏷️ HOME → EXPLORE categoryId = $categoryId');
+      // fallback to widget.initialCategory (legacy enum) if provided
+      categoryId ??= widget.initialCategory != null ? _mapCategoryToCategoryId(widget.initialCategory!) : null;
 
+      final apiSort = _apiSortFor(selectedFilter) ?? 'created_at';
+      final sortOrder = sortDirection == SortDirection.ascending ? 'asc' : 'desc';
+
+      if (categoryId != null && categoryId.isNotEmpty) {
         selectedCategoryId = categoryId;
         ref.read(exploreStateProvider.notifier).setCategoryId(categoryId);
-
-        final apiSort = _apiSortFor(selectedFilter) ?? 'created_at';
-        final sortOrder = sortDirection == SortDirection.ascending ? 'asc' : 'desc';
-
         ref.read(productsProvider.notifier).refresh(
           latitude: address.lat,
           longitude: address.lng,
@@ -88,9 +92,6 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
           sortOrder: sortOrder,
         );
       } else {
-        final apiSort = _apiSortFor(selectedFilter) ?? 'created_at';
-        final sortOrder = sortDirection == SortDirection.ascending ? 'asc' : 'desc';
-
         ref.read(productsProvider.notifier).loadOnce(
           latitude: address.lat,
           longitude: address.lng,
@@ -103,7 +104,6 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
 
   @override
   void dispose() {
-    debugPrint('💀 ExploreListScreen dispose HASH=${hashCode}');
     _searchController.dispose();
     super.dispose();
   }
@@ -148,7 +148,7 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
   // ---------------------------
   // HELPERS
   // ---------------------------
-  String? mapCategoryToCategoryId(CategoryFilterOption c) {
+  String? _mapCategoryToCategoryId(CategoryFilterOption c) {
     switch (c) {
       case CategoryFilterOption.all:
         return null;
@@ -166,35 +166,41 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
         return 'vegan';
       case CategoryFilterOption.glutenFree:
         return 'gluten_free';
-      default:
-        return null;
     }
   }
 
-  // Read sort map from provider safely and return Map<ExploreFilterOption, String?>.
-  Map<ExploreFilterOption, String?> _readSortOptionsSafe() {
-    final dynamic raw = ref.read(sortByMapProvider);
-    final Map<ExploreFilterOption, String?> result = {};
-    if (raw == null) return result;
+  // Read raw sort map from provider as Map<ExploreFilterOption,String?> safely.
+  Map<ExploreFilterOption, String?> _readSortOptionsRaw() {
+    final dynamic raw = ref.watch(sortByMapProvider);
+    if (raw == null) return <ExploreFilterOption, String?>{};
+    if (raw is Map<ExploreFilterOption, String?>) return raw;
     if (raw is Map) {
+      final out = <ExploreFilterOption, String?>{};
       raw.forEach((k, v) {
         try {
-          if (k is ExploreFilterOption) {
-            result[k] = v?.toString();
-          }
+          if (k is ExploreFilterOption) out[k] = v?.toString();
         } catch (_) {}
       });
+      return out;
     }
-    return result;
+    return <ExploreFilterOption, String?>{};
   }
 
-  // Return API key (nullable) for currently selectedFilter
+  // Return a non-null map by dropping null values (for consumers that require non-null strings).
+  Map<ExploreFilterOption, String> _readSortOptionsNonNull() {
+    final raw = _readSortOptionsRaw();
+    return Map.fromEntries(
+      raw.entries.where((e) => e.value != null).map((e) => MapEntry(e.key, e.value!)),
+    );
+  }
+
+  // Return API key (nullable) for an ExploreFilterOption
   String? _apiSortFor(ExploreFilterOption opt) {
-    final map = _readSortOptionsSafe();
-    return map[opt];
+    final raw = _readSortOptionsRaw();
+    return raw[opt];
   }
 
-  // Extract categories list safely
+  // Extract categories list safely from provider value
   List<dynamic> _extractCategories(dynamic catsRaw) {
     if (catsRaw == null) return [];
     if (catsRaw is List) return catsRaw;
@@ -208,15 +214,12 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     return [];
   }
 
-  // Find category name by backend id. If not found, return fallback label based on enum.
+  // Resolve category name from backend id; if not available return friendly enum label or 'Yükleniyor...'
+// use your central categoryLabel function here
   String _categoryNameFromId(String? id, dynamic catsRaw) {
-    if (id == null || id.isEmpty) {
-      // legacy: show friendly label for enum-based selection
-      return _categoryLabel(selectedCategory);
-    }
     final list = _extractCategories(catsRaw);
-    if (list.isEmpty) return _categoryLabel(selectedCategory);
-    try {
+    // if backend selected id exists, try to find a backend name
+    if (id != null && id.isNotEmpty) {
       final found = list.firstWhere((c) {
         try {
           final cid = (c as dynamic).id;
@@ -225,14 +228,23 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
           return false;
         }
       }, orElse: () => null);
-      if (found == null) return _categoryLabel(selectedCategory);
-      final name = ((found as dynamic).name ?? (found as dynamic).title ?? id).toString();
-      return name;
-    } catch (_) {
-      return _categoryLabel(selectedCategory);
+      if (found != null) {
+        return ((found as dynamic).name ?? (found as dynamic).title ?? id).toString();
+      }
+      // if not found, fallthrough to id string
+      return id;
     }
+
+    // no backend id -> if user chose an enum category (not 'all') show that friendly label
+    if (selectedCategory != CategoryFilterOption.all) {
+      return categoryLabel(selectedCategory);
+    }
+
+    // no id and enum is 'all' -> if we have categories list then "Hepsi", else "Yükleniyor..."
+    return list.isNotEmpty ? 'Hepsi' : 'Yükleniyor...';
   }
 
+  /*
   String _categoryLabel(CategoryFilterOption c) {
     switch (c) {
       case CategoryFilterOption.all:
@@ -246,13 +258,15 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
       case CategoryFilterOption.market:
         return 'Market & Manav';
       case CategoryFilterOption.vegetarian:
-        return 'Vejetaryen';
+        return 'Vejetaryan';
       case CategoryFilterOption.vegan:
         return 'Vegan';
       case CategoryFilterOption.glutenFree:
         return 'Glutensiz';
     }
   }
+
+   */
 
   String _sortLabel(ExploreFilterOption opt) {
     switch (opt) {
@@ -266,6 +280,8 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
         return 'Puan';
     }
   }
+
+
 
   // ---------------------------
   // UI: backend-driven category sheet (returns selected id or null)
@@ -281,7 +297,7 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
           return SafeArea(
             top: false,
             child: FractionallySizedBox(
-              heightFactor: 0.80, // leave space for custom bottom bar
+              heightFactor: 0.80,
               child: Container(
                 decoration: const BoxDecoration(
                   color: Colors.white,
@@ -333,11 +349,11 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
   }
 
   // ---------------------------
-  // UI: backend-driven SORT sheet (returns map {'opt': ExploreFilterOption, 'dir': SortDirection})
+  // UI: backend-driven SORT sheet (returns {opt, dir})
+  // Accepts nullable-value map (provider may return Map<ExploreFilterOption, String?>)
   // ---------------------------
-  Future<Map<String, dynamic>?> _showBackendSortSheet(Map<ExploreFilterOption, String?> sortOptions) {
-    // If backend does not provide any mapping, we still show the local options (fallback)
-    final options = sortOptions.keys.toList();
+  Future<Map<String, dynamic>?> _showBackendSortSheet(Map<ExploreFilterOption, String?>? sortOptions) {
+    final options = (sortOptions?.keys.toList() ?? []);
     final available = options.isNotEmpty ? options : ExploreFilterOption.values;
 
     return showModalBottomSheet<Map<String, dynamic>>(
@@ -443,9 +459,22 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     }
 
     // read sort options safely and pass to header & sort sheet
-    final sortOptions = _readSortOptionsSafe();
+    final sortOptionsRaw = _readSortOptionsRaw();
+    final sortOptionsNonNull = _readSortOptionsNonNull();
 
-    debugPrint('EXPLORE LIST BUILD products=${productsState.products.length} filtered=${filteredProducts.length} loading=${productsState.isLoadingList}');
+    // compute current category label using categoriesRaw safely
+    final currentCategoryId = selectedCategoryId ?? ref.read(exploreStateProvider).categoryId;
+    final currentCategoryLabel = _categoryNameFromId(currentCategoryId, categoriesRaw);
+
+    debugPrint(
+      'EXPLORE LIST BUILD '
+          'products=${productsState.products.length} '
+          'filtered=${filteredProducts.length} '
+          'loading=${productsState.isLoadingList} '
+          'selectedCategoryId=$selectedCategoryId '
+          'exploreState.categoryId=${ref.read(exploreStateProvider).categoryId} '
+          'sortOptions=${sortOptionsNonNull.isEmpty ? "empty" : sortOptionsNonNull}',
+    );
 
     if (productsState.isLoadingList && filteredProducts.isEmpty) {
       return const Scaffold(
@@ -467,13 +496,14 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
         children: [
           CustomScrollView(
             slivers: [
-              _buildHeader(categoriesRaw, address, sortOptions, _categoryNameFromId(selectedCategoryId, categoriesRaw)),
+              _buildHeader(categoriesRaw, address, sortOptionsRaw, currentCategoryLabel),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                         (context, i) {
                       final p = filteredProducts[i];
+                      debugPrint('SLIVER BUILD: index=$i id=${p.id} name=${p.name}');
                       return ProductCard(
                         product: p,
                         onTap: () => context.push('/product-detail/${p.id}'),
@@ -496,11 +526,11 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     );
   }
 
-  // Header builder with injected sortOptions and currentCategoryLabel
+  // Header builder with injected nullable sortOptionsRaw (provider may have null values)
   SliverPersistentHeader _buildHeader(
       dynamic categoriesRaw,
       dynamic address,
-      Map<ExploreFilterOption, String?> sortOptions,
+      Map<ExploreFilterOption, String?> sortOptionsRaw,
       String currentCategoryLabel,
       ) {
     final categoriesList = _extractCategories(categoriesRaw);
@@ -524,7 +554,7 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
 
         // SORT → open backend/constructed sheet (Apply inside sheet)
         onSortChanged: (opt) async {
-          final res = await _showBackendSortSheet(sortOptions);
+          final res = await _showBackendSortSheet(sortOptionsRaw);
           if (res == null) return;
 
           final picked = res['opt'] as ExploreFilterOption;
@@ -603,7 +633,7 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
           );
           if (res == null) return;
 
-          final categoryId = mapCategoryToCategoryId(res);
+          final categoryId = _mapCategoryToCategoryId(res);
           setState(() {
             selectedCategory = res;
             selectedCategoryId = categoryId;

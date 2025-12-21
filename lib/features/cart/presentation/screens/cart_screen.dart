@@ -152,6 +152,8 @@ class _CartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final storeName = items.first.shopName; // domain’den geliyor (backend store.name)
     final logo = items.first.image; // domain’de brand.logo
+    final logoRaw = logo; // items.first.image or wherever logo comes from
+    final logoUrl = sanitizeImageUrl(logoRaw);
 
     return Container(
       decoration: BoxDecoration(
@@ -182,15 +184,26 @@ class _CartCard extends StatelessWidget {
                   border: Border.all(color: AppColors.primaryDarkGreen),
                 ),
                 child: ClipOval(
-                  child: Image.network(
-                    resolveImageUrl(logo),
+                  child: logoUrl == null
+                      ? const Icon(Icons.store, size: 28)
+                      : Image.network(
+                    logoUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.store, size: 28),
-                  )
+                    width: 50,
+                    height: 50,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(child: SizedBox(width:16, height:16, child: CircularProgressIndicator(strokeWidth:2)));
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.store, size: 28);
+                    },
+                  ),
                 ),
               ),
+
               const SizedBox(width: 10),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

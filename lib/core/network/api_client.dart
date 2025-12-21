@@ -63,6 +63,29 @@ class ApiClient {
     return response;
   }
 
+// --------------------------------------------------------------
+  // put
+  // -------------------------------------------------------------
+  Future<http.Response> put(String endpoint, {Map<String, dynamic>? body}) async {
+    final url = Uri.parse("$baseUrl$endpoint");
+
+    // 🔥 BURASI DÜZELDİ: readToken() olarak değiştirildi
+    final savedToken = await PrefsService.readToken();
+
+    final response = await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (savedToken != null) 'Authorization': 'Bearer $savedToken',
+      },
+      body: body != null ? jsonEncode(body) : null,
+    );
+
+    _handleStatus(response); // Hata yönetimini de diğerleri gibi ekleyelim
+    return response;
+  }
+
   // --------------------------------------------------------------
   // ERROR MANAGEMENT
   // --------------------------------------------------------------

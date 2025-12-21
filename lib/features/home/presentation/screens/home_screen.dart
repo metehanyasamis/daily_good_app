@@ -15,6 +15,7 @@ import '../domain/providers/home_state_provider.dart';
 import '../widgets/home_active_order_box.dart';
 import '../widgets/home_banner_slider.dart';
 import '../widgets/home_category_bar.dart';
+import '../widgets/home_email_warning_banner.dart';
 import '../widgets/home_product_list.dart';
 import '../widgets/home_section_title.dart';
 
@@ -165,6 +166,9 @@ class HomeContent extends ConsumerWidget {
         bottom: kBottomNavigationBarHeight + 24,
       ),
       children: [
+        // 📧 E-POSTA WARNING BANNER BURADA
+        const HomeEmailWarningBanner(),
+
         const HomeSectionTitle(title: "Hemen Yanımda"),
         HomeProductList(products: hemenYaninda),
 

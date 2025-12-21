@@ -1,6 +1,4 @@
 // lib/features/product/domain/products_notifier.dart
-// Güncelleme: loadOnce / refresh artık sortBy / sortOrder alıyor ve repo'ya geçiriyor.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repository/product_repository.dart';
@@ -15,9 +13,6 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
   final ProductRepository repo;
   ProductsNotifier(this.repo) : super(const ProductsState());
 
-  // =============================
-  // LIST → GET /products/category
-  // =============================
   Future<void> loadOnce({
     String? categoryId,
     double? latitude,
@@ -31,10 +26,8 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     String sortBy = 'created_at',
     String sortOrder = 'desc',
   }) async {
-    // 🔐 ÇİFT KORUMA
     if (state.initialized || state.isLoadingList) {
-      debugPrint(
-          '⛔ loadOnce SKIP (initialized=${state.initialized}, loading=${state.isLoadingList})');
+      debugPrint('⛔ loadOnce SKIP (initialized=${state.initialized}, loading=${state.isLoadingList})');
       return;
     }
 
@@ -67,8 +60,7 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     String sortBy = 'created_at',
     String sortOrder = 'desc',
   }) async {
-    debugPrint(
-        '📡 BACKEND REFRESH → categoryId=$categoryId lat=$latitude lng=$longitude sortBy=$sortBy sortOrder=$sortOrder');
+    debugPrint('📡 BACKEND REFRESH → categoryId=$categoryId lat=$latitude lng=$longitude sortBy=$sortBy sortOrder=$sortOrder');
 
     await _fetchList(
       categoryId: categoryId,
@@ -103,7 +95,8 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     state = state.copyWith(isLoadingList: true, clearError: true);
 
     try {
-      final res = await repo.fetchProducts(
+      // Use the flat helper to get a List<ProductModel> (handles grouped response)
+      final parsedProducts = await repo.fetchProductsFlat(
         categoryId: categoryId,
         latitude: latitude,
         longitude: longitude,
@@ -119,12 +112,26 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
         yarin: yarin,
       );
 
+      debugPrint('PRODUCTS NOTIFIER: parsedProducts length = ${parsedProducts.length}');
+      if (parsedProducts.isNotEmpty) {
+        // try to print some identifying fields safely
+        final first = parsedProducts.first;
+        try {
+          debugPrint('PRODUCTS NOTIFIER: sample product -> id=${(first as dynamic).id}, name=${(first as dynamic).name}');
+        } catch (_) {
+          debugPrint('PRODUCTS NOTIFIER: sample product -> ${first.toString()}');
+        }
+      }
+
       state = state.copyWith(
-        products: res.products,
+        products: parsedProducts,
         isLoadingList: false,
         initialized: markInitialized ? true : state.initialized,
       );
-    } catch (e) {
+
+      debugPrint('PRODUCTS NOTIFIER: state.products length AFTER set -> ${state.products.length}');
+    } catch (e, st) {
+      debugPrint('PRODUCTS NOTIFIER: fetch error -> $e\n$st');
       state = state.copyWith(
         isLoadingList: false,
         error: e.toString(),
@@ -132,9 +139,7 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
     }
   }
 
-  // =========================
-  // DETAIL → GET /products/{id}
-  // =========================
+  // detail...
   Future<void> fetchDetail(String productId) async {
     state = state.copyWith(isLoadingDetail: true, clearError: true);
 

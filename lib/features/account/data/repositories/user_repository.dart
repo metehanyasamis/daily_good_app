@@ -11,6 +11,8 @@ abstract class UserRepository {
   Future<UserModel> verifyEmailOtpCode(String email, String code);
   Future<UserModel> updatePhoneNumber(String phone);
   Future<void> deleteAccount();
+  Future<void> sendEmailChangeOtp(String newEmail);
+  Future<UserModel> verifyEmailChangeOtp(String email, String code);
 }
 
 class UserRepositoryImpl implements UserRepository {
@@ -43,24 +45,24 @@ class UserRepositoryImpl implements UserRepository {
   // ----------------------------------------------------------------------
   @override
   Future<UserModel> updateUser(UserModel data) async {
-    print("🌐 [API] POST /customer/auth/update-profile");
+    print("🌐 [API] PUT /customer/profile");
 
     final body = {
       "first_name": data.firstName,
       "last_name": data.lastName,
-      "email": data.email,
+      // Dökümanda email ve birth_date yazmıyor,
+      // eğer hata alırsan sadece ad-soyad bırakabilirsin.
       "birth_date": data.birthDate,
     };
 
-    print("➡️ BODY: $body");
-
-    final response = await api.post("/customer/auth/update-profile", body: body);
+    // Artık 'put' metodu tanımlı olduğu için hata vermeyecek
+    final response = await api.put("/customer/profile", body: body);
 
     print("⬅️ STATUS: ${response.statusCode}");
     print("⬅️ BODY: ${response.body}");
 
     if (response.statusCode != 200) {
-      throw Exception("Profil güncellenemedi");
+      throw Exception("Profil güncellenemedi. Hata kodu: ${response.statusCode}");
     }
 
     final decoded = jsonDecode(response.body);
@@ -93,25 +95,26 @@ class UserRepositoryImpl implements UserRepository {
 // ----------------------------------------------------------------------
   @override
   Future<UserModel> verifyEmailOtpCode(String email, String code) async {
-    print("🌐 [API] POST /customer/auth/verify-email-otp");
-    print("➡️ EMAIL=$email, CODE=$code");
-
     final response = await api.post(
       "/customer/auth/verify-email-otp",
-      body: {
-        "email": email,
-        "code": code,
-      },
+      body: {"email": email, "code": code},
     );
-
-    print("⬅️ STATUS=${response.statusCode}");
-    print("⬅️ BODY=${response.body}");
 
     if (response.statusCode != 200) {
       throw Exception("OTP doğrulanamadı");
     }
 
     final decoded = jsonDecode(response.body);
+
+    // 🔥 SORUN BURADAYDI: Backend data'yı null gönderiyor.
+    // Eğer data null ise mevcut kullanıcıyı çekmek için /me çağrısı yapmalıyız
+    // veya sadece başarılı kabul etmeliyiz.
+
+    if (decoded["data"] == null) {
+      // Backend güncel kullanıcıyı dönmüyorsa, biz manuel /me çağırıp güncel halini alalım
+      return await fetchUser();
+    }
+
     return UserModel.fromJson(decoded["data"]);
   }
 
@@ -137,6 +140,44 @@ class UserRepositoryImpl implements UserRepository {
     final decoded = jsonDecode(response.body);
     return UserModel.fromJson(decoded["data"]);
   }
+
+  // ----------------------------------------------------------------------
+  // POST /customer/profile/email/send-otp
+  // ----------------------------------------------------------------------
+  @override
+   Future<void> sendEmailChangeOtp(String newEmail) async {
+    print("🌐 [API] POST /customer/profile/email/send-otp");
+
+    final response = await api.post(
+      "/customer/profile/email/send-otp",
+      body: {"email": newEmail},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Kod gönderilemedi: ${response.body}");
+    }
+  }
+
+  // ----------------------------------------------------------------------
+  // POST /customer/profile/email/verify-otp
+  // ----------------------------------------------------------------------
+  @override
+  Future<UserModel> verifyEmailChangeOtp(String email, String code) async {
+    print("🌐 [API] POST /customer/profile/email/verify-otp");
+
+    final response = await api.post(
+      "/customer/profile/email/verify-otp",
+      body: {"email": email, "code": code},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Kod doğrulanamadı.");
+    }
+
+    final decoded = jsonDecode(response.body);
+    return UserModel.fromJson(decoded["data"]);
+  }
+
 
   // ----------------------------------------------------------------------
   // DELETE /customer/auth/delete

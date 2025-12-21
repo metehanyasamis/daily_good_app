@@ -41,13 +41,14 @@ class ProductModel {
       stock: json["stock"] ?? 0,
       imageUrl: normalizeImageUrl(json["image_url"]),
       store: json["store"] != null
-          ? StoreSummary.fromJson(json["store"])
-          : StoreSummary(
-        id: "",
-        name: "",
-        address: "",
-        imageUrl: "",
-      ),
+          ? StoreSummary(
+        id: json["store"]["id"]?.toString() ?? "",
+        name: json["store"]["name"] ?? "",
+        address: json["store"]["address"] ?? "",
+        // Store'un kendi görselini de normalize ediyoruz
+        imageUrl: normalizeImageUrl(json["store"]["image_url"] ?? json["store"]["banner_image_url"]),
+      )
+          : StoreSummary(id: "", name: "", address: "", imageUrl: ""),
       startHour: json["start_hour"] ?? "",
       endHour: json["end_hour"] ?? "",
       startDate: json["start_date"] ?? "",
@@ -72,18 +73,20 @@ String normalizeImageUrl(dynamic raw) {
   final url = raw.toString().trim();
   if (url.isEmpty) return "";
 
-  // ❌ storage + https://... gibi BOZUK URL
-  if (url.contains('/storage/http')) {
-    final idx = url.indexOf('/storage/');
-    return url.substring(idx + 9); // '/storage/'.length = 9
+  // 1. Durum: İç içe geçmiş bozuk URL kontrolü
+  // Eğer string içinde "http" ifadesi birden fazla geçiyorsa veya
+  // storage kelimesinden sonra tekrar http geliyorsa en sondaki http'yi al.
+  if (url.contains('http') && url.lastIndexOf('http') > 0) {
+    return url.substring(url.lastIndexOf('http'));
   }
 
-
-  // ✅ zaten tam URL
-  if (url.startsWith('http://') || url.startsWith('https://')) {
+  // 2. Durum: Zaten tek bir tam URL ise
+  if (url.startsWith('http')) {
     return url;
   }
 
-  // ✅ sadece path geldiyse
-  return 'https://dailygood.dijicrea.net/storage/$url';
+  // 3. Durum: Sadece dosya yolu (path) ise
+  // Başındaki eğik çizgiyi temizle ki çift slash olmasın
+  final cleanPath = url.startsWith('/') ? url.substring(1) : url;
+  return 'https://dailygood.dijicrea.net/storage/$cleanPath';
 }

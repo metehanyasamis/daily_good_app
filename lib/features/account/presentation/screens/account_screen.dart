@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/data/prefs_service.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/email_verification_dialog.dart';
 import '../../../../core/widgets/info_row_widget.dart';
 
 import '../../../auth/domain/providers/auth_notifier.dart';
@@ -13,6 +12,7 @@ import '../../../saving/model/saving_model.dart';
 import '../../../saving/providers/saving_provider.dart';
 import '../../domain/providers/user_notifier.dart';
 import '../../domain/states/user_state.dart';
+import '../widgets/email_otp_dialog.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -108,30 +108,21 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   // -------------------------------------------------------------
+// AccountScreen içindeki mevcut metodu bununla değiştir:
   Future<void> _verifyEmail(String email) async {
     final notifier = ref.read(userNotifierProvider.notifier);
 
+    // 1. Önce e-posta kodunu gönder
     await notifier.sendEmailVerification(email);
 
-    final otp = await showDialog<String>(
-      context: context,
-      builder: (_) => EmailVerificationDialog(email: email),
-    );
-
-    if (otp == null || otp.isEmpty) return;
-
-    try {
-      await notifier.verifyEmailOtp(email, otp);
-
-      final refreshedUser = ref.read(userNotifierProvider).user;
-
-      if (refreshedUser?.isEmailVerified == true) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("E-posta doğrulandı")));
-      }
-    } catch (_) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Kod geçersiz')));
+    // 2. Senin yeni BottomSheet'ini aç (EmailVerificationDialog yerine EmailOtpSheet)
+    if (mounted) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => EmailOtpSheet(email: email), // Senin yeni sheet'in
+      );
     }
   }
 
@@ -148,16 +139,19 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Widget build(BuildContext context) {
     final userState = ref.watch(userNotifierProvider);
     final saving = ref.watch(savingProvider);
+    final user = userState.user;
 
-// 1) LOADING
-    if (userState.status == UserStatus.loading) {
+    // 1) İLK YÜKLEME KONTROLÜ
+    // Eğer elimizde hiç user yoksa ve hala yükleniyorsa o zaman tam ekran loading göster.
+    if (user == null && userState.status == UserStatus.loading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-// 2) ERROR
-    if (userState.status == UserStatus.error) {
+    // 2) HATA KONTROLÜ
+    // Eğer user hala null ise ve hata varsa hata ekranı göster.
+    if (user == null && userState.status == UserStatus.error) {
       return Scaffold(
         body: Center(
           child: Text(
@@ -169,14 +163,17 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       );
     }
 
-// 3) SUCCESS
-    final user = userState.user;
+    // 3) GÜVENLİK KONTROLÜ
+    // Eğer ne hata var ne user, yine loading.
     if (user == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
+    // BURADAN SONRASI: user artık kesinlikle null değil.
+    // Profil güncellense bile (loading olsa bile) eski veri ekranda kalmaya devam eder,
+    // böylece 'puf' diye uçma veya geri gelince patlama olmaz.
 
     return Scaffold(
       appBar: AppBar(
@@ -184,10 +181,15 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         centerTitle: true,
         backgroundColor: AppColors.primaryDarkGreen,
         foregroundColor: Colors.white,
+        // Güncelleme sırasında minik bir gösterge istersen buraya ekleyebilirsin
+        bottom: userState.status == UserStatus.loading
+            ? const PreferredSize(
+            preferredSize: Size.fromHeight(2),
+            child: LinearProgressIndicator(minHeight: 2))
+            : null,
       ),
       body: RefreshIndicator(
-        onRefresh: () async =>
-            ref.read(userNotifierProvider.notifier).loadUser(),
+        onRefresh: () async => ref.read(userNotifierProvider.notifier).loadUser(),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
