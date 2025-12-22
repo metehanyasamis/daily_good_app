@@ -22,6 +22,7 @@ class PaymentScreen extends ConsumerStatefulWidget {
 class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isProcessing = false;
+  bool _isPaymentSuccessful = false;
 
   // UI için sahte kart alanları (backend'e göndermiyoruz şimdilik)
   final _cardNumberController = TextEditingController();
@@ -40,24 +41,28 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cartItems = ref.watch(cartProvider); // List<CartItem>
+    final cartItems = ref.watch(cartProvider);
 
-    if (cartItems.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          backgroundColor: AppColors.primaryDarkGreen,
-          title: const Text(
-            'Ödeme',
-            style: TextStyle(color: Colors.white),
-          ),
-          centerTitle: true,
-          iconTheme: const IconThemeData(color: Colors.white),
-        ),
-        body: const Center(
-          child: Text('Sepetiniz boş.'),
-        ),
-      );
-    }
+  // ✅ DÜZELTME: Eğer ödeme başarılıysa, sepet boş olsa bile bu bloğa girme
+  if (cartItems.isEmpty && !_isPaymentSuccessful) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.primaryDarkGreen,
+        title: const Text('Ödeme', style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+      ),
+      body: const Center(child: Text('Sepetiniz boş.')),
+    );
+  }
+
+  // Ödeme başarılıysa ve yönlendirme bekleniyorsa sadece yükleniyor göster
+  // veya mevcut ekranın kalmasını sağla
+  if (_isPaymentSuccessful) {
+    return const Scaffold(
+      backgroundColor: AppColors.primaryDarkGreen,
+      body: Center(child: CircularProgressIndicator(color: Colors.white)),
+    );
+  }
 
     final totalAmount = _calculateTotal(cartItems);
 
@@ -136,7 +141,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         },
         items: cartItems.map((c) {
           return CreateOrderItemRequest(
-            productId: c.productId, // 🔥 DOĞRU
+            productId: c.productId,
             quantity: c.quantity,
             unitPrice: c.price,
             totalPrice: c.price * c.quantity,
@@ -146,17 +151,36 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
       final order = await repo.createOrder(request);
 
-      ref.read(cartProvider.notifier).clearCart();
+      // ✅ Başarı durumunda flag'i set et
+      if (mounted) {
+        setState(() {
+          _isPaymentSuccessful = true;
+        });
+      }
+
+      // Sepeti temizle
+      await ref.read(cartProvider.notifier).clearCart();
 
       if (!mounted) return;
-      context.go('/order-success', extra: order.id);
+
+      final orderId = order.id.toString();
+      context.go('/order-success?id=$orderId');
+
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ödeme başarısız: $e')),
-      );
+      // ❌ Hata durumunda flag'leri sıfırla
+      if (mounted) {
+        setState(() {
+          _isPaymentSuccessful = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ödeme başarısız: $e')),
+        );
+      }
     } finally {
-      if (mounted) setState(() => _isProcessing = false);
+      // 🛡️ Her durumda loading'i kapat
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
 

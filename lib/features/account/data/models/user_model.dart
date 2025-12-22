@@ -56,8 +56,8 @@ class UserModel {
       email: json["email"],
       birthDate: json["birth_date"],
 
-      isEmailVerified: false, //json["email_verified_at"] != null || (json["isEmailVerified"] == true),
-      isPhoneVerified: true, //json["phone_verified_at"] != null,
+      isEmailVerified: json["email_verified_at"] != null || (json["isEmailVerified"] == true),
+      isPhoneVerified: json["phone_verified_at"] != null,
 
       latitude: json["latitude"] != null
           ? double.tryParse(json["latitude"].toString())

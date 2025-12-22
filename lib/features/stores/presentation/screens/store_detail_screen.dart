@@ -68,7 +68,17 @@ class StoreDetailScreen extends ConsumerWidget {
                   children: [
                     const SizedBox(height: 12),
                     // içerik
-                    StoreDetailsContent(storeDetail: store),
+                    StoreDetailsContent(
+                      storeDetail: store,
+                      onProductTap: (product) {
+                        // Ürün detay ekranına yönlendiriyoruz
+                        // GoRouter kullanıyorsan:
+                        context.push('/product-detail/${product.id}');
+
+                        // Eğer route yapın farklıysa (örneğin nested route):
+                        // context.pushNamed('product_detail', pathParameters: {'id': product.id});
+                      },
+                    ),
                     const SizedBox(height: 12),
                     if (store.workingHours != null &&
                         store.workingHours!.days.isNotEmpty)

@@ -38,18 +38,28 @@ class MiniStoreCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // LOGO
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: store.imageUrl.isNotEmpty
-                    ? NetworkImage(store.imageUrl)
-                    : null,
-                onBackgroundImageError: (_, __) {
-                  // sessizce düş, UI bozulmasın
-                },
-                child: store.imageUrl.isEmpty
-                    ? const Icon(Icons.store, size: 18, color: Colors.grey)
-                    : null,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  shape: BoxShape.circle,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: store.imageUrl.isNotEmpty
+                      ? Image.network(
+                    store.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.store, size: 18, color: Colors.grey),
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(child: SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2)));
+                    },
+                  )
+                      : const Icon(Icons.store, size: 18, color: Colors.grey),
+                ),
               ),
 
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/delivery_date_formatter.dart';
 import '../../../../core/utils/image_utils.dart';
 import '../../../../core/widgets/navigation_link.dart';
 import '../../../product/data/models/product_model.dart';
@@ -124,110 +125,104 @@ class StoreDetailsContent extends StatelessWidget {
     );
   }
 
+// StoreDetailsContent.dart içindeki _productList metodunu bununla değiştir:
+
   Widget _productList(List<ProductModel> products) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Seni bekleyen lezzetler",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
+        const Text(
+          "Seni bekleyen lezzetler",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
 
         ...products.map((product) {
-          return GestureDetector(
-            onTap: () => onProductTap?.call(product),
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Builder(builder: (ctx) {
-                      // product.imageUrl modelde String (boş olabilir) — sanitizeImageUrl null dönebilir
-                      final safeUrl = sanitizeImageUrl(product.imageUrl?.isNotEmpty == true ? product.imageUrl : null);
-
-                      if (safeUrl == null) {
-                        // asset placeholder kullan
-                        return Image.asset(
-                          'assets/images/sample_food3.jpg',
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.cover,
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => onProductTap?.call(product),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    // 1. Ürün Görseli
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Builder(builder: (ctx) {
+                        final safeUrl = sanitizeImageUrl(product.imageUrl?.isNotEmpty == true ? product.imageUrl : null);
+                        if (safeUrl == null) {
+                          return Image.asset('assets/images/sample_food3.jpg', width: 48, height: 48, fit: BoxFit.cover);
+                        }
+                        return Image.network(
+                          safeUrl,
+                          width: 48, height: 48, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Image.asset('assets/images/sample_food3.jpg', width: 48, height: 48, fit: BoxFit.cover),
                         );
-                      }
-
-                      // network image with safe errorBuilder + loadingBuilder
-                      return Image.network(
-                        safeUrl,
-                        width: 44,
-                        height: 44,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return SizedBox(
-                            width: 44,
-                            height: 44,
-                            child: Center(
-                              child: SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          // log için
-                          debugPrint('IMAGE LOAD ERROR for ${product.imageUrl} -> $error');
-                          // kesinlikle uzun hata metni döndürme, sadece asset placeholder göster
-                          return Image.asset(
-                            'assets/images/sample_food3.jpg',
-                            width: 44,
-                            height: 44,
-                            fit: BoxFit.cover,
-                          );
-                        },
-                      );
-                    }),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      product.name ?? '',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      }),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        "${product.listPrice?.toStringAsFixed(2) ?? '-'} ₺",
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                          decoration: TextDecoration.lineThrough,
-                        ),
+                    const SizedBox(width: 12),
+
+                    // 2. Ürün Bilgileri (İsim + Teslimat Saati)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            product.name ?? '',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          // 🔥 Teslimat Saati Geri Geldi
+                          Text(
+                            formatDeliveryDate(product.startDate, product.startHour, product.endHour),
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ],
                       ),
-                      Text(
-                        "${product.salePrice?.toStringAsFixed(2) ?? '-'} ₺",
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryDarkGreen,
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // 3. Fiyat Bilgisi
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (product.listPrice != null && product.listPrice! > 0)
+                          Text(
+                            "${product.listPrice!.toStringAsFixed(2)} ₺",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        Text(
+                          "${product.salePrice?.toStringAsFixed(2) ?? '-'} ₺",
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryDarkGreen,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),            ),
+                      ],
+                    ),
+
+                    // 4. Ok İkonu
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: Colors.grey, size: 22),
+                  ],
+                ),
+              ),
+            ),
           );
         }),
       ],
@@ -252,53 +247,6 @@ class StoreDetailsContent extends StatelessWidget {
     );
   }
 
-
-  /*
-  Widget _ratingCard(AverageRatingsModel? ratings) {
-    if (ratings == null) return const SizedBox();
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("İşletme Değerlendirme",
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          _ratingRow("Servis", ratings.service),
-          _ratingRow("Ürün Miktarı", ratings.productQuantity),
-          _ratingRow("Ürün Lezzeti", ratings.productTaste),
-          _ratingRow("Ürün Çeşitliliği", ratings.productVariety),
-        ],
-      ),
-    );
-  }
-
-  Widget _ratingRow(String label, double rating) {
-    final r = rating.clamp(0, 5);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(width: 130, child: Text(label)),
-          Expanded(
-            child: LinearProgressIndicator(
-              value: r / 5,
-              backgroundColor: Colors.grey.shade200,
-              color: AppColors.primaryDarkGreen,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(r.toStringAsFixed(1)),
-        ],
-      ),
-    );
-  }
-
-   */
 }
 
 

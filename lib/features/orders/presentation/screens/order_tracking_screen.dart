@@ -110,9 +110,17 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           _buildOrderSummary(theme, order),
           const SizedBox(height: 16),
           const KnowMoreFull(forceBoxMode: true),
+          const SizedBox(height: 16),
           CustomButton(
             text: 'Teslim Almayı Onayla',
             onPressed: () => context.go('/thank-you'),
+            showPrice: false,
+          ),
+          const SizedBox(height: 16),
+
+          CustomButton(
+            text: 'Anasayfaya Dön',
+            onPressed: () => context.go('/home'),
             showPrice: false,
           ),
         ],

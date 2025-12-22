@@ -364,10 +364,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/notifications',
         builder: (_, _) => const NotificationScreen(),
       ),
+
       GoRoute(
         path: '/order-success',
-        builder: (_, _) => const OrderSuccessScreen(),
+        builder: (context, state) {
+          // queryParameters['id'] her zaman String döner veya null döner
+          final String? id = state.uri.queryParameters['id'];
+          return OrderSuccessScreen(orderId: id);
+        },
       ),
+
       GoRoute(
         path: '/order-tracking/:id',
         builder: (context, state) {

@@ -100,6 +100,7 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
     );
   }
 
+// ExploreMapScreen içindeki ilgili kısım:
   void _openHalfStoreSheet(StoreSummary store) {
     final productRepo = ref.read(productRepositoryProvider);
 
@@ -109,13 +110,12 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => HalfStoreSheet(
         store: store,
-        productsFuture: productRepo.fetchProducts(
-          storeId: store.id, // ✅ NET VE DOĞRU
-          perPage: 10,       // sheet için makul
+        // 🔥 DOĞRU ÇAĞRI: fetchProductsFlat tüm grupları birleştirip Liste döner
+        productsFuture: productRepo.fetchProductsFlat(
+          storeId: store.id,
+          perPage: 20,
         ),
-
-        onStoreTap: () =>
-            context.push('/store-detail/${store.id}'),
+        onStoreTap: () => context.push('/store-detail/${store.id}'),
       ),
     );
   }

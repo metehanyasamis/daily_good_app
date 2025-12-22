@@ -3,14 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/navigation_link.dart';
-import '../../../product/data/models/product_list_response.dart';
 import '../../../product/data/models/product_model.dart';
 import '../../../stores/data/model/store_summary.dart';
 
-
 class HalfStoreSheet extends StatelessWidget {
   final StoreSummary store;
-  final Future<ProductListResponse> productsFuture;
+  // 🔥 DEĞİŞİKLİK: ProductListResponse yerine direkt Liste bekliyoruz
+  final Future<List<ProductModel>> productsFuture;
   final VoidCallback onStoreTap;
 
   const HalfStoreSheet({
@@ -65,13 +64,10 @@ class HalfStoreSheet extends StatelessWidget {
                                   ),
                                   if (store.overallRating != null) ...[
                                     const SizedBox(width: 6),
-                                    const Icon(Icons.star,
-                                        size: 18, color: Colors.amber),
+                                    const Icon(Icons.star, size: 18, color: Colors.amber),
                                     Text(
-                                      store.overallRating!
-                                          .toStringAsFixed(1),
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w600),
+                                      store.overallRating!.toStringAsFixed(1),
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
                                     ),
                                   ],
                                 ],
@@ -79,19 +75,15 @@ class HalfStoreSheet extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 store.address,
-                                style: const TextStyle(
-                                    color: Colors.grey, fontSize: 13),
+                                style: const TextStyle(color: Colors.grey, fontSize: 13),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const Text(
                                 "Bugün teslim al",
-                                style: TextStyle(
-                                    color: Colors.grey, fontSize: 13),
+                                style: TextStyle(color: Colors.grey, fontSize: 13),
                               ),
-
                               const SizedBox(height: 6),
-
                               NavigationLink(
                                 address: store.address,
                                 latitude: store.latitude,
@@ -103,7 +95,6 @@ class HalfStoreSheet extends StatelessWidget {
                                   fontSize: 13,
                                 ),
                               ),
-
                             ],
                           ),
                         ),
@@ -117,54 +108,50 @@ class HalfStoreSheet extends StatelessWidget {
                   // ---------------- PRODUCTS ----------------
                   const Text(
                     "Seni bekleyen lezzetler",
-                    style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
 
-                  FutureBuilder<ProductListResponse>(
+                  FutureBuilder<List<ProductModel>>(
                     future: productsFuture,
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState ==
-                          ConnectionState.waiting) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(
-                              child: CircularProgressIndicator()),
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const SizedBox(
+                          height: 150,
+                          child: Center(child: CircularProgressIndicator()),
                         );
                       }
 
                       if (snapshot.hasError) {
-                        return const Text("Ürünler yüklenemedi");
+                        debugPrint("❌ SHEET HATASI: ${snapshot.error}");
+                        return const Center(child: Text("Ürünler yüklenemedi."));
                       }
 
-                      final products =
-                          snapshot.data?.products ?? <ProductModel>[];
+                      final products = snapshot.data ?? [];
 
                       if (products.isEmpty) {
-                        return const Text("Bugün ürün bulunmuyor");
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(40.0),
+                            child: Text("Bu dükkan için şu an ürün bulunamadı."),
+                          ),
+                        );
                       }
 
-                      return SizedBox(
-                        height: 300, // 👈 sheet içi alan (isteğe göre 250–400)
-                        child: ListView.separated(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          itemCount: products.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final product = products[index];
-
-                            return _MiniProductRow(
-                              product: product,
-                              onTap: () {
-                                if (product.id == null);
-                                context.push('/product-detail/${product.id}');
-                              },
-                            );
-                          },
-                        ),
+                      return ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: products.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final product = products[index];
+                          return _MiniProductRow(
+                            product: product,
+                            onTap: () => context.push('/product-detail/${product.id}'),
+                          );
+                        },
                       );
-
                     },
                   ),
                 ],
@@ -177,18 +164,10 @@ class HalfStoreSheet extends StatelessWidget {
   }
 }
 
-// ===================================================================
-// MINI PRODUCT ROW
-// ===================================================================
-
 class _MiniProductRow extends StatelessWidget {
   final ProductModel product;
   final VoidCallback onTap;
-
-  const _MiniProductRow({
-    required this.product,
-    required this.onTap,
-  });
+  const _MiniProductRow({required this.product, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +183,6 @@ class _MiniProductRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // 🍔 ÜRÜN İKONU / GÖRSEL
             Container(
               width: 48,
               height: 48,
@@ -212,12 +190,9 @@ class _MiniProductRow extends StatelessWidget {
                 color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.fastfood, size: 24),
+              child: const Icon(Icons.fastfood, size: 24, color: Colors.grey),
             ),
-
             const SizedBox(width: 12),
-
-            // 📄 ÜRÜN BİLGİLERİ
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,47 +201,31 @@ class _MiniProductRow extends StatelessWidget {
                     product.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
-
                   const SizedBox(height: 4),
-
-                  // ⏰ TESLİM SAATİ
-                  if (product.startHour != null && product.endHour != null)
-                    Text(
-                      "Bugün ${product.startHour} – ${product.endHour}",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
+                  Text(
+                    "Bugün ${product.startHour} – ${product.endHour}",
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
                 ],
               ),
             ),
-
             const SizedBox(width: 8),
-
-            // 💰 FİYAT + OK
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Eski fiyat (üstü çizili)
-                if (product.listPrice != null)
+                if (product.listPrice > 0)
                   Text(
-                    "${product.listPrice!.toStringAsFixed(2)} ₺",
+                    "${product.listPrice.toStringAsFixed(2)} ₺",
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
                       decoration: TextDecoration.lineThrough,
                     ),
                   ),
-
-                // Yeni fiyat
                 Text(
-                  "${product.salePrice?.toStringAsFixed(2)} ₺",
+                  "${product.salePrice.toStringAsFixed(2)} ₺",
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -275,15 +234,8 @@ class _MiniProductRow extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(width: 6),
-
-            // 👉 TIKLANABİLİRLİK OKU
-            const Icon(
-              Icons.chevron_right,
-              color: Colors.grey,
-              size: 22,
-            ),
+            const Icon(Icons.chevron_right, color: Colors.grey, size: 22),
           ],
         ),
       ),
@@ -291,13 +243,8 @@ class _MiniProductRow extends StatelessWidget {
   }
 }
 
-// ===================================================================
-// STORE AVATAR
-// ===================================================================
-
 class _StoreAvatar extends StatelessWidget {
   final String imageUrl;
-
   const _StoreAvatar({required this.imageUrl});
 
   @override
@@ -311,8 +258,7 @@ class _StoreAvatar extends StatelessWidget {
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(
             color: Colors.grey.shade200,
-            child:
-            const Icon(Icons.store, color: Colors.grey),
+            child: const Icon(Icons.store, color: Colors.grey),
           ),
         ),
       ),

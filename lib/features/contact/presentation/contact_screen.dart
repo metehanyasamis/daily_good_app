@@ -41,10 +41,13 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       orElse: () => <OrderListItem>[],
     );
 
+    /*
     final orderItems = [
       ...orders,
       otherOrderKey,
     ];
+
+     */
 
     return DismissKeyboard(
       child: Scaffold(
@@ -87,16 +90,15 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
 
               const SizedBox(height: 20),
 
-              /// SİPARİŞ
-              const Text("Hangi siparişiniz ile ilgili",
+              /// SİPARİŞ (OPSİYONEL)
+              const Text("Hangi siparişiniz ile ilgili (Opsiyonel)",
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               _dropdown<Object>(
-                hint: "Sipariş seçiniz...",
+                hint: "Sipariş seçebilirsiniz...",
                 value: selectedOrder,
-                items: orderItems,
+                items: orders, // Sadece gerçek sipariş listesi
                 display: (o) {
-                  if (o == otherOrderKey) return "Diğer";
                   final order = o as OrderListItem;
                   return "${order.storeName} • ${order.totalAmount.toInt()} TL";
                 },
@@ -198,37 +200,36 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
   // ---------------------------------------------------------------------------
 
   Future<void> _submit() async {
+    final messageText = messageController.text.trim();
+
+    // 1. Konu başlığı seçimi her zaman zorunlu
     if (selectedSubjectKey == null) {
-      _toast("Lütfen konu başlığı seçin");
+      _toast("Lütfen bir konu başlığı seçin");
       return;
     }
 
-    if (selectedOrder == null) {
-      _toast("Lütfen bir seçim yapın");
-      return;
-    }
-
-    final isOtherOrder = selectedOrder == otherOrderKey;
-    final isOtherSubject = selectedSubjectKey == "other";
-
-    if ((isOtherOrder || isOtherSubject) &&
-        messageController.text.trim().isEmpty) {
-      _toast("Diğer seçeneğinde mesaj zorunludur");
+    // 2. Eğer konu "Diğer" (key: 'other') ise Mesaj zorunlu
+    // Not: contactSubjects içindeki 'Diğer' key'inizin 'other' olduğunu varsayıyorum.
+    if (selectedSubjectKey == "other" && messageText.isEmpty) {
+      _toast("Konu 'Diğer' olduğunda mesaj yazmanız zorunludur.");
       return;
     }
 
     final msg = ContactMessage(
       subjects: [selectedSubjectKey!],
-      orderId:
-      isOtherOrder ? null : (selectedOrder as OrderListItem).id,
-      message: messageController.text.trim(),
+      // Sipariş seçilmediyse null gider, seçildiyse ID'si gider
+      orderId: selectedOrder != null ? (selectedOrder as OrderListItem).id : null,
+      message: messageText.isNotEmpty ? messageText : null,
       attachments: _photos,
     );
 
-    await ref.read(sendContactMessageProvider(msg).future);
-
-    if (!mounted) return;
-    context.go('/contact-success');
+    try {
+      await ref.read(sendContactMessageProvider(msg).future);
+      if (!mounted) return;
+      context.go('/contact-success');
+    } catch (e) {
+      _toast("Hata: ${e.toString()}");
+    }
   }
 
   // ---------------------------------------------------------------------------

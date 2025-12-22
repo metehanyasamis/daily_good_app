@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/time_formatter.dart';
 import '../../../../core/widgets/fav_button.dart';
 import '../../data/models/product_model.dart';
 
@@ -202,10 +201,7 @@ class ProductCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          TimeFormatter.range(
-                            product.startHour,
-                            product.endHour,
-                          ),
+                          product.deliveryTimeLabel, // Artik TimeFormatter'i burada çagirmaya gerek yok
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[700],

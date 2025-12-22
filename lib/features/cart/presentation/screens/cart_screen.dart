@@ -23,6 +23,7 @@ class CartScreen extends ConsumerStatefulWidget {
 class _CartScreenState extends ConsumerState<CartScreen> {
   final TextEditingController _noteController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  bool _isAgreed = true;
 
   @override
   void dispose() {
@@ -111,7 +112,22 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            // 🔥 SÖZLEŞME ONAY ALANI (Yeni eklendi)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: _ContractCheckbox(
+                  value: _isAgreed,
+                  onChanged: (val) {
+                    setState(() {
+                      _isAgreed = val ?? false;
+                    });
+                  },
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 50)),
           ],
         ),
 
@@ -125,13 +141,85 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             price: total,
             showPrice: true,
             onPressed: () {
-              // Not: “notes” endpoint’e bağlanınca _noteController.text kullanılacak.
-              // Şimdilik sadece ödeme ekranına geçiyoruz.
+              if (!_isAgreed) {
+                // 🔔 Kullanıcıya uyarıyı burada çakıyoruz
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Devam etmek için sözleşmeleri onaylamalısınız."),
+                    backgroundColor: Colors.redAccent,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                return; // Fonksiyondan çık, ödeme sayfasına gitme
+              }
+
+              // Tik varsa ödemeye devam et
               context.push('/payment', extra: total);
             },
           ),
         ),
       ),
+    );
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// 🧺 Sözleşme Onay Kutusu
+// ---------------------------------------------------------------------------
+
+class _ContractCheckbox extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool?> onChanged;
+
+  const _ContractCheckbox({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 24,
+          width: 24,
+          child: Checkbox(
+            value: value,
+            onChanged: onChanged,
+            activeColor: AppColors.primaryDarkGreen, // Seçiliyken iç dolgu rengi
+            checkColor: Colors.white, // İçindeki tik işareti rengi
+
+            // 🔥 Siyah çerçeveyi kaldıran/hafifleten kısım:
+            side: BorderSide.none,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              // Buraya URL açma mantığı gelecek (şimdilik debugPrint)
+              debugPrint("Sözleşme detayları açılacak...");
+            },
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+                children: [
+                  TextSpan(
+                    text: "Ön Bilgilendirme Formu ",
+                    style: TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold),
+                  ),
+                  const TextSpan(text: "ve "),
+                  TextSpan(
+                    text: "Mesafeli Satış Sözleşmesi",
+                    style: TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold),
+                  ),
+                  const TextSpan(text: "'ni okudum ve kabul ediyorum."),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -76,16 +76,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             slivers: [
               _ProductHeader(product: product),
               _ProductInfoSection(product: product),
-              const SliverToBoxAdapter(child: KnowMoreFull()),
+              const KnowMoreFull(),
               _StoreSection(product: product),
               _RatingSection(product: product),
               SliverToBoxAdapter(
-                child: StoreMapCard(
+                child: store.latitude != 0.0 && store.longitude != 0.0
+                    ? StoreMapCard(
                   storeId: store.id,
-                  latitude: store.latitude,
-                  longitude: store.longitude,
+                  latitude: store.latitude!,
+                  longitude: store.longitude!,
                   address: store.address,
-                ),
+                )
+                    : const SizedBox.shrink(), // Koordinat yoksa haritayı hiç çizme, patlamasın
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 140)),
             ],

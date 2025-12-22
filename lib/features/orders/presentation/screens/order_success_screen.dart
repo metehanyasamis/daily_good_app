@@ -6,7 +6,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
 
 class OrderSuccessScreen extends ConsumerStatefulWidget {
-  const OrderSuccessScreen({super.key});
+  /// Ödeme tamamlandıktan sonra gelen sipariş ID'si
+  final String? orderId;
+
+  const OrderSuccessScreen({super.key, this.orderId});
 
   @override
   ConsumerState<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
@@ -23,6 +26,8 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
     super.initState();
 
     // 🧹 ÖDEME TAMAMLANDI → SEPETİ TEMİZLE
+    // CartController'da yaptığımız yeni "kilitli" sistem sayesinde
+    // burada güvenle çağırabiliriz, 404 hatası almayız.
     Future.microtask(() {
       ref.read(cartProvider.notifier).clearCart();
     });
@@ -40,7 +45,9 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
     // 🔹 2.5 saniye sonra sipariş takibine yönlendir
     Timer(const Duration(seconds: 2, milliseconds: 500), () {
       if (mounted) {
-        context.go('/order-tracking');
+        // widget.orderId zaten String? olarak tanımlı olmalı
+        final targetId = widget.orderId ?? "last";
+        context.go('/order-tracking/$targetId');
       }
     });
   }
@@ -63,6 +70,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
               return Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Başarı İkonu
                   Transform.scale(
                     scale: _scale.value,
                     child: const Icon(
@@ -72,6 +80,8 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // Başlık
                   Opacity(
                     opacity: _fade.value,
                     child: const Text(
@@ -85,6 +95,8 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                     ),
                   ),
                   const SizedBox(height: 10),
+
+                  // Alt Bilgi
                   Opacity(
                     opacity: _fade.value,
                     child: const Text(
@@ -96,7 +108,10 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                       textAlign: TextAlign.center,
                     ),
                   ),
+
                   const SizedBox(height: 40),
+
+                  // Yükleniyor İndikatörü
                   Opacity(
                     opacity: _fade.value,
                     child: Column(
@@ -105,8 +120,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                           width: 36,
                           height: 36,
                           child: CircularProgressIndicator.adaptive(
-                            valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             strokeWidth: 3.2,
                           ),
                         ),

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/dio_provider.dart';
 import '../../data/repository/cart_repository.dart';
@@ -17,10 +18,17 @@ class CartController extends StateNotifier<List<CartItem>> {
 
   String? currentShopId;
 
+  /// 🛡️ İşlem devam ederken (temizleme/ekleme) mükerrer istekleri engellemek için kilit
+  bool _isProcessing = false;
+
   Future<void> loadCart() async {
-    final items = await _repo.getCart();
-    state = items;
-    currentShopId = items.isNotEmpty ? items.first.shopId : null;
+    try {
+      final items = await _repo.getCart();
+      state = items;
+      currentShopId = items.isNotEmpty ? items.first.shopId : null;
+    } catch (e) {
+      debugPrint("🛒 CartController Load Error: $e");
+    }
   }
 
   bool isSameStore(String shopId) {
@@ -28,58 +36,96 @@ class CartController extends StateNotifier<List<CartItem>> {
   }
 
   Future<bool> addProduct(ProductModel product, int qty) async {
-    final ok = await _repo.add(
-      productId: product.id,
-      quantity: qty,
-    );
+    if (_isProcessing) return false;
+    _isProcessing = true;
 
-    if (!ok) return false;
+    try {
+      final ok = await _repo.add(
+        productId: product.id,
+        quantity: qty,
+      );
 
-    await loadCart();
-    return true;
+      if (!ok) return false;
+
+      await loadCart();
+      return true;
+    } finally {
+      _isProcessing = false;
+    }
   }
 
   Future<void> increment(CartItem item) async {
-    await _repo.updateQuantity(
-      cartItemId: item.cartItemId,
-      productId: item.productId,
-      quantity: item.quantity + 1,
-    );
-    await loadCart();
-  }
+    if (_isProcessing) return;
+    _isProcessing = true;
 
-  Future<void> decrement(CartItem item) async {
-    if (item.quantity - 1 <= 0) {
-      await _repo.remove(item.cartItemId);
-    } else {
+    try {
       await _repo.updateQuantity(
         cartItemId: item.cartItemId,
         productId: item.productId,
-        quantity: item.quantity - 1,
+        quantity: item.quantity + 1,
       );
+      await loadCart();
+    } finally {
+      _isProcessing = false;
     }
-    await loadCart();
   }
 
-  Future<void> clearCart() async {
-    for (final item in state) {
-      await _repo.remove(item.cartItemId);
+  Future<void> decrement(CartItem item) async {
+    if (_isProcessing) return;
+    _isProcessing = true;
+
+    try {
+      if (item.quantity - 1 <= 0) {
+        await _repo.remove(item.cartItemId);
+      } else {
+        await _repo.updateQuantity(
+          cartItemId: item.cartItemId,
+          productId: item.productId,
+          quantity: item.quantity - 1,
+        );
+      }
+      await loadCart();
+    } finally {
+      _isProcessing = false;
     }
-    state = [];
-    currentShopId = null;
+  }
+
+  /// ✅ Sıralı temizleme yaparak 404 hatalarını engeller
+  Future<void> clearCart() async {
+    if (_isProcessing || state.isEmpty) return;
+    _isProcessing = true;
+
+    try {
+      // Önce mevcut öğelerin bir kopyasını alalım
+      final itemsToRemove = List<CartItem>.from(state);
+
+      // Local state'i anında temizleyip UI'ı rahatlatalım
+      state = [];
+      currentShopId = null;
+
+      // Loglardaki çakışmayı önlemek için her silme işlemini sırayla await ediyoruz
+      for (final item in itemsToRemove) {
+        await _repo.remove(item.cartItemId);
+      }
+    } catch (e) {
+      debugPrint("🛒 Cart Clear Error: $e");
+    } finally {
+      _isProcessing = false;
+      await loadCart(); // Backend ile son kez senkronize ol
+    }
   }
 
   /// ❌ Farklı işletme → sepeti temizle ve yeni ürünü ekle
   Future<bool> replaceWith(ProductModel product, int qty) async {
-    // 🔥 backend sepeti temizlemeden önce local state temizle
-    state = [];
-    currentShopId = null;
+    if (_isProcessing) return false;
 
-    // sonra yeni ürünü ekle
+    // Önce backend sepetini güvenli şekilde temizle
+    await clearCart();
+
+    // Sonra yeni ürünü ekle (addProduct kendi içinde kilidini açıp kapatacak)
     return await addProduct(product, qty);
   }
 }
-
 
 final cartProvider =
 StateNotifierProvider<CartController, List<CartItem>>((ref) {
