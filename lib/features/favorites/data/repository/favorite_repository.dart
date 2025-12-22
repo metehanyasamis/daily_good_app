@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -16,31 +17,95 @@ class FavoriteRepository {
 
   // ---------------- PRODUCTS ----------------
   Future<List<FavoriteProductResponseModel>> fetchFavoriteProducts() async {
-    final res = await api.get('/customer/favorites/products');
-    final body = jsonDecode(res.body);
-    return (body['data'] as List)
-        .map((e) => FavoriteProductResponseModel.fromJson(e))
-        .toList();
+    try {
+      final res = await api.get('/customer/favorites/products');
+      // ApiClient içinde jsonDecode zaten yapılıyorsa body['data'] olarak kullanın.
+      // Eğer yapılmıyorsa:
+      final body = json.decode(res.body);
+
+      if (body['success'] == true) {
+        return (body['data'] as List)
+            .map((e) => FavoriteProductResponseModel.fromJson(e))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Repo Error (fetchProducts): $e");
+      return [];
+    }
   }
 
-  Future<void> addFavoriteProduct(String id) =>
-      api.post('/customer/favorites/products/add/$id');
+  Future<bool> addFavoriteProduct(String id) async {
+    debugPrint('🚀 [REPO] Product Fav Ekleme İsteği: $id');
 
-  Future<void> removeFavoriteProduct(String id) =>
-      api.delete('/customer/favorites/products/remove/$id');
+    // 💡 ÇÖZÜM: POST isteğine boş bir body {} ekliyoruz.
+    // Backend bazen "ne gönderdiğin belli değil" diyerek 400 döner.
+    final res = await api.post('/customer/favorites/products/add/$id', body: {});
+
+    final success = _isSuccess(res);
+    debugPrint('✅ [REPO] Product Fav Ekleme Sonucu: $success (Kod: ${res.statusCode})');
+
+    // Eğer hala başarısızsa backend'in ne dediğini görelim:
+    if (!success) {
+      debugPrint('⚠️ [REPO] Backend Hata Mesajı: ${res.body}');
+    }
+
+    return success;
+  }
+
+  Future<bool> removeFavoriteProduct(String id) async {
+    debugPrint('🗑️ [REPO] Product Fav Silme İsteği: $id');
+    final res = await api.delete('/customer/favorites/products/remove/$id');
+    final success = _isSuccess(res);
+    debugPrint('✅ [REPO] Product Fav Silme Sonucu: $success');
+    return success;
+  }
 
   // ---------------- STORES ----------------
   Future<List<FavoriteStoreResponseModel>> fetchFavoriteStores() async {
-    final res = await api.get('/customer/favorites');
-    final body = jsonDecode(res.body);
-    return (body['data'] as List)
-        .map((e) => FavoriteStoreResponseModel.fromJson(e))
-        .toList();
+    try {
+      final res = await api.get('/customer/favorites');
+      final body = json.decode(res.body);
+
+      if (body['success'] == true) {
+        return (body['data'] as List)
+            .map((e) => FavoriteStoreResponseModel.fromJson(e))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Repo Error (fetchStores): $e");
+      return [];
+    }
   }
 
-  Future<void> addFavoriteStore(String id) =>
-      api.post('/customer/favorites/add/$id');
+  Future<bool> addFavoriteStore(String id) async {
+    debugPrint('🚀 [REPO] Store Fav Ekleme İsteği: $id');
+    // Burada da boş body gönderiyoruz
+    final res = await api.post('/customer/favorites/add/$id', body: {});
+    final success = _isSuccess(res);
+    debugPrint('✅ [REPO] Store Fav Sonucu: $success (Kod: ${res.statusCode})');
+    return success;
+  }
 
-  Future<void> removeFavoriteStore(String id) =>
-      api.delete('/customer/favorites/remove/$id');
+  Future<bool> removeFavoriteStore(String id) async {
+    // 🚩 Dökümanındaki curl örneğinde DELETE '.../favorites/remove/1' kullanılmış.
+    // Bu doğru, ancak dönüş kodlarını kontrol etmeliyiz.
+    final res = await api.delete('/customer/favorites/remove/$id');
+    return _isSuccess(res);
+  }
+
+  // Helper: İsteğin başarılı olup olmadığını kontrol eder
+  bool _isSuccess(dynamic res) {
+    try {
+      final body = json.decode(res.body);
+      // Backend "zaten var" diyorsa veya success true ise başarılı say
+      if (res.statusCode == 400 && body['message'].toString().contains('zaten')) {
+        return true;
+      }
+      return body['success'] == true;
+    } catch (_) {
+      return res.statusCode == 200 || res.statusCode == 201;
+    }
+  }
 }

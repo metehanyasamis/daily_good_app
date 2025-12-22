@@ -45,8 +45,11 @@ class StoreSummary {
       address: json["address"] ?? "",
 
       // Hem banner hem image url kontrolü
-      imageUrl: json["banner_image_url"] ?? json["image_url"] ?? "",
-
+      imageUrl: json["banner_image_url"] ??
+          json["image_url"] ??
+          json["banner_image"] ?? // Dökümanda bazen bu geliyor
+          json["image"] ??        // Fallback
+          "",
       latitude: (json["latitude"] as num?)?.toDouble() ?? 0.0,
       longitude: (json["longitude"] as num?)?.toDouble() ?? 0.0,
       bannerImageUrl: json["banner_image_url"],

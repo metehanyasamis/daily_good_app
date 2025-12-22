@@ -28,17 +28,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // ---------------------------------------------------------------------------
   // OTP GÖNDER (TEK DOĞRU YERİ)
   // ---------------------------------------------------------------------------
-  Future<bool> sendOtp(String phone) async {
-    debugPrint("📲 [AUTH] OTP gönderiliyor → $phone");
+  Future<bool> sendOtp(String phone, {required String purpose}) async {
     state = const AuthState.loading();
 
-    final ok = await repo.sendOtp(phone);
+    // Repo'ya telefon ve amacı gönderiyoruz
+    final ok = await repo.sendOtp(phone, purpose: purpose);
 
     if (ok) {
       state = const AuthState.otpSent();
       return true;
     } else {
-      state = const AuthState.error("OTP gönderilemedi");
+      state = const AuthState.error("Kod gönderilemedi. Lütfen tekrar deneyin.");
       return false;
     }
   }

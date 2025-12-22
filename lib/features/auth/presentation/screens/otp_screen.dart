@@ -65,7 +65,12 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
     if (_seconds != 0) return;
 
     final auth = ref.read(authNotifierProvider.notifier);
-    await auth.sendOtp(widget.phone);
+
+    // 🔥 ÖNEMLİ: Yeniden gönderirken de amacı belirtmeliyiz
+    final String currentPurpose = widget.isLogin ? "login" : "register";
+
+    // Notifier'daki sendOtp artık purpose beklediği için bunu ekliyoruz
+    await auth.sendOtp(widget.phone, purpose: currentPurpose);
 
     setState(() {
       _seconds = 120;

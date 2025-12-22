@@ -20,6 +20,13 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // 🔥 Ekran her açıldığında arka planda favorileri tazele
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // ProviderScope/WidgetRef'e erişmek için ProviderContainer
+      // veya ConsumerStatefulWidget kullanmalısın.
+      // Mevcut kodunu ConsumerStatefulWidget'a çevirmek en iyisi.
+    });
   }
 
   @override

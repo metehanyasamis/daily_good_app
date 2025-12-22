@@ -55,6 +55,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // SEND OTP
   // ---------------------------------------------------------------------------
 
+// LoginScreen.dart içindeki _onSubmit metodu
+
   Future<void> _onSubmit() async {
     if (_isOtpOpen) return;
 
@@ -69,13 +71,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return _error("Lütfen koşulları kabul edin.");
     }
 
-    // ❌ ARTIK isPhoneRegistered KULLANMIYORUZ
-    // Backend kimin mevcut / yeni olduğunu kendisi bilecek
     final auth = ref.read(authNotifierProvider.notifier);
-    final success = await auth.sendOtp(phone);
+
+    // 🔥 DEĞİŞİKLİK BURADA:
+    // Tab durumuna göre purpose değerini belirliyoruz.
+    final String currentPurpose = isLoginTab ? "login" : "register";
+
+    // Artık Notifier'a bu amacı gönderiyoruz
+    final success = await auth.sendOtp(phone, purpose: currentPurpose);
 
     if (!success) {
-      return _error("OTP gönderilemedi. Lütfen tekrar deneyin.");
+      // Notifier içindeki error state'inden gelen mesajı veya default hata mesajını göster
+      return _error("İşlem başarısız. Lütfen bilgilerinizi kontrol edin.");
     }
 
     setState(() => _isOtpOpen = true);
@@ -86,7 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => OtpBottomSheet(
         phone: phone,
-        isLogin: isLoginTab, // 👉 Login mi, Kayıt mı bilgisi buradan
+        isLogin: isLoginTab,
       ),
     );
 

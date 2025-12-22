@@ -9,12 +9,16 @@ class FavoriteProductsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ Sadece products değişince rebuild
-    final products = ref.watch(
-      favoritesProvider.select((s) => s.products),
-    );
+    // 1. Tüm modelleri ve sadece ürün ID setini izle
+    final allProducts = ref.watch(favoritesProvider.select((s) => s.products));
+    final favoriteIds = ref.watch(favoritesProvider.select((s) => s.productIds));
 
-    if (products.isEmpty) return const _EmptyProductsState();
+    // 2. Filtreleme: Sadece ID'si hala favori setinde olan modelleri göster
+    // Notifier'daki toggleProduct sonrası set güncellendiği an burası tetiklenir
+    final activeProducts = allProducts.where((p) => favoriteIds.contains(p.id)).toList();
+
+    // 3. Boş durum kontrolünü filtreli listeye göre yap
+    if (activeProducts.isEmpty) return const _EmptyProductsState();
 
     return RefreshIndicator(
       onRefresh: () => ref.read(favoritesProvider.notifier).loadAll(),
@@ -25,8 +29,12 @@ class FavoriteProductsTab extends ConsumerWidget {
           12,
           MediaQuery.of(context).padding.bottom + 80,
         ),
-        itemCount: products.length,
-        itemBuilder: (_, i) => ProductCard(product: products[i]),
+        // 🔥 ÖNEMLİ: Filtrelenmiş listenin uzunluğunu veriyoruz
+        itemCount: activeProducts.length,
+        itemBuilder: (_, i) {
+          // 🔥 ÖNEMLİ: Filtrelenmiş listeden ürünü çekiyoruz
+          return ProductCard(product: activeProducts[i]);
+        },
       ),
     );
   }

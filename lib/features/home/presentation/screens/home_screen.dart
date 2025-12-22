@@ -16,6 +16,7 @@ import '../widgets/home_active_order_box.dart';
 import '../widgets/home_banner_slider.dart';
 import '../widgets/home_category_bar.dart';
 import '../widgets/home_email_warning_banner.dart';
+import '../widgets/home_location_request_sheet.dart';
 import '../widgets/home_product_list.dart';
 import '../widgets/home_section_title.dart';
 
@@ -68,14 +69,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           "${homeState.sectionProducts.map((k,v)=>MapEntry(k.name,v.length))}",
     );
 
+    // 🔥 KONUM DEĞİŞTİĞİNDE VERİLERİ YENİLE
+    ref.listen(addressProvider, (previous, next) {
+      if (next.isSelected && (previous?.lat != next.lat || previous?.lng != next.lng)) {
+        debugPrint("📍 Konum değişti, ana sayfa yenileniyor...");
+        ref.read(homeStateProvider.notifier).loadHome(
+          latitude: next.lat,
+          longitude: next.lng,
+        );
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(70),
         child: CustomHomeAppBar(
           address: addressState.title,
-          onLocationTap: () => context.push('/location-picker'),
-          onNotificationsTap: () => context.push('/notifications'),
+          onLocationTap: () {
+            final address = ref.read(addressProvider);
+
+            if (!address.isSelected) {
+              // Ayrı sınıf yaptığımız widget'ı burada çağırıyoruz
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                builder: (context) => const HomeLocationRequestSheet(),
+              );
+            } else {
+              context.push('/location-picker');
+            }
+          },
+            onNotificationsTap: () => context.push('/notifications'),
         ),
       ),
       body: Stack(
@@ -166,23 +194,34 @@ class HomeContent extends ConsumerWidget {
         bottom: kBottomNavigationBarHeight + 24,
       ),
       children: [
-        // 📧 E-POSTA WARNING BANNER BURADA
         const HomeEmailWarningBanner(),
 
-        const HomeSectionTitle(title: "Hemen Yanımda"),
-        HomeProductList(products: hemenYaninda),
+        // 🔥 KOŞULLU GÖSTERİM BAŞLADI
 
-        const HomeSectionTitle(title: "Son Şans"),
-        HomeProductList(products: sonSans),
+        if (hemenYaninda.isNotEmpty) ...[
+          const HomeSectionTitle(title: "Hemen Yanımda"),
+          HomeProductList(products: hemenYaninda),
+        ],
 
-        const HomeSectionTitle(title: "Yeni"),
-        HomeProductList(products: yeni),
+        if (sonSans.isNotEmpty) ...[
+          const HomeSectionTitle(title: "Son Şans"),
+          HomeProductList(products: sonSans),
+        ],
 
-        const HomeSectionTitle(title: "Bugün"),
-        HomeProductList(products: bugun),
+        if (yeni.isNotEmpty) ...[
+          const HomeSectionTitle(title: "Yeni"),
+          HomeProductList(products: yeni),
+        ],
 
-        const HomeSectionTitle(title: "Yarın"),
-        HomeProductList(products: yarin),
+        if (bugun.isNotEmpty) ...[
+          const HomeSectionTitle(title: "Bugün"),
+          HomeProductList(products: bugun),
+        ],
+
+        if (yarin.isNotEmpty) ...[
+          const HomeSectionTitle(title: "Yarın"),
+          HomeProductList(products: yarin),
+        ],
 
         const SizedBox(height: 32),
       ],

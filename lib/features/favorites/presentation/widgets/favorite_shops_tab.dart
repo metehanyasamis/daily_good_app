@@ -11,12 +11,16 @@ class FavoriteShopsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ Sadece stores değişince rebuild
-    final shops = ref.watch(
-      favoritesProvider.select((s) => s.stores),
-    );
+    // 1. Tüm mağaza modellerini ve ID setini dinle
+    final shops = ref.watch(favoritesProvider.select((s) => s.stores));
+    final shopIds = ref.watch(favoritesProvider.select((s) => s.storeIds));
 
-    if (shops.isEmpty) return const _EmptyShopsState();
+    // 2. Filtreleme: Sadece ID'si hala favori setinde olanları göster
+    // Bu sayede kalbe basıldığı an kart listeden kaybolur (Anlık UX)
+    final activeShops = shops.where((s) => shopIds.contains(s.id)).toList();
+
+    // 3. Boş durum kontrolü
+    if (activeShops.isEmpty) return const _EmptyShopsState();
 
     return RefreshIndicator(
       onRefresh: () => ref.read(favoritesProvider.notifier).loadAll(),
@@ -27,9 +31,10 @@ class FavoriteShopsTab extends ConsumerWidget {
           12,
           MediaQuery.of(context).padding.bottom + 80,
         ),
-        itemCount: shops.length,
+        // 🔥 BURASI ÖNEMLİ: activeShops kullanmalısın
+        itemCount: activeShops.length,
         itemBuilder: (context, index) {
-          final shop = shops[index];
+          final shop = activeShops[index]; // 🔥 Burası da activeShops olmalı
           return _ShopCard(shop: shop);
         },
       ),
@@ -104,7 +109,16 @@ class _ShopAvatar extends StatelessWidget {
       child: ClipOval(
         child: url.isEmpty
             ? const Icon(Icons.storefront, color: Colors.black26, size: 28)
-            : Image.network(url, fit: BoxFit.cover),
+            : Image.network(
+          url,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+          const Icon(Icons.storefront, color: Colors.black26, size: 28),
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryDarkGreen.withOpacity(0.3)));
+          },
+        ),
       ),
     );
   }

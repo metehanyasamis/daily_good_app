@@ -125,7 +125,10 @@ class ProductCard extends StatelessWidget {
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: FavButton(id: product.id),
+                    child: FavButton(
+                      id: product.id,
+                      isStore: false, // 👈 Mutlaka ekle: Bu bir üründür
+                    ),
                   ),
 
                   // STORE LOGO + STORE NAME (banner üstüne binen kısım)

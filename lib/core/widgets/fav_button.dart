@@ -106,33 +106,22 @@ class _FavButtonState extends ConsumerState<FavButton>
   Widget build(BuildContext context) {
     final resolvedId = _resolveId();
     final inferredIsStore = _resolveIsStore();
-
-    // If we couldn't resolve id, show disabled icon
-    if (resolvedId == null || resolvedId.isEmpty) {
-      return Container(
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Icon(Icons.favorite_border, color: Colors.grey.shade400, size: widget.size * 0.55),
-      );
-    }
-
     final isStore = widget.isStore ?? inferredIsStore;
 
-    final isFav = _isFavoriteFromState(resolvedId, isStore);
+    // 🔍 BUILD SIRASINDA DURUMU GÖR
+    final isFav = _isFavoriteFromState(resolvedId ?? '', isStore);
+    debugPrint('🎨 [FAV_BUILD] ID: $resolvedId | isStore: $isStore | isFav: $isFav');
+
+    if (resolvedId == null || resolvedId.isEmpty) {
+      return const SizedBox.shrink(); // ID yoksa gizle veya gri göster
+    }
 
     return GestureDetector(
       onTap: () async {
+        debugPrint('🖱️ [FAV_CLICK] Tıklandı!');
+        debugPrint('   👉 Hedef ID: $resolvedId');
+        debugPrint('   👉 Hedef Tip: ${isStore ? "STORE" : "PRODUCT"}');
+
         await _animate();
         await _toggleFavorite(resolvedId, isStore);
       },

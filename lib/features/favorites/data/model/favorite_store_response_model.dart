@@ -1,7 +1,7 @@
 import '../../../stores/data/model/store_summary.dart';
 
 class FavoriteStoreResponseModel {
-  final String id;
+  final String id; // Favori kayıt ID'si
   final StoreSummary store;
 
   FavoriteStoreResponseModel({
@@ -10,17 +10,10 @@ class FavoriteStoreResponseModel {
   });
 
   factory FavoriteStoreResponseModel.fromJson(Map<String, dynamic> json) {
-    final s = json['store'];
     return FavoriteStoreResponseModel(
       id: json['id'].toString(),
-      store: StoreSummary(
-        id: s['id'].toString(),
-        name: s['name'] ?? '',
-        address: s['address'] ?? '',
-        imageUrl: s['banner_image'] ?? '',
-        distanceKm: (s['distance_km'] as num?)?.toDouble(),
-        overallRating: (s['overall_rating'] as num?)?.toDouble(),
-      ),
+      // 🔥 Senin mevcut StoreSummary yapını kullanıyoruz
+      store: StoreSummary.fromJson(json['store'] ?? {}),
     );
   }
 }

@@ -14,22 +14,23 @@ class AuthRepository {
         headers: {"Accept": "application/json"},
       ));
 
-  Future<bool> sendOtp(String phone) async {
-    debugPrint("🌐 [API] POST /customer/auth/send-otp");
-    debugPrint("➡️ phone: $phone");
+  Future<bool> sendOtp(String phone, {required String purpose, String? email}) async {
+    final data = {
+      "phone": phone,
+      "purpose": purpose,
+    };
+
+    // Eğer kayıt oluyorsa ve email lazımsa ekle
+    if (purpose == "register" && email != null) {
+      data["email"] = email;
+    }
 
     try {
-      final res = await _dio.post("/customer/auth/send-otp", data: {
-        "phone": phone,
-      });
-
-      debugPrint("📩 STATUS: ${res.statusCode}");
-      debugPrint("📩 DATA: ${res.data}");
-
+      final res = await _dio.post("/customer/auth/send-otp", data: data);
       return res.statusCode == 200;
-    } on DioException catch (e) {
-      debugPrint("❌ sendOtp ERROR STATUS: ${e.response?.statusCode}");
-      debugPrint("❌ sendOtp ERROR DATA: ${e.response?.data}");
+    } catch (e) {
+      // Burada gelen hataya bak: "Email is required" diyorsa
+      // UI'da email alanını zorunlu yapmalısın.
       return false;
     }
   }

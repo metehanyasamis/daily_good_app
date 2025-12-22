@@ -140,7 +140,10 @@ class _ProductHeader extends StatelessWidget {
         onTap: () => context.pop(),
       ),
       actions: [
-        FavButton(id: product.id),
+        FavButton(
+          id: product.id,
+          isStore: false, // 👈 Bu bir üründür
+        ),
         const SizedBox(width: 12),
       ],
       flexibleSpace: FlexibleSpaceBar(
