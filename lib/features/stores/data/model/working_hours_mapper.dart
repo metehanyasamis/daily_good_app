@@ -5,13 +5,14 @@ import 'package:daily_good/features/stores/data/model/working_hours_ui_model.dar
 
 extension WorkingHoursMapper on WorkingHoursModel {
   List<WorkingHoursUiModel> toUiList() {
-    if (days.isEmpty) return [];
-
-    return days.entries.map((e) {
+    // Artık 'days' bir List olduğu için direkt .map kullanıyoruz
+    return days.map((dayModel) {
       return WorkingHoursUiModel(
-        day: _dayLabel(e.key),
-        open: e.value.start,
-        close: e.value.end,
+        // API'den gelen 'Pazartesi' gibi değerleri direkt kullanıyoruz
+        day: dayModel.day,
+        open: dayModel.openTime,
+        close: dayModel.closeTime,
+        isClosed: dayModel.isClosed,
       );
     }).toList();
   }

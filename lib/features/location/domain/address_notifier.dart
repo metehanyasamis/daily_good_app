@@ -159,4 +159,23 @@ class AddressNotifier extends StateNotifier<AddressState> {
     debugPrint("♻️ [ADDRESS] hydrated from AppState → $address");
   }
 
+
+
+  // final LatLngBounds? visibleBounds;
+
+// address_notifier.dart içine ekle:
+  void updateVisibleRegion(double swLat, double swLng, double neLat, double neLng) {
+    debugPrint("📍 Harita Alanı Güncellendi:");
+    debugPrint("   Sol Alt: $swLat, $swLng");
+    debugPrint("   Sağ Üst: $neLat, $neLng");
+
+    // Burada istersen repository'deki getStoresInBounds metodunu çağırabilirsin.
+    _repo.getStoresInBounds(
+      swLat: swLat,
+      swLng: swLng,
+      neLat: neLat,
+      neLng: neLng,
+    );
+  }
+
 }

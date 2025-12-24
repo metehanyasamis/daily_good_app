@@ -23,93 +23,65 @@ class StoreDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(storeDetailProvider(storeId));
 
-    if (state.loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (state.error != null) {
-      return Scaffold(
-        body: Center(child: Text("Hata: ${state.error}")),
-      );
-    }
+    if (state.loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (state.error != null) return Scaffold(body: Center(child: Text("Hata: ${state.error}")));
 
     final StoreDetailModel? store = state.detail;
-    if (store == null) {
-      return const Scaffold(
-        body: Center(child: Text("Mağaza bulunamadı")),
-      );
-    }
+    if (store == null) return const Scaffold(body: Center(child: Text("Mağaza bulunamadı")));
 
-    // modeldeki doğru alan isimlerini kullan
-    final bannerRaw = store.bannerImageUrl;
-    // logo tercihen brand.logoUrl, yoksa store.imageUrl
-    final logoRaw = store.brand?.logoUrl ?? store.imageUrl;
-
-    final bannerUrl = sanitizeImageUrl(bannerRaw);
-    final logoUrl = sanitizeImageUrl(logoRaw);
+    final bannerUrl = sanitizeImageUrl(store.bannerImageUrl);
+    final logoUrl = sanitizeImageUrl(store.brand?.logoUrl ?? store.imageUrl);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F8F8), // Sayfa arka planını hafif gri yap ki beyaz kartlar patlasın (Figma'daki gibi)
       body: Stack(
         children: [
           CustomScrollView(
             slivers: [
-              _header(
-                context,
-                store,
-                bannerUrl: bannerUrl,
-                logoUrl: logoUrl,
-              ),
+              _header(context, store, bannerUrl: bannerUrl, logoUrl: logoUrl),
               SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 12),
-                    // içerik
+
+                    // 1. ANA İÇERİK: Ürünler + Bilgi + Rating
+                    // Bu widget zaten kendi içinde beyaz kart yapısına sahip.
                     StoreDetailsContent(
                       storeDetail: store,
-                      onProductTap: (product) {
-                        // Ürün detay ekranına yönlendiriyoruz
-                        // GoRouter kullanıyorsan:
-                        context.push('/product-detail/${product.id}');
-
-                        // Eğer route yapın farklıysa (örneğin nested route):
-                        // context.pushNamed('product_detail', pathParameters: {'id': product.id});
-                      },
+                      onProductTap: (product) => context.push('/product-detail/${product.id}'),
                     ),
-                    const SizedBox(height: 12),
-                    if (store.workingHours != null &&
-                        store.workingHours!.days.isNotEmpty)
+
+                    // 2. ÇALIŞMA SAATLERİ
+                    // Debug yazılarını sildik, sadece veri varsa kartı gösteriyoruz.
+                    if (store.workingHours != null && store.workingHours!.days.isNotEmpty) ...[
+                      const SizedBox(height: 16), // Bölümler arası nefes payı
                       StoreWorkingHoursSection(
                         hours: store.workingHours!.toUiList(),
                       ),
+                    ],
+
                     const SizedBox(height: 16),
+
+                    // 3. HARİTA KARTI
                     StoreMapCard(
                       storeId: store.id,
                       latitude: store.latitude,
                       longitude: store.longitude,
                       address: store.address,
                     ),
-                    const SizedBox(height: 140),
+
+                    const SizedBox(height: 140), // Alt bar için kaydırma payı
                   ],
                 ),
               ),
             ],
           ),
-
-          // floating cart (sağ altta)
-          const Positioned(
-            right: 16,
-            bottom: 16,
-            child: FloatingCartButton(),
-          ),
+          const Positioned(right: 16, bottom: 16, child: FloatingCartButton()),
         ],
       ),
     );
   }
-
   Widget _header(BuildContext context,
       StoreDetailModel store, {
         required String? bannerUrl,

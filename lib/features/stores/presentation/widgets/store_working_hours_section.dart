@@ -8,37 +8,61 @@ class StoreWorkingHoursSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("📦 [UI_BUILD] Gelen Saat Listesi Uzunluğu: ${hours.length}");
     if (hours.isEmpty) {
+      debugPrint("🚫 [UI_EMPTY] Liste boş olduğu için SizedBox dönüyorum");
       return const SizedBox();
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(14),
+      // Padding ve Margin ayarları Figma'ya göre güncellendi
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(20), // İç boşluk biraz artırıldı
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(20), // Tasarımdaki gibi daha oval
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05), // Çok hafif, modern bir gölge
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             "Çalışma Saatleri",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18, // Başlık biraz büyütüldü
+              letterSpacing: -0.5,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16), // Başlık ile liste arası açıldı
 
           ...hours.map(
                 (h) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: 8), // Satır araları ferahlatıldı
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(h.day),
+                  Text(
+                    h.day,
+                    style: TextStyle(
+                      color: Colors.grey.shade700, // Gün isimleri biraz daha soluk
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
                   Text(
                     h.display(),
-                    style: const TextStyle(color: Colors.black54),
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w600, // Saatler daha belirgin
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),

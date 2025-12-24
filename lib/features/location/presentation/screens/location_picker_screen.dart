@@ -31,14 +31,31 @@ class _LocationPickerScreenState
     _map = mapboxMap;
   }
 
+// LocationPickerScreen.dart içinde _onCameraChanged metodu:
   void _onCameraChanged(CameraChangedEventData event) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () async {
+    _debounce = Timer(const Duration(milliseconds: 600), () async {
       if (_map == null || !mounted) return;
 
+      // 1. CameraBounds nesnesini alıyoruz
+      final cameraBounds = await _map!.getBounds();
+
+      // 2. CameraBounds içindeki 'bounds' (CoordinateBounds) alanına erişiyoruz
+      // southwest ve northeast artık 'Point' tipinde ve koordinatları içinde saklıyor
+      final swPoint = cameraBounds.bounds.southwest;
+      final nePoint = cameraBounds.bounds.northeast;
+
+      // 3. Notifier'a gönderirken koordinatlara .coordinates.lat/lng şeklinde ulaşıyoruz
+      ref.read(addressProvider.notifier).updateVisibleRegion(
+        swPoint.coordinates.lat.toDouble(),
+        swPoint.coordinates.lng.toDouble(),
+        nePoint.coordinates.lat.toDouble(),
+        nePoint.coordinates.lng.toDouble(),
+      );
+
+      // Mevcut merkez alma kodun
       final cam = await _map!.getCameraState();
       final center = cam.center.coordinates;
-
       ref.read(addressProvider.notifier).setFromMap(
         lat: center.lat.toDouble(),
         lng: center.lng.toDouble(),

@@ -30,9 +30,7 @@ class StoreDetailsContent extends StatelessWidget {
           const SizedBox(height: 20),
           _productList(products),
           const SizedBox(height: 20),
-          _infoCard(),
-          const SizedBox(height: 20),
-          //_ratingCard(ratings),
+          _combinedInfoAndRatingCard(ratings),
         ],
       ),
     );
@@ -125,125 +123,196 @@ class StoreDetailsContent extends StatelessWidget {
     );
   }
 
-// StoreDetailsContent.dart içindeki _productList metodunu bununla değiştir:
 
+  // StoreDetailsContent.dart içindeki ilgili kısım
   Widget _productList(List<ProductModel> products) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           "Seni bekleyen lezzetler",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-
-        ...products.map((product) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
+        ...products.map((product) => Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20), // Daha yuvarlak köşeler
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(12),
+            leading: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => onProductTap?.call(product),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    // 1. Ürün Görseli
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Builder(builder: (ctx) {
-                        final safeUrl = sanitizeImageUrl(product.imageUrl?.isNotEmpty == true ? product.imageUrl : null);
-                        if (safeUrl == null) {
-                          return Image.asset('assets/images/sample_food3.jpg', width: 48, height: 48, fit: BoxFit.cover);
-                        }
-                        return Image.network(
-                          safeUrl,
-                          width: 48, height: 48, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Image.asset('assets/images/sample_food3.jpg', width: 48, height: 48, fit: BoxFit.cover),
-                        );
-                      }),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // 2. Ürün Bilgileri (İsim + Teslimat Saati)
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            product.name ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          // 🔥 Teslimat Saati Geri Geldi
-                          Text(
-                            formatDeliveryDate(product.startDate, product.startHour, product.endHour),
-                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    // 3. Fiyat Bilgisi
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (product.listPrice != null && product.listPrice! > 0)
-                          Text(
-                            "${product.listPrice!.toStringAsFixed(2)} ₺",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                        Text(
-                          "${product.salePrice?.toStringAsFixed(2) ?? '-'} ₺",
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryDarkGreen,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // 4. Ok İkonu
-                    const SizedBox(width: 8),
-                    const Icon(Icons.chevron_right, color: Colors.grey, size: 22),
-                  ],
-                ),
+              child: Image.network(
+                sanitizeImageUrl(product.imageUrl) ?? '',
+                width: 60, height: 60, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Image.asset('assets/images/sample_food3.jpg'),
               ),
             ),
-          );
-        }),
+            title: Text(product.name ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+              "Bugün teslim al: ${product.startHour} - ${product.endHour}",
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+            ),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (product.listPrice != null)
+                  Text("${product.listPrice} TL", style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 11, color: Colors.grey)),
+                Text(
+                  "${product.salePrice} TL",
+                  style: const TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        )),
       ],
     );
   }
 
-  Widget _infoCard() {
+  Widget _combinedInfoAndRatingCard(AverageRatingsModel? ratings) {
+    debugPrint("🏗 [UI_BUILD] Kart çiziliyor. Mağaza: ${storeDetail.name} | Yıl: ${storeDetail.struggleYears}");
+
+    // --- YIL HESAPLAMA MANTIĞI ---
+    String struggleYears = "1"; // Varsayılan
+    try {
+      if (storeDetail.createdAt != null) {
+        final createDate = DateTime.parse(storeDetail.createdAt!);
+        final now = DateTime.now();
+        int difference = now.year - createDate.year;
+        // Eğer aynı yıl içindeyse veya 0 çıktıysa "1" kabul ediyoruz
+        struggleYears = difference <= 0 ? "1" : difference.toString();
+      }
+    } catch (e) {
+      debugPrint("Yıl hesaplama hatası: $e");
+    }
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: const Column(
-        children: [
-          Text("1+ yıldır israfla mücadelede"),
-          SizedBox(height: 10),
-          Text("250+ yemek kurtarıldı"),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
         ],
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // DİNAMİK YIL VERİSİ
+          _infoRow(
+              Icons.timer_outlined,
+              "${storeDetail.struggleYears}+ yıldır israfla mücadelede"
+          ),
+
+          const SizedBox(height: 16),
+
+          // ŞİMDİLİK STATİK (Backend ile konuşulacak)
+          _infoRow(Icons.shopping_basket_outlined, "${storeDetail.totalReviews ?? 0}+ yemek kurtarıldı"),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Divider(height: 1, color: Color(0xFFF1F1F1)),
+          ),
+
+          // RATING BÖLÜMÜ
+          _ratingSection(ratings),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _infoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.primaryDarkGreen, size: 24),
+        const SizedBox(width: 12),
+        Text(
+          text,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+      ],
+    );
+  }
+
+  Widget _ratingSection(AverageRatingsModel? ratings) {
+    if (ratings == null) return const SizedBox.shrink();
+
+    final ratingMap = {
+      "Servis": ratings.service,
+      "Ürün Miktarı": ratings.productQuantity,
+      "Ürün Lezzeti": ratings.productTaste,
+      "Ürün Çeşitliliği": ratings.productVariety,
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              "İşletme Değerlendirme",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Row(
+              children: [
+                const Icon(Icons.star, color: AppColors.primaryDarkGreen, size: 18),
+                Text(
+                  " ${storeDetail.overallRating.toStringAsFixed(1)} (${storeDetail.totalReviews}+)",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        ...ratingMap.entries.map((entry) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Text(entry.key, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+              ),
+              Expanded(
+                flex: 5,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: entry.value / 5,
+                    backgroundColor: Colors.grey.shade100,
+                    color: AppColors.primaryDarkGreen,
+                    minHeight: 6,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                entry.value.toStringAsFixed(1),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ],
+          ),
+        )),
+      ],
     );
   }
 

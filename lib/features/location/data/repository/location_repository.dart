@@ -39,4 +39,29 @@ class LocationRepository {
       return false;
     }
   }
+
+  // boundry çin hazırlık
+
+  Future<List<dynamic>> getStoresInBounds({
+    required double swLat,
+    required double swLng,
+    required double neLat,
+    required double neLng,
+  }) async {
+    try {
+      // Backend hazır olduğunda burası açılacak
+      // final res = await _dio.get('/customer/stores/nearby', queryParameters: {
+      //   'sw_lat': swLat, 'sw_lng': swLng, 'ne_lat': neLat, 'ne_lng': neLng,
+      // });
+      // return res.data['data'];
+
+      debugPrint("🌐 Harita sınırları gönderilmeye hazır: SW($swLat, $swLng) - NE($neLat, $neLng)");
+      return []; // Şimdilik boş liste
+    } catch (e) {
+      debugPrint("❌ Harita verisi çekme hatası: $e");
+      return [];
+    }
+  }
+
+
 }
