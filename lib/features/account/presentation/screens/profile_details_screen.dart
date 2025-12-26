@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../data/models/user_model.dart';
 import '../../domain/providers/user_notifier.dart';
 import '../../domain/states/user_state.dart';
 import '../widgets/email_change_sheeet.dart';
@@ -43,15 +44,26 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   // ---------------------------------------------------------------
   // E-POSTA DEĞİŞTİRME MODAL (OTP AKIŞI)
   // ---------------------------------------------------------------
-  void _showEmailChangeSheet(String currentEmail) {
-    showModalBottomSheet(
+  void _showEmailChangeWorkflow(String currentEmail) async {
+    // Tek bir sheet üzerinden tüm akışı yönetiyoruz
+    final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => EmailChangeBottomSheet(currentEmail: currentEmail),
+      builder: (context) => EmailChangeSheet(currentEmail: currentEmail),
     );
-  }
 
+    // Eğer her şey bitti ve Navigator.pop(context, "OK") dendiyse:
+    if (result == "OK" && mounted) {
+      // 1. Başarı Mesajı
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("E-posta başarıyla güncellendi."), backgroundColor: Colors.green),
+      );
+
+      // 2. Account Screen'e (Geriye) Dön
+      Navigator.of(context).pop();
+    }
+  }
   // ---------------------------------------------------------------
   // DATE PICKER
   // ---------------------------------------------------------------
@@ -94,11 +106,9 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
 // PROFİL KAYDET / GÜNCELLEME MANTIĞI (Refaktör Edildi)
 // ---------------------------------------------------------------
   Future<void> _save(UserNotifier notifier, UserState state) async {
-    print("🔘 [UI-DEBUG] Kaydet'e basıldı.");
+    print("🎯 [UI-STEP-1] Kaydet Başladı");
 
-    final u = state.user;
-
-    // 🛠️ Tarihi backend'in %100 anlayacağı formata getiriyoruz (YYYY-MM-DD)
+    // 1. Tarih Formatlama
     String? formattedDate;
     if (_selectedBirthDate != null) {
       formattedDate = "${_selectedBirthDate!.year}-"
@@ -106,29 +116,36 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           "${_selectedBirthDate!.day.toString().padLeft(2, '0')}";
     }
 
-    print("📝 [UI-DEBUG] Controller Email: ${_emailController.text}");
-    print("📅 [UI-DEBUG] Seçili Tarih Nesnesi: $_selectedBirthDate");
-
-    final updatedUser = u!.copyWith(
+    // 2. Kullanıcı Verisini Hazırla (id: "" ekledik)
+    final userToSave = UserModel(
+      id: "", // 👈 HATA BURADAYDI, eklendi.
       firstName: _nameController.text.trim(),
       lastName: _surnameController.text.trim(),
       email: _emailController.text.trim(),
-      birthDate: formattedDate, // Güvenli format: 1990-01-01
+      phone: state.user?.phone ?? "",
+      birthDate: formattedDate,
     );
 
-    print("📅 [UI] Backend'e giden tarih: $formattedDate");
-    print("📦 [UI-DEBUG] Notifier'a giden modeldeki tarih: ${updatedUser.birthDate}");
-    print("📦 [UI-DEBUG] Notifier'a giden email: ${updatedUser.email}");
-
     try {
-      await notifier.updateUser(updatedUser);
-      print("🎉 [UI] İşlem Başarılı!");
+      // 3. Notifier'daki DOĞRU metodu çağırıyoruz: updateUser
+      // Senin notifier'ın isNewUser kontrolü yapıp register'a yönlendiriyor.
+      await notifier.updateUser(userToSave);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("İşlem başarıyla tamamlandı."),
+            backgroundColor: Colors.green,
+          ),
+        );
+        context.go('/home'); // Başarılıysa yönlendir
+      }
     } catch (e) {
-      print("🚩 [UI] Hata: $e");
-      _showError("Hata: $e");
+      print("🚨 [UI-ERROR] Hata: $e");
+      // e.toString() yaparak backend'den gelen gerçek hatayı gösteriyoruz
+      _showError(e.toString().replaceAll("Exception: ", ""));
     }
   }
-
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg), backgroundColor: Colors.red));
@@ -232,7 +249,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
 // 1. MOD: E-mail doluysa (Senin metodun - Kilitli/OTP'li)
   Widget _emailActionTile(String email) {
     return InkWell(
-      onTap: () => _showEmailChangeSheet(email),
+      onTap: () => _showEmailChangeWorkflow(email),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
@@ -321,10 +338,23 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         child: isLoading
-            ? const CircularProgressIndicator(color: Colors.white)
+            ? const Center( // Merkeze al
+          child: SizedBox(
+            height: 24, // Yükseklik ve genişlik EŞİT olmalı (Kare)
+            width: 24,
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2.5, // Biraz daha ince ve şık
+            ),
+          ),
+        )
             : Text(
           isNewUser ? "Bilgilerimi Kaydet" : "Bilgilerimi Güncelle",
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold
+          ),
         ),
       ),
     );

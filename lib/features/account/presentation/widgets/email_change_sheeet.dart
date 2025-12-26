@@ -1,103 +1,219 @@
-
-// -----------------------------------------------------------------------------
-// E-POSTA DEĞİŞTİRME BOTTOM SHEET BİLEŞENİ
-// -----------------------------------------------------------------------------
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:pinput/pinput.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../data/repositories/user_repository.dart';
 import '../../domain/providers/user_notifier.dart';
 
-class EmailChangeBottomSheet extends ConsumerStatefulWidget {
+class EmailChangeSheet extends ConsumerStatefulWidget {
   final String currentEmail;
-  const EmailChangeBottomSheet({required this.currentEmail});
+  const EmailChangeSheet({super.key, required this.currentEmail});
 
   @override
-  ConsumerState<EmailChangeBottomSheet> createState() => EmailChangeBottomSheetState();
+  ConsumerState<EmailChangeSheet> createState() => _EmailChangeSheetState();
 }
 
-class EmailChangeBottomSheetState extends ConsumerState<EmailChangeBottomSheet> {
-  final _newEmailController = TextEditingController();
-  final _otpController = TextEditingController();
-  bool _isOtpSent = false;
+class _EmailChangeSheetState extends ConsumerState<EmailChangeSheet> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _pinController = TextEditingController();
+  final FocusNode _pinFocusNode = FocusNode();
+
+  bool _isOtpSent = false; // Kod gönderildi mi?
   bool _isLoading = false;
+  bool _isError = false;
 
-  Future<void> _handleAction() async {
+  Timer? _timer;
+  int _seconds = 120;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _emailController.dispose();
+    _pinController.dispose();
+    _pinFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _seconds = 120;
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_seconds == 0) t.cancel();
+      else if (mounted) setState(() => _seconds--);
+    });
+  }
+
+  // 1. ADIM: YENİ MAİLE KOD GÖNDER
+  Future<void> _sendOtp() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || email == widget.currentEmail) return;
+
     setState(() => _isLoading = true);
-    final repo = ref.read(userRepositoryProvider);
-
     try {
-      if (!_isOtpSent) {
-        // 1. Adım: OTP Gönder
-        await repo.sendEmailChangeOtp(_newEmailController.text.trim());
-        setState(() => _isOtpSent = true);
-      } else {
-        // 2. Adım: OTP Doğrula ve Güncelle
-        final updatedUser = await repo.verifyEmailChangeOtp(
-          _newEmailController.text.trim(),
-          _otpController.text.trim(),
-        );
-        ref.read(userNotifierProvider.notifier).loadUser(); // State'i tazele
-        if (mounted) Navigator.pop(context);
+      await ref.read(userNotifierProvider.notifier).sendEmailChangeOtp(email);
+      if (mounted) {
+        setState(() {
+          _isOtpSent = true;
+          _isLoading = false;
+        });
+        _startTimer();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-    } finally {
       setState(() => _isLoading = false);
+      _showSnackBar(e.toString(), Colors.red);
     }
+  }
+
+  // 2. ADIM: KODU DOĞRULA VE GÜNCELLE
+  Future<void> _verifyOtp() async {
+    final email = _emailController.text.trim();
+    final otp = _pinController.text.trim();
+    if (otp.length != 6) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final success = await ref.read(userNotifierProvider.notifier).verifyEmailChangeOtp(email, otp);
+      if (mounted) {
+        if (success) {
+          Navigator.pop(context, "OK"); // Her şey bitti!
+        } else {
+          _handleOtpError();
+        }
+      }
+    } catch (e) {
+      _handleOtpError();
+    }
+  }
+
+  void _handleOtpError() {
+    setState(() {
+      _isLoading = false;
+      _isError = true;
+    });
+    _pinController.clear();
+    _pinFocusNode.requestFocus();
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => _isError = false);
+    });
+  }
+
+  void _showSnackBar(String msg, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: color),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
-          const SizedBox(height: 24),
-          Text(_isOtpSent ? "Kodu Doğrula" : "E-posta Değiştir", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Text(
-            _isOtpSent ? "${_newEmailController.text} adresine gelen kodu girin." : "Yeni e-posta adresinize bir doğrulama kodu göndereceğiz.",
-            textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey),
+    // 📐 PIN TEMASI (SMS ile aynı)
+    final baseTheme = PinTheme(
+      height: 56, width: 50,
+      textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _isError ? Colors.red : AppColors.primaryDarkGreen, width: 2),
+      ),
+    );
+
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(28, 28, 28, MediaQuery.of(context).viewInsets.bottom + 28),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+        ),
+        child: SafeArea(
+          child: AnimatedSwitcher( // Ekranlar arası yumuşak geçiş
+            duration: const Duration(milliseconds: 300),
+            child: _isOtpSent ? _buildOtpStep(baseTheme) : _buildEmailStep(),
           ),
-          const SizedBox(height: 24),
-          if (!_isOtpSent)
-            TextField(
-              controller: _newEmailController,
-              decoration: InputDecoration(
-                hintText: "Yeni e-posta adresi",
-                prefixIcon: const Icon(Icons.mail_outline),
-                filled: true, fillColor: Colors.grey[100],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              ),
-            )
-          else
-            TextField(
-              controller: _otpController,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              maxLength: 6,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
-              decoration: InputDecoration(
-                hintText: "000000",
-                filled: true, fillColor: Colors.grey[100],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+        ),
+      ),
+    );
+  }
+
+  // E-POSTA GİRİŞ EKRANI
+  Widget _buildEmailStep() {
+    return Column(
+      key: const ValueKey("email_step"),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text("E-posta Değiştir", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        const Text("Yeni e-posta adresinizi giriniz. Size bir doğrulama kodu göndereceğiz.",
+            textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
+        const SizedBox(height: 24),
+        TextField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: InputDecoration(
+            hintText: "Yeni e-posta adresi",
+            prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primaryDarkGreen),
+            filled: true, fillColor: Colors.grey[50],
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: AppColors.primaryDarkGreen)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        _buildButton(onPressed: _sendOtp, label: "Kod Gönder"),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  // OTP GİRİŞ EKRANI (Pinput)
+  Widget _buildOtpStep(PinTheme baseTheme) {
+    return Column(
+      key: const ValueKey("otp_step"),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text("Kodu Doğrula", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        Text("${_emailController.text} adresine gönderilen kodu giriniz.",
+            textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
+        const SizedBox(height: 24),
+        Pinput(
+          length: 6,
+          controller: _pinController,
+          focusNode: _pinFocusNode,
+          defaultPinTheme: baseTheme,
+          focusedPinTheme: baseTheme.copyWith(
+            decoration: baseTheme.decoration!.copyWith(
+              border: Border.all(
+                color: _isError ? Colors.red : AppColors.primaryDarkGreen,
+                width: 3,
               ),
             ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity, height: 56,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _handleAction,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryDarkGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(_isOtpSent ? "Onayla" : "Kod Gönder", style: const TextStyle(color: Colors.white)),
-            ),
           ),
-        ],
+          forceErrorState: _isError,
+          autofocus: true,
+          onCompleted: (_) => _verifyOtp(),
+        ),
+        const SizedBox(height: 24),
+        _seconds > 0
+            ? Text("${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')} içinde tekrar gönderebilirsin", style: const TextStyle(color: Colors.black54))
+            : TextButton(onPressed: _sendOtp, child: const Text("Kodu tekrar gönder", style: TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold))),
+        const SizedBox(height: 24),
+        _buildButton(onPressed: _verifyOtp, label: _isError ? "Hatalı Kod" : "Doğrula"),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildButton({required VoidCallback onPressed, required String label}) {
+    return SizedBox(
+      width: double.infinity, height: 52,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _isError ? Colors.red : AppColors.primaryDarkGreen,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
+        ),
+        child: _isLoading
+            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            : Text(label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );
   }

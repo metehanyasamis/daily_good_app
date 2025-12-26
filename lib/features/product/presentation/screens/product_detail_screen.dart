@@ -12,6 +12,7 @@ import '../../../../core/widgets/store_delivery_info_card.dart';
 
 import '../../../cart/domain/providers/cart_provider.dart';
 import '../../../cart/presentation/widgets/cart_warning_modal.dart';
+import '../../../settings/domain/providers/legal_settings_provider.dart';
 import '../../../stores/domain/providers/store_detail_provider.dart';
 import '../../../stores/presentation/widgets/store_map_card.dart';
 import '../../domain/products_notifier.dart';
@@ -37,11 +38,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   void _fetchDetail() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final notifier = ref.read(productsProvider.notifier);
-      final state = ref.read(productsProvider);
-
-      if (state.selectedProduct?.id != widget.productId) {
-        notifier.fetchDetail(widget.productId);
-      }
+      notifier.clearDetail();
+      notifier.fetchDetail(widget.productId);
     });
   }
 
@@ -50,8 +48,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final productState = ref.watch(productsProvider);
     final product = productState.selectedProduct;
 
-    if (product == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    final settingsAsync = ref.watch(legalSettingsProvider);
+
+    if (product == null || product.id != widget.productId) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     final storeId = product.store.id;
@@ -76,7 +78,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             slivers: [
               _ProductHeader(product: product),
               _ProductInfoSection(product: product),
-              const KnowMoreFull(),
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
+              // 🎯 ÇÖZÜM: Veri varsa gönderiyoruz, yoksa null (default metin görünecek)
+              KnowMoreFull(
+                customInfo: settingsAsync.value?.importantInfo,
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
               _StoreSection(product: product),
               _RatingSection(product: product),
               SliverToBoxAdapter(
@@ -187,7 +196,10 @@ class _ProductInfoSection extends StatelessWidget {
             const SizedBox(height: 20),
             const Text("Bu pakette seni ne bekliyor?", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
-            const Text("İçerik bilgisi backend’den gelecek."),
+            Text(
+              product.description ?? "İçerik bilgisi bulunmamaktadır.",
+              style: TextStyle(color: Colors.grey.shade800, height: 1.4),
+            ),
           ],
         ),
       ),
@@ -289,6 +301,8 @@ class _CircularIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       icon: Container(
+        width: 40,
+        height: 40,
         padding: const EdgeInsets.all(8),
         decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
         child: Icon(icon, color: Colors.black, size: 18),

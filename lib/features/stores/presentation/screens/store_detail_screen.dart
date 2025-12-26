@@ -141,8 +141,8 @@ class StoreDetailScreen extends ConsumerWidget {
               left: 16,
               bottom: 16,
               child: Container(
-                width: 74,
-                height: 74,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
@@ -151,7 +151,7 @@ class StoreDetailScreen extends ConsumerWidget {
                   ),
                 ),
                 child: CircleAvatar(
-                  radius: 35,
+                  radius: 28,
                   backgroundColor: Colors.white,
                   child: ClipOval(
                     child: logoUrl != null

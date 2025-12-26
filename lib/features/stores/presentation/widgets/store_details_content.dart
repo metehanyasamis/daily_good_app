@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/delivery_date_formatter.dart';
 import '../../../../core/utils/image_utils.dart';
 import '../../../../core/widgets/navigation_link.dart';
 import '../../../product/data/models/product_model.dart';

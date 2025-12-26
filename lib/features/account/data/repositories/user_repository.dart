@@ -23,9 +23,27 @@ class UserRepositoryImpl implements UserRepository {
 
   @override
   Future<UserModel> fetchUser() async {
-    final response = await api.get("/customer/auth/me");
-    if (response.statusCode != 200) throw Exception("Kullanıcı bilgisi alınamadı");
+    // 🎯 KRİTİK: İstatistikler için endpoint '/profile' olmalı
+    print("📡 [REPO] fetchUser İsteği Atılıyor: /customer/profile");
+
+    final response = await api.get("/customer/profile");
+
+    print("📥 [REPO] Status Code: ${response.statusCode}");
+
+    if (response.statusCode != 200) {
+      print("❌ [REPO] Hata: Kullanıcı bilgisi alınamadı");
+      throw Exception("Kullanıcı bilgisi alınamadı");
+    }
+
     final decoded = jsonDecode(response.body);
+
+    // 🔍 DEBUG: İstatistik verisi gerçekten geliyor mu bakıyoruz
+    if (decoded["data"] != null && decoded["data"]["statistics"] != null) {
+      print("✅ [REPO] İstatistikler Bulundu: ${decoded["data"]["statistics"]}");
+    } else {
+      print("⚠️ [REPO] İstatistik verisi boş (null) geliyor!");
+    }
+
     return UserModel.fromJson(decoded["data"]);
   }
 
@@ -102,10 +120,25 @@ class UserRepositoryImpl implements UserRepository {
     return UserModel.fromJson(jsonDecode(response.body)["data"]);
   }
 
+// UserRepositoryImpl içindeki metodu bununla değiştir:
   @override
   Future<void> sendEmailChangeOtp(String newEmail) async {
-    final response = await api.post("/customer/profile/email/send-otp", body: {"email": newEmail});
-    if (response.statusCode != 200) throw Exception("Kod gönderilemedi");
+    print("📡 [REPO] sendEmailChangeOtp Başladı: $newEmail");
+
+    // URL dökümandaki ile birebir aynı olmalı
+    final response = await api.post(
+      "/customer/profile/email/send-otp",
+      body: {"email": newEmail},
+    );
+
+    print("📥 [REPO] Status Code: ${response.statusCode}");
+    print("📥 [REPO] Body: ${response.body}");
+
+    if (response.statusCode != 200) {
+      final Map<String, dynamic> errorData = jsonDecode(response.body);
+      // Backend'den gelen gerçek hata mesajını fırlat ki ekranda görelim
+      throw Exception(errorData["message"] ?? "Kod gönderilemedi");
+    }
   }
 
   @override
@@ -117,8 +150,13 @@ class UserRepositoryImpl implements UserRepository {
 
   @override
   Future<void> deleteAccount() async {
-    final response = await api.delete("/customer/auth/delete");
-    if (response.statusCode != 200) throw Exception("Hesap silinemedi");
+    // SAKIN BU PRİNT'İ SİLME, BU GELMİYORSA BUTON BOZUKTUR
+    debugPrint("🔥 [FATAL-DEBUG] REPOSITORY İÇİNE GİRİLDİ!");
+
+    final response = await api.delete("/customer/profile");
+
+    debugPrint("📥 [REPO] Status: ${response.statusCode}");
+    if (response.statusCode != 200) throw Exception("Silme başarısız");
   }
 }
 

@@ -9,8 +9,9 @@ class ProductModel {
   final double salePrice;
   final int stock;
   final String imageUrl;
+  final String? description;
   final StoreSummary store;
-  final String startHour; // Artık util sayesinde her zaman temiz String gelecek
+  final String startHour;
   final String endHour;
   final String startDate;
   final String endDate;
@@ -23,6 +24,7 @@ class ProductModel {
     required this.salePrice,
     required this.stock,
     required this.imageUrl,
+    required this.description,
     required this.store,
     required this.startHour,
     required this.endHour,
@@ -55,6 +57,7 @@ class ProductModel {
       salePrice: (json["sale_price"] as num?)?.toDouble() ?? 0.0,
       stock: (json["stock"] as num?)?.toInt() ?? 0,
       imageUrl: normalizeImageUrl(json["image_url"]),
+      description: json['description'],
       store: resolvedStore,
 
       // 🔥 SAATLER: Veri girerken TimeFormatter üzerinden yıkanıyor (00:00:00 -> 00:00)

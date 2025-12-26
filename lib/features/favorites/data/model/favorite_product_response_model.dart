@@ -41,6 +41,7 @@ class FavoriteProductResponseModel {
       salePrice: product.salePrice.toDouble(),
       stock: product.stock,
       imageUrl: product.imageUrl,
+      description: product.description,
       store: product.store.toStoreSummary(),
       startHour: product.startHour ?? "",
       endHour: product.endHour ?? "",

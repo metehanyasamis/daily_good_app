@@ -215,9 +215,9 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       return;
     }
 
+    print("🚀 GÖNDERİLEN KEY: $selectedSubjectKey"); // Bunun yukarıdaki listeden biri olması şart!
     final msg = ContactMessage(
-      subjects: [selectedSubjectKey!],
-      // Sipariş seçilmediyse null gider, seçildiyse ID'si gider
+      subject: selectedSubjectKey!, // Liste [] içine almadan doğrudan gönderiyoruz
       orderId: selectedOrder != null ? (selectedOrder as OrderListItem).id : null,
       message: messageText.isNotEmpty ? messageText : null,
       attachments: _photos,

@@ -8,7 +8,6 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/info_row_widget.dart';
 
 import '../../../auth/domain/providers/auth_notifier.dart';
-import '../../../saving/model/saving_model.dart';
 import '../../../saving/providers/saving_provider.dart';
 import '../../domain/providers/user_notifier.dart';
 import '../../domain/states/user_state.dart';
@@ -76,21 +75,25 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
 
   // -------------------------------------------------------------
+
+  /*
   Future<void> _deleteAccount() async {
+    // 1. Önce gerekli araçları "dışarıya" çıkaralım
+    final userNotifier = ref.read(userNotifierProvider.notifier);
+    final authNotifier = ref.read(authNotifierProvider.notifier);
+    final router = GoRouter.of(context);
+
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      barrierDismissible: false, // Yanlışlıkla kapanmasın
+      builder: (ctx) => AlertDialog(
         title: const Text('Hesabı Sil'),
-        content: const Text('Hesabınızı kalıcı olarak silmek istediğinize emin misiniz?'),
+        content: const Text('Tüm verileriniz kalıcı olarak silinecektir. Emin misiniz?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('İptal'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
           ElevatedButton(
-            style:
-            ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Evet, Sil'),
           ),
         ],
@@ -99,14 +102,101 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
     if (confirm != true) return;
 
-    final userNotifier = ref.read(userNotifierProvider.notifier);
+    // 2. İşlem başlıyor: Loading gösterelim
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
 
-    await userNotifier.deleteUserAccount();
-    await ref.read(authNotifierProvider.notifier).logout();
-    await PrefsService.clearAll();
+    try {
+      debugPrint("🕹️ [UI] Backend silme tetiklendi...");
+      await userNotifier.deleteUserAccount();
 
-    if (mounted) context.go('/login');
+      // 3. Backend silindi! Şimdi "Hayalet Mod"da temizlik yapalım
+      debugPrint("🕹️ [UI] Temizlik ve Yönlendirme...");
+
+      // Önce yönlendirelim ki AccountScreen ekrandan kalksın (Siyah ekranı önler)
+      router.go('/login');
+
+      // Yarım saniye sonra sessizce temizle
+      Future.delayed(const Duration(milliseconds: 300), () async {
+        await authNotifier.logout();
+        await PrefsService.clearAll();
+        debugPrint("🏁 [UI] Tertemiz oldu.");
+      });
+
+    } catch (e) {
+      debugPrint("💥 [UI-ERROR] $e");
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Loading'i kapat
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Hata: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
+*/
+
+  Future<void> _deleteAccount() async {
+    // 1. Önce gerekli araçları context ölmeden kopyala
+    final userNotifier = ref.read(userNotifierProvider.notifier);
+    final authNotifier = ref.read(authNotifierProvider.notifier);
+
+    // 🎯 KRİTİK: GoRouter'ı direkt değişkene al
+    final router = GoRouter.of(context);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hesabı Sil'),
+        content: const Text('Tüm verileriniz silinecek. Emin misiniz?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Evet, Sil'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // 2. Loading göster
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      debugPrint("🕹️ [UI] Backend silme başlıyor...");
+      await userNotifier.deleteUserAccount();
+
+      // 🎯 BURASI EN ÖNEMLİ KISIM:
+      // Önce yönlendiriyoruz. Ekranda AccountScreen kalmadığı için çökme riski bitiyor.
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Loading'i kapat
+        router.go('/login'); // Login'e kaç!
+
+        // 3. Login ekranına geçiş başladıktan hemen sonra yereli süpür
+        // Future.microtask veya kısa bir delay ile yaparsak AccountScreen dispose olur.
+        Future.delayed(const Duration(milliseconds: 100), () async {
+          await authNotifier.logout();
+          await PrefsService.clearAll();
+          debugPrint("🏁 [UI] Tertemiz oldu.");
+        });
+      }
+    } catch (e) {
+      debugPrint("💥 [UI-HATA] $e");
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
+
 
   // -------------------------------------------------------------
 // AccountScreen içindeki mevcut metodu bununla değiştir:
@@ -240,10 +330,16 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                   ),
                   const SizedBox(height: 8),
                   InfoRowWidget(
-                    icon: Icons.phone_android,
+                    icon: Icons.phone,
                     label: "Telefon",
                     value: user.phone,
+                    // 🎯 KRİTİK MANTIK: Eğer phone_verified_at doluysa (true ise) DOĞRULANMIŞTIR.
+                    // Modelimizde bunu zaten check ettik.
                     isVerified: user.isPhoneVerified,
+
+                    // Madem zaten doğrulanmadan içeri giremez,
+                    // onVerify'ı null yaparsak o "Şimdi Doğrula" butonu ASLA çıkmaz.
+                    onVerify: null,
                   ),
                   const SizedBox(height: 8),
                   InfoRowWidget(
@@ -259,7 +355,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               const SizedBox(height: 10),
 
               // -------------------------------------------------- SAVING card
-              _buildSavingCard(saving),
+              _buildSavingCard(),
 
               const SizedBox(height: 12),
 
@@ -356,7 +452,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   // -------------------------------------------------------------
-  Widget _buildSavingCard(SavingModel saving) {
+  Widget _buildSavingCard() { // Artık parametre almıyor, veriyi ref üzerinden watch ediyoruz
+    final userState = ref.watch(userNotifierProvider);
+    final stats = userState.user?.statistics;
+
     return _buildCard(
       title: "Kurtardığın Paketler & Kazançların",
       children: [
@@ -365,25 +464,29 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           children: [
             _StatBox(
               icon: Icons.local_mall_outlined,
-              value: "${saving.packagesSaved}",
+              // Backend: total_packages_purchased
+              value: "${stats?.totalPackages ?? 0}",
               label: "Paket",
             ),
             _StatBox(
               icon: Icons.savings,
-              value: "${saving.moneySaved.toStringAsFixed(0)} TL",
+              // Backend: total_savings
+              value: "${stats?.totalSavings?.toStringAsFixed(0) ?? "0"} TL",
               label: "Tasarruf",
             ),
             _StatBox(
               icon: Icons.eco_outlined,
-              value: "${saving.carbonSavedKg.toStringAsFixed(1)} kg",
+              // Backend: carbon_footprint_kg
+              value: "${stats?.carbonFootprint?.toStringAsFixed(1) ?? "0.0"} kg",
               label: "CO₂",
             ),
           ],
         ),
         const Divider(height: 24),
         ListTile(
-          leading: const Icon(Icons.history),
-          title: const Text("Geçmiş Siparişler"),
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.history, color: AppColors.primaryDarkGreen),
+          title: const Text("Geçmiş Siparişler", style: TextStyle(fontWeight: FontWeight.w500)),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/order-history'),
         )

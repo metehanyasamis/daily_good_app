@@ -1,4 +1,6 @@
 
+import 'package:flutter/material.dart';
+
 class UserModel {
   final String id;
   final String? firstName;
@@ -21,8 +23,8 @@ class UserModel {
   final String? createdAt;
   final String? updatedAt;
 
-  // Token sadece login sırasında gelir
   final String? token;
+  final UserStatistics? statistics;
 
   UserModel({
     required this.id,
@@ -42,29 +44,32 @@ class UserModel {
     this.createdAt,
     this.updatedAt,
     this.token,
+    this.statistics,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json, {String? token}) {
     final location = json["location"];
+    final statsJson = json["statistics"];
+
+    // Debug için kalsın, veriyi gördük
+    debugPrint("🔍 [PARSE-START] ID: ${json["id"]}");
 
     return UserModel(
-      id: json["id"] ?? "",
-      phone: json["phone"] ?? "",
-      firstName: json["first_name"],
-      lastName: json["last_name"],
-      fullName: json["full_name"],
+      id: json["id"]?.toString() ?? "",
+      phone: json["phone"]?.toString() ?? "",
+      firstName: json["first_name"], // Logda "first_name"
+      lastName: json["last_name"],   // Logda "last_name"
+      fullName: json["full_name"],   // Logda "full_name"
       email: json["email"],
-      birthDate: json["birth_date"],
+      birthDate: json["birth_date"]?.toString(), // 🎯 Logda: "birth_date"
 
-      isEmailVerified: json["email_verified_at"] != null || (json["isEmailVerified"] == true),
-      isPhoneVerified: json["phone_verified_at"] != null,
+      // 🔥 LOGA GÖRE GÜNCELLENEN KRİTİK ALANLAR:
+      // phone_verified_at dolu gelirse true döner
+      isEmailVerified: json["email_verified_at"] != null && json["email_verified_at"].toString().isNotEmpty,
+      isPhoneVerified: json["phone_verified_at"] != null && json["phone_verified_at"].toString().isNotEmpty,
 
-      latitude: json["latitude"] != null
-          ? double.tryParse(json["latitude"].toString())
-          : null,
-      longitude: json["longitude"] != null
-          ? double.tryParse(json["longitude"].toString())
-          : null,
+      latitude: json["latitude"] != null ? double.tryParse(json["latitude"].toString()) : null,
+      longitude: json["longitude"] != null ? double.tryParse(json["longitude"].toString()) : null,
 
       locationLat: location != null ? (location["lat"]?.toDouble()) : null,
       locationLng: location != null ? (location["lng"]?.toDouble()) : null,
@@ -72,9 +77,8 @@ class UserModel {
       fcmToken: json["fcm_token"],
       createdAt: json["created_at"],
       updatedAt: json["updated_at"],
-
-      // login sırasında token geçilir
-      token: token,
+      token: token ?? json["token"],
+      statistics: statsJson != null ? UserStatistics.fromJson(statsJson) : null,
     );
   }
 
@@ -98,6 +102,7 @@ class UserModel {
     "created_at": createdAt,
     "updated_at": updatedAt,
     "token": token,
+    "statistics": statistics?.toJson(),
   };
 
   UserModel copyWith({
@@ -118,6 +123,7 @@ class UserModel {
     String? createdAt,
     String? updatedAt,
     String? token,
+    UserStatistics? statistics,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -137,6 +143,35 @@ class UserModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       token: token ?? this.token,
+      statistics: statistics ?? this.statistics,
     );
   }
+}
+
+
+// 📊 Backend'deki "statistics" yapısını karşılayan yardımcı sınıf
+class UserStatistics {
+  final int totalPackages;
+  final double totalSavings;
+  final double carbonFootprint;
+
+  UserStatistics({
+    required this.totalPackages,
+    required this.totalSavings,
+    required this.carbonFootprint,
+  });
+
+  factory UserStatistics.fromJson(Map<String, dynamic> json) {
+    return UserStatistics(
+      totalPackages: json['total_packages_purchased'] ?? 0,
+      totalSavings: (json['total_savings'] ?? 0).toDouble(),
+      carbonFootprint: (json['carbon_footprint_kg'] ?? 0).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    "total_packages_purchased": totalPackages,
+    "total_savings": totalSavings,
+    "carbon_footprint_kg": carbonFootprint,
+  };
 }

@@ -71,58 +71,63 @@ class UserNotifier extends StateNotifier<UserState> {
   }
 
   // ------------------------------------------------------------------
-  // TEK VE ANA GÜNCELLEME METODU
-  // ------------------------------------------------------------------
-// ------------------------------------------------------------------
   // TEK VE ANA GÜNCELLEME METODU (Düzeltilmiş Versiyon)
   // ------------------------------------------------------------------
   Future<void> updateUser(UserModel updated) async {
-    print("🔎 [CHECK] Notifier'a gelen email: '${updated.email}'"); // Bunu kontrol et!
-    print("🔎 [CHECK] Notifier'a gelen phone: '${updated.phone}'"); // Bunu kontrol et!
-
-
     final previousUser = state.user;
-
-    // 1. HATA DÜZELTME: appState üzerinden newUser kontrolü
-    // Eğer AppState modelinin içinde 'newUser' diye bir alan varsa bu şekilde okunur:
     final bool isNewUser = ref.read(appStateProvider).isNewUser;
 
-    print("🚀 [NOTIFIER] İşlem başladı. Yeni kullanıcı mı?: $isNewUser");
+    print("🚀 [NOTIFIER] Güncelleme Başladı. Yeni Kullanıcı: $isNewUser");
+    print("📅 [NOTIFIER] Gönderilen Doğum Tarihi: ${updated.birthDate}");
 
     try {
-      // UserState içindeki copyWith ile status'u loading yapıyoruz
       state = state.copyWith(status: UserStatus.loading);
-
       UserModel savedUser;
 
       if (isNewUser) {
-        // 1. Yeni Kayıt (AuthRepository üzerinden)
-        print("🎯 [NOTIFIER] AuthRepository.registerUser çağrılıyor...");
         savedUser = await authRepository.registerUser(updated);
-
       } else {
-        // 2. Mevcut Güncelleme (UserRepository üzerinden)
-        print("📝 [NOTIFIER] UserRepository.updateUser çağrılıyor...");
         savedUser = await repository.updateUser(updated);
       }
 
-      print("✅ [NOTIFIER] İşlem Başarılı: ${savedUser.firstName}");
-      // İşlem bitince User'ı state'e "ready" olarak koyuyoruz
+      print("✅ [NOTIFIER] Backend'den Gelen Tarih: ${savedUser.birthDate}");
       state = UserState.ready(savedUser);
-
     } catch (e) {
-      print("❌ [NOTIFIER] HATA YAKALANDI: $e");
-
-      // 2. HATA DÜZELTME: Catch bloğunda state ataması
-      if (previousUser != null) {
-        // Eğer eski bir kullanıcı verisi varsa onu geri yükle ve status'u error/ready yap
-        state = UserState.ready(previousUser);
-      } else {
-        // Eğer hiç veri yoksa, UserState.initial() gibi bir başlangıç state'i ver
-        // 'state = UserStatus.initial' YANLIŞTI, doğrusu aşağıda:
-        state = const UserState.initial();
-      }
+      print("❌ [NOTIFIER] HATA: $e");
+      state = previousUser != null ? UserState.ready(previousUser) : const UserState.initial();
       rethrow;
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // 📧 E-POSTA DEĞİŞTİRME AKIŞI (Yeni Eklenenler)
+  // ------------------------------------------------------------------
+
+  // 1. OTP Kodu Gönder (Eksik olan metot buydu)
+  Future<void> sendEmailChangeOtp(String newEmail) async {
+    try {
+      print("🚀 [NOTIFIER] Email Change OTP İstendi: $newEmail");
+      await repository.sendEmailChangeOtp(newEmail);
+    } catch (e) {
+      print("❌ [NOTIFIER] sendEmailChangeOtp Hata: $e");
+      rethrow;
+    }
+  }
+
+  // 2. OTP Kodu Doğrula (E-posta değişimini tamamlar)
+  Future<bool> verifyEmailChangeOtp(String email, String code) async {
+    try {
+      print("🔑 [NOTIFIER] Email Change OTP Doğrulanıyor: $code");
+      // Repository'den gelen güncel kullanıcı modelini alıyoruz
+      final updatedUser = await repository.verifyEmailChangeOtp(email, code);
+
+      // State'i yeni kullanıcı bilgileriyle güncelle
+      state = UserState.ready(updatedUser);
+      print("✅ [NOTIFIER] Email Değişimi Başarılı!");
+      return true;
+    } catch (e) {
+      print("❌ [NOTIFIER] verifyEmailChangeOtp Hata: $e");
+      return false;
     }
   }
 
@@ -149,7 +154,13 @@ class UserNotifier extends StateNotifier<UserState> {
   }
 
   Future<void> deleteUserAccount() async {
-    await repository.deleteAccount();
-    clearUser();
+    debugPrint("🚀 [NOTIFIER] Fonksiyon tetiklendi!");
+    try {
+      await repository.deleteAccount();
+      debugPrint("✅ [NOTIFIER] Repo bitti.");
+    } catch (e) {
+      debugPrint("🚨 [NOTIFIER] Hata: $e");
+      rethrow;
+    }
   }
 }

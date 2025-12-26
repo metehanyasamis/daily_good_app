@@ -3,10 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart'; // ✅ BU IMPORT ŞART
 import '../../../settings/domain/providers/legal_settings_provider.dart';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import '../../../settings/domain/providers/legal_settings_provider.dart';
 
 class LegalDocumentsScreen extends ConsumerWidget {
   const LegalDocumentsScreen({super.key});

@@ -1,16 +1,15 @@
-// lib/features/contact/data/contact_message_model.dart
-
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 
 class ContactMessage {
-  final List<String> subjects;
+  final String subject; // List<String> yerine String yapıldı
   final String? orderId;
   final String? message;
   final List<File> attachments;
 
   ContactMessage({
-    required this.subjects,
+    required this.subject, // Tekil hale getirildi
     this.orderId,
     this.message,
     this.attachments = const [],
@@ -19,30 +18,24 @@ class ContactMessage {
   FormData toFormData() {
     final formData = FormData();
 
-    // subject[]
-    for (final s in subjects) {
-      formData.fields.add(MapEntry('subject[]', s));
-    }
+    // 🎯 DÜZELTME: Liste döngüsünü kaldır, tekil string gönder
+    // Backend dokümanında 'subject[]' değil sadece 'subject' yazıyor.
+    formData.fields.add(MapEntry('subject', subject));
 
-    // order_id
     if (orderId != null && orderId!.isNotEmpty) {
       formData.fields.add(MapEntry('order_id', orderId!));
     }
 
-    // message
     if (message != null && message!.isNotEmpty) {
       formData.fields.add(MapEntry('message', message!));
     }
 
-    // attachments[]
+    // Fotoğraflar için 'attachments[]' kullanımı dokümanla uyumlu görünüyor.
     for (final file in attachments) {
       formData.files.add(
         MapEntry(
           'attachments[]',
-          MultipartFile.fromFileSync(
-            file.path,
-            filename: file.path.split('/').last,
-          ),
+          MultipartFile.fromFileSync(file.path),
         ),
       );
     }

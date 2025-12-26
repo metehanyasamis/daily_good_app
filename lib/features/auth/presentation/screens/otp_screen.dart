@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../account/data/models/user_model.dart';
 import '../../../account/domain/providers/user_notifier.dart';
 import '../../domain/providers/auth_notifier.dart';
 
