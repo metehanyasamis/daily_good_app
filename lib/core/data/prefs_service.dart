@@ -30,20 +30,16 @@ class PrefsService {
   // 🔑 TOKEN — READ
   // -------------------------------------------------------------
   static Future<String?> readToken() async {
-    if (inMemoryToken != null && inMemoryToken!.isNotEmpty) {
-      return inMemoryToken;
-    }
-
+    if (inMemoryToken != null && inMemoryToken!.isNotEmpty) return inMemoryToken;
     final p = await _prefs;
     final token = p.getString(_kAuthToken);
-
-    if (token != null && token.isNotEmpty) {
-      inMemoryToken = token;
-    }
-
+    if (token != null && token.isNotEmpty) inMemoryToken = token;
     print("📥 [Prefs] Token read → $token");
     return token;
   }
+
+  // 💡 Hata veren yerler için bu alias'ı ekle:
+  static Future<String?> getToken() => readToken();
 
   // -------------------------------------------------------------
   // TOKEN — CLEAR

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../account/data/models/user_model.dart';
+import '../../../account/domain/providers/user_notifier.dart';
 import '../../domain/providers/auth_notifier.dart';
 
 class OtpBottomSheet extends ConsumerStatefulWidget {
@@ -70,7 +72,11 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
     final String currentPurpose = widget.isLogin ? "login" : "register";
 
     // Notifier'daki sendOtp artık purpose beklediği için bunu ekliyoruz
-    await auth.sendOtp(widget.phone, purpose: currentPurpose);
+    await ref.read(authNotifierProvider.notifier).sendOtp(
+      phone: widget.phone,
+      purpose: widget.isLogin ? 'login' : 'register',
+    );
+
 
     setState(() {
       _seconds = 120;
@@ -86,42 +92,33 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
   // SUBMIT
   // ---------------------------------------------------------------------------
   Future<void> _submit() async {
+    debugPrint("🔘 [UI-OTP] Doğrula butonuna basıldı.");
     final code = _pin.text.trim();
     if (code.length != 6) return;
 
-    setState(() {
-      _loading = true;
-      _error = false;
-    });
+    setState(() { _loading = true; _error = false; });
 
-    final auth = ref.read(authNotifierProvider.notifier);
+    try {
+      final auth = ref.read(authNotifierProvider.notifier);
+      final userNotif = ref.read(userNotifierProvider.notifier);
 
-    // LOGIN
-    if (widget.isLogin) {
-      final result = await auth.login(widget.phone, code);
+      final userModel = await auth.verifyOtpModel(widget.phone, code);
 
-      if (!mounted) return;
+      if (userModel != null) {
+        debugPrint("💾 [UI-OTP] UserNotifier.saveUser çağrılıyor...");
+        await userNotif.saveUser(userModel);
 
-      if (result == "EXISTING") {
-        context.go("/");     // ✔ DOĞRU
-        return;
+        if (!mounted) return;
+        debugPrint("🚢 [UI-OTP] Yönlendirme yapılıyor: /profileDetail");
+        context.go("/profileDetail");
+      } else {
+        debugPrint("🚨 [UI-OTP] İşlem başarısız, hata gösteriliyor.");
+        _handleError();
       }
-
+    } catch (e) {
+      debugPrint("💥 [UI-OTP] CRASH: $e");
       _handleError();
-      return;
     }
-
-    // REGISTER
-    final ok = await auth.verifyOtp(widget.phone, code);
-
-    if (!ok) {
-      _handleError();
-      return;
-    }
-
-    if (!mounted) return;
-
-    context.go("/profileDetail");  // ✔ DOĞRU
   }
 
 

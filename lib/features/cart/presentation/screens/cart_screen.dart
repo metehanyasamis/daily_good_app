@@ -1,5 +1,6 @@
 // lib/features/cart/presentation/screens/cart_screen.dart
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,7 @@ import '../../../../core/widgets/know_more_full.dart';
 import '../../../../core/widgets/navigation_link.dart';
 import '../../domain/models/cart_item.dart';
 import '../../domain/providers/cart_provider.dart';
+import '../../domain/providers/checkout_contracts_provider.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -118,11 +120,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 padding: const EdgeInsets.all(16),
                 child: _ContractCheckbox(
                   value: _isAgreed,
-                  onChanged: (val) {
-                    setState(() {
-                      _isAgreed = val ?? false;
-                    });
-                  },
+                  cartId: "", // Boş bırak, backend auth üzerinden çözsün
+                  onChanged: (val) => setState(() => _isAgreed = val ?? false),
                 ),
               ),
             ),
@@ -168,58 +167,110 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 // 🧺 Sözleşme Onay Kutusu
 // ---------------------------------------------------------------------------
 
-class _ContractCheckbox extends StatelessWidget {
+class _ContractCheckbox extends ConsumerWidget {
   final bool value;
   final ValueChanged<bool?> onChanged;
+  final String? cartId;
 
-  const _ContractCheckbox({required this.value, required this.onChanged});
+  const _ContractCheckbox({
+    required this.value,
+    required this.onChanged,
+    this.cartId,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Sözleşmeleri çekiyoruz
+    final contractsAsync = ref.watch(checkoutContractsProvider(cartId));
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ✅ CHECKBOX HER ZAMAN BURADA DURACAK
         SizedBox(
           height: 24,
           width: 24,
           child: Checkbox(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.primaryDarkGreen, // Seçiliyken iç dolgu rengi
-            checkColor: Colors.white, // İçindeki tik işareti rengi
-
-            // 🔥 Siyah çerçeveyi kaldıran/hafifleten kısım:
-            side: BorderSide.none,
+            activeColor: AppColors.primaryDarkGreen,
+            side: const BorderSide(color: Colors.grey, width: 1.5),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           ),
         ),
         const SizedBox(width: 12),
+        // ✅ SADECE METİN KISMI DİNAMİK
         Expanded(
-          child: GestureDetector(
-            onTap: () {
-              // Buraya URL açma mantığı gelecek (şimdilik debugPrint)
-              debugPrint("Sözleşme detayları açılacak...");
-            },
-            child: RichText(
+          child: contractsAsync.when(
+            data: (contracts) => RichText(
               text: TextSpan(
                 style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
                 children: [
                   TextSpan(
-                    text: "Ön Bilgilendirme Formu ",
-                    style: TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold),
+                    text: "Ön Bilgilendirme Formu",
+                    style: const TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => _showContractModal(context, "Ön Bilgilendirme Formu", contracts.onBilgilendirmeFormu),
                   ),
-                  const TextSpan(text: "ve "),
+                  const TextSpan(text: " ve "),
                   TextSpan(
                     text: "Mesafeli Satış Sözleşmesi",
-                    style: TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => _showContractModal(context, "Mesafeli Satış Sözleşmesi", contracts.mesafeliSatisSozlesmesi),
                   ),
                   const TextSpan(text: "'ni okudum ve kabul ediyorum."),
                 ],
               ),
             ),
+            // Yüklenirken veya hata anında checkbox gitmesin diye metin yer tutucu gösteriyoruz
+            loading: () => const Text("Sözleşmeler hazırlanıyor...", style: TextStyle(fontSize: 13, color: Colors.grey)),
+            error: (_, __) => const Text("Sözleşmelere şu an ulaşılamıyor.", style: TextStyle(fontSize: 13, color: Colors.red)),
           ),
         ),
       ],
+    );
+  }
+
+  void _showContractModal(BuildContext context, String title, String htmlContent) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                // İleride 'flutter_widget_from_html' eklerseniz burayı HtmlWidget ile değiştirin
+                child: Text(
+                  htmlContent.replaceAll(RegExp(r'<[^>]*>'), ''), // Basit HTML temizleme
+                  style: const TextStyle(fontSize: 14, height: 1.5),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

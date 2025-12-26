@@ -14,49 +14,59 @@ class AuthRepository {
         headers: {"Accept": "application/json"},
       ));
 
-  Future<bool> sendOtp(String phone, {required String purpose, String? email}) async {
-    final data = {
-      "phone": phone,
-      "purpose": purpose,
-    };
-
-    // Eğer kayıt oluyorsa ve email lazımsa ekle
-    if (purpose == "register" && email != null) {
-      data["email"] = email;
-    }
-
+// auth_repository.dart içindeki sendOtp metodunu şu şekilde güncelle:
+  Future<bool> sendOtp(String phone, {required String purpose}) async {
     try {
-      final res = await _dio.post("/customer/auth/send-otp", data: data);
-      return res.statusCode == 200;
+      final response = await _dio.post('/customer/auth/send-otp', data: {
+        'phone': phone,
+        'purpose': purpose,
+      });
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      // 💡 KRİTİK NOKTA: Hatayı yutma, yukarı fırlat ki Notifier mesajı alabilsin!
+      rethrow;
     } catch (e) {
-      // Burada gelen hataya bak: "Email is required" diyorsa
-      // UI'da email alanını zorunlu yapmalısın.
-      return false;
+      rethrow;
     }
   }
 
-  Future<bool> verifyOtp(String phone, String code) async {
-    debugPrint("🌐 [API] POST /customer/auth/verify-otp");
-    debugPrint("➡️ Gönderilen: { phone: $phone, code: $code }");
-
+  Future<UserModel?> verifyOtp(String phone, String code) async {
     try {
       final res = await _dio.post("/customer/auth/verify-otp", data: {
         "phone": phone,
         "code": code,
       });
 
-      debugPrint("📩 [API] Response STATUS: ${res.statusCode}");
-      debugPrint("📩 [API] Response DATA: ${res.data}");
+      // 1. Backend isteği kabul etti mi?
+      if (res.data["success"] == true) {
+        final dynamic body = res.data["data"] ?? res.data;
+        final String? token = body["token"];
+        final Map<String, dynamic>? userJson = body["customer"] ?? body["user"];
 
-      return res.data["success"] == true;
-
-    } on DioException catch (e) {
-      debugPrint("❌ [API] verifyOtp ERROR STATUS: ${e.response?.statusCode}");
-      debugPrint("❌ [API] verifyOtp ERROR DATA: ${e.response?.data}");
-      return false;
+        if (userJson != null) {
+          // DURUM A: Mevcut kullanıcı (Hemen token kaydet)
+          UserModel user = UserModel.fromJson(userJson).copyWith(token: token);
+          if (token != null) {
+            await PrefsService.saveToken(token);
+            _dio.options.headers["Authorization"] = "Bearer $token";
+          }
+          return user;
+        } else {
+          // DURUM B: Yeni kullanıcı (Logundaki durum!)
+          // Token yok, sorun değil. Profil sayfasına gitmesi için geçici model dön:
+          return UserModel(
+            id: "",
+            phone: body["phone"] ?? phone, // Backend'den gelen telefonu al
+            token: null,
+          );
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint("💥 [CRITICAL ERROR] verifyOtp: $e");
+      return null;
     }
   }
-
 
   Future<UserModel?> login(String phone, String code) async {
     try {
@@ -121,60 +131,59 @@ class AuthRepository {
 // Sadece dolu olan (non-null ve non-empty) alanları gönderir.
 // ------------------------------------------------------------------
   Future<UserModel> registerUser(UserModel user) async {
-    debugPrint("🌐 [API] POST /customer/auth/register (Yeni Kayıt)");
-
-    // 1. ZORUNLU alanlarla data objesini başlat
-    final data = <String, dynamic>{
-      "phone": user.phone,
-      "first_name": user.firstName,
-      "last_name": user.lastName,
-      "email": user.email,
-    };
-
-    if (user.birthDate != null && user.birthDate!.isNotEmpty) {
-      data["birth_date"] = user.birthDate;
-    }
-
-    if (user.latitude != null && user.longitude != null) {
-      data["latitude"] = user.latitude;
-      data["longitude"] = user.longitude;
-    }
-
-    if (user.fcmToken != null && user.fcmToken!.isNotEmpty) {
-      data["fcm_token"] = user.fcmToken;
-    }
-
-    // 🔥 Artık data hazır → burada loglamak doğru
-    debugPrint("➡️ GÖNDERİLEN JSON → $data");
+    // 1. BU SATIRI GÖRMEK ZORUNDAYIZ
+    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    print("🚨 [CRITICAL-DEBUG] REGISTER METODU TETİKLENDİ!");
+    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
     try {
-      // API çağrısı
-      final res = await _dio.post("/customer/auth/register", data: data);
+      // Veriyi hazırla
+      final data = <String, dynamic>{
+        "phone": user.phone,
+        "first_name": user.firstName,
+        "last_name": user.lastName,
+        "email": user.email,
+        "birth_date": user.birthDate
+      };
 
-      debugPrint("📩 STATUS → ${res.statusCode}");
-      debugPrint("📥 RESPONSE BODY → ${res.data}");
-      debugPrint("📤 REQUEST BODY → ${res.requestOptions.data}");
+      // 2. İSTEK ATILMADAN HEMEN ÖNCE
+      print("🚀 [CRITICAL-DEBUG] API'ye gidiliyor... Data: $data");
 
-      final registeredUser =
-      UserModel.fromJson(res.data["data"]["customer"]).copyWith(
-        token: res.data["data"]["token"],
+      final res = await _dio.post(
+        "/customer/auth/register",
+        data: data,
+        options: Options(
+          headers: {"Authorization": ""}, // Token kontrolünü burada sıfırlıyoruz
+          validateStatus: (status) => true, // Hata kodlarını (401, 422) yakalamamızı sağlar
+        ),
       );
 
-      if (registeredUser.token != null && registeredUser.token!.isNotEmpty) {
-        _dio.options.headers["Authorization"] =
-        "Bearer ${registeredUser.token}";
+      // 3. CEVAP GELDİĞİNDE
+      print("📥 [CRITICAL-DEBUG] Status: ${res.statusCode}");
+      print("📥 [CRITICAL-DEBUG] Body: ${res.data}");
+
+      if (res.data["success"] == true) {
+        final responseData = res.data["data"];
+        final String? newToken = responseData["token"];
+        final customerJson = responseData["customer"];
+
+        if (newToken != null) {
+          await PrefsService.saveToken(newToken);
+          _dio.options.headers["Authorization"] = "Bearer $newToken";
+        }
+
+        print("✅ [CRITICAL-DEBUG] Register Başarılı!");
+        return UserModel.fromJson(customerJson).copyWith(token: newToken);
+      } else {
+        print("❌ [CRITICAL-DEBUG] Backend reddetti: ${res.data["message"]}");
+        throw Exception(res.data["message"] ?? "Kayıt başarısız");
       }
-
-      return registeredUser;
-
-    } on DioException catch (e) {
-      debugPrint("❌ [API] registerUser ERROR STATUS: ${e.response?.statusCode}");
-      debugPrint("❌ [API] registerUser ERROR DATA: ${e.response?.data}");
-      debugPrint("📤 REQUEST BODY (HATA ANINDA) → ${e.requestOptions.data}");
+    } catch (e) {
+      // 4. EĞER BİR YERDE PATLARSA MUTLAKA BURAYA DÜŞER
+      print("💥 [CRITICAL-DEBUG] YAKALANAN HATA: $e");
       rethrow;
     }
   }
-
 
 
   Future<void> logout() async {

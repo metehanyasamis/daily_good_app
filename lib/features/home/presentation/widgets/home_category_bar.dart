@@ -23,10 +23,12 @@ class HomeCategoryBar extends SliverPersistentHeaderDelegate {
 
     return Container(
       color: AppColors.background,
-      child: ListView.builder(
+      child: ListView.separated( // 👈 Builder yerine Separated kullanıyoruz
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16), // 👈 Kenar boşlukları
         itemCount: categories.length,
+        // Elemanlar arası net boşluk:
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final isSelected = selectedIndex == index;
           final category = categories[index];
@@ -40,7 +42,7 @@ class HomeCategoryBar extends SliverPersistentHeaderDelegate {
           return GestureDetector(
             onTap: () => onSelected(index),
             child: SizedBox(
-              width: 80,
+              width: 78,
               height: maxExtent,
               child: Stack(
                 alignment: Alignment.center,

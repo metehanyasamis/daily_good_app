@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,145 +26,81 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required this.repo,
   }) : super(const AuthState.initial());
 
-  // ---------------------------------------------------------------------------
-  // OTP GÖNDER (TEK DOĞRU YERİ)
-  // ---------------------------------------------------------------------------
-  Future<bool> sendOtp(String phone, {required String purpose}) async {
+// auth_notifier.dart içindeki metod
+  Future<void> sendOtp({required String phone, required String purpose}) async {
     state = const AuthState.loading();
-
-    // Repo'ya telefon ve amacı gönderiyoruz
-    final ok = await repo.sendOtp(phone, purpose: purpose);
-
-    if (ok) {
-      state = const AuthState.otpSent();
-      return true;
-    } else {
-      state = const AuthState.error("Kod gönderilemedi. Lütfen tekrar deneyin.");
-      return false;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // OTP DOĞRULAMA
-  // ---------------------------------------------------------------------------
-  Future<bool> verifyOtp(String phone, String code) async {
-    debugPrint("🔑 OTP doğrulanıyor...");
-
-    state = const AuthState.loading();
-
-    final ok = await repo.verifyOtp(phone, code);
-
-    if (!ok) {
-      state = const AuthState.invalidOtp();
-      return false;
-    }
-
-    debugPrint("🔵 [OTP] Yeni kullanıcı OTP doğrulandı!");
-
-    // ----------------------------------------------------------
-    // 1) Kullanıcı "geçici olarak login" kabul edilmeli
-    // ----------------------------------------------------------
-    await ref.read(appStateProvider.notifier).setLoggedIn(true);
-
-    // ----------------------------------------------------------
-    // 2) Yeni kullanıcı akışını başlat
-    // ----------------------------------------------------------
-    await ref.read(appStateProvider.notifier).setIsNewUser(true);
-
-    // profil doldurmadığı için zorunlu
-    await ref.read(appStateProvider.notifier).setHasSeenProfileDetails(false);
-
-    // onboarding daha yapılmadı
-    await ref.read(appStateProvider.notifier).setHasSeenOnboarding(false);
-
-    // ----------------------------------------------------------
-    // 3) UserModel'i geçici olarak oluştur
-    // ----------------------------------------------------------
-    final tempUser = UserModel(
-      id: "",
-      phone: phone,
-    );
-
-    ref.read(userNotifierProvider.notifier).saveUserLocally(tempUser);
-
-    // ----------------------------------------------------------
-    // 4) Auth state başarıya döner
-    // ----------------------------------------------------------
-    state = const AuthState.authenticated();
-
-    return true;
-  }
-
-
-
-  // ---------------------------------------------------------------------------
-  // LOGIN
-  // ---------------------------------------------------------------------------
-  Future<String> login(String phone, String code) async {
-    debugPrint("🌍 Login → $phone");
+    debugPrint("📡 [OTP REQUEST] $phone ($purpose)");
 
     try {
-      final user = await repo.login(phone, code);
+      final bool ok = await repo.sendOtp(phone, purpose: purpose);
 
-      // -------------------------
-      // 1) Yeni kullanıcı
-      // -------------------------
-      if (user == null) {
-        debugPrint("🆕 [AUTH] Yeni kullanıcı algılandı");
+      if (ok) {
+        debugPrint("✅ [OTP RESPONSE] Başarılı");
+        state = const AuthState.otpSent();
+      } else {
+        state = const AuthState.error("Beklenmedik bir sorun oluştu.");
+      }
+    } on DioException catch (e) {
+      // 🔥 Backend'den gelen o meşhur mesajları burada yakalıyoruz:
+      final String serverMessage = e.response?.data?['message'] ?? "İşlem başarısız oldu.";
+      final String? errorCode = e.response?.data?['error_code'];
 
+      debugPrint("❌ [BACKEND ERROR] Message: $serverMessage, Code: $errorCode");
+
+      // State'e gerçek mesajı basıyoruz
+      state = AuthState.error(serverMessage);
+    } catch (e) {
+      debugPrint("💥 [FATAL ERROR] $e");
+      state = const AuthState.error("Bağlantı hatası: Lütfen internetinizi kontrol edin.");
+    }
+  }
+
+
+// ---------------------------------------------------------------------------
+// REGISTER/OTP DOĞRULAMA (YENİ KULLANICI İÇİN)
+// ---------------------------------------------------------------------------
+  Future<UserModel?> verifyOtpModel(String phone, String code) async {
+    state = const AuthState.loading();
+    try {
+      final user = await repo.verifyOtp(phone, code);
+
+      if (user != null) {
+        // Yeni kullanıcı olsa bile sisteme "girdi" diyoruz ki ProfileDetail'e gidebilsin
         await ref.read(appStateProvider.notifier).setLoggedIn(true);
         await ref.read(appStateProvider.notifier).setIsNewUser(true);
 
-        final newUser = UserModel(
-          id: "",
-          phone: phone,
-        );
-
-        ref.read(userNotifierProvider.notifier).saveUserLocally(newUser);
-
         state = const AuthState.authenticated();
-        return "NEW";
+        return user;
       }
 
-      // -------------------------
-      // 2) Mevcut kullanıcı
-      // -------------------------
-
-      // 2A) Token kaydet
-      if (user.token != null && user.token!.isNotEmpty) {
-        await PrefsService.saveToken(user.token!);
-        debugPrint("🔑 Token kaydedildi → ${user.token}");
-      } else {
-        debugPrint("⚠️ [AUTH] USER TOKEN GELMEDİ! API'yi kontrol edin.");
-      }
-
-      // 2B) AppState: logged in
-      await ref.read(appStateProvider.notifier).setLoggedIn(true);
-
-      // 2C) User geçici olarak kaydedilir
-      ref.read(userNotifierProvider.notifier).saveUser(user);
-
-      // 2D) 💥 /me çağrısı — temiz profil
-      debugPrint("📡 /me çağrılıyor (login sonrası tam user için)");
-
-      final fullUser = await repo.me();
-
-      if (fullUser != null) {
-        ref.read(userNotifierProvider.notifier).saveUser(fullUser);
-        state = AuthState.authenticated(fullUser);
-      } else {
-        debugPrint("⚠️ [AUTH] /me NULL döndü — backend login/me tutarsız olabilir.");
-        state = AuthState.authenticated(user);
-      }
-
-      return "EXISTING";
+      state = const AuthState.invalidOtp();
+      return null;
     } catch (e) {
-      debugPrint("❌ LOGIN ERROR: $e");
       state = AuthState.error(e.toString());
-      return "ERROR";
+      return null;
     }
   }
 
+  // ---------------------------------------------------------------------------
+// LOGIN (SADE VE MODEL DÖNEN)
+// ---------------------------------------------------------------------------
+  Future<UserModel?> login(String phone, String code) async {
+    state = const AuthState.loading();
+    try {
+      final user = await repo.login(phone, code);
+
+      if (user != null) {
+        await ref.read(appStateProvider.notifier).setLoggedIn(true);
+        state = AuthState.authenticated(user);
+        return user; // ✨ ARTIK DOĞRU TİP DÖNÜYOR (UserModel)
+      }
+
+      return null;
+    } catch (e) {
+      state = AuthState.error(e.toString());
+      return null;
+    }
+  }
   // ---------------------------------------------------------------------------
   // /me
   // ---------------------------------------------------------------------------

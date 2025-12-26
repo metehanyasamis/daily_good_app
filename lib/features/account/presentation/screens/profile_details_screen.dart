@@ -19,6 +19,7 @@ class ProfileDetailsScreen extends ConsumerStatefulWidget {
 class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   final _nameController = TextEditingController();
   final _surnameController = TextEditingController();
+  final _emailController = TextEditingController();
   bool _initialized = false;
   DateTime? _selectedBirthDate;
 
@@ -26,6 +27,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   void dispose() {
     _nameController.dispose();
     _surnameController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -33,6 +35,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     final u = state.user!;
     _nameController.text = u.firstName ?? "";
     _surnameController.text = u.lastName ?? "";
+    _emailController.text = u.email ?? "";
     _selectedBirthDate =
     u.birthDate != null ? DateTime.tryParse(u.birthDate!) : null;
   }
@@ -87,35 +90,42 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   // ---------------------------------------------------------------
   // AD-SOYAD KAYDET (PUT /customer/profile)
   // ---------------------------------------------------------------
+// ---------------------------------------------------------------
+// PROFİL KAYDET / GÜNCELLEME MANTIĞI (Refaktör Edildi)
+// ---------------------------------------------------------------
   Future<void> _save(UserNotifier notifier, UserState state) async {
+    print("🔘 [UI-DEBUG] Kaydet'e basıldı.");
+
     final u = state.user;
-    if (u == null) return;
 
-    final first = _nameController.text.trim();
-    final last = _surnameController.text.trim();
-
-    if (first.isEmpty || last.isEmpty) {
-      return _showError("Lütfen Ad ve Soyad alanlarını doldurunuz.");
+    // 🛠️ Tarihi backend'in %100 anlayacağı formata getiriyoruz (YYYY-MM-DD)
+    String? formattedDate;
+    if (_selectedBirthDate != null) {
+      formattedDate = "${_selectedBirthDate!.year}-"
+          "${_selectedBirthDate!.month.toString().padLeft(2, '0')}-"
+          "${_selectedBirthDate!.day.toString().padLeft(2, '0')}";
     }
 
-    final updated = u.copyWith(
-      firstName: first,
-      lastName: last,
-      birthDate: _selectedBirthDate != null
-          ? _selectedBirthDate!.toIso8601String().split("T").first
-          : u.birthDate,
+    print("📝 [UI-DEBUG] Controller Email: ${_emailController.text}");
+    print("📅 [UI-DEBUG] Seçili Tarih Nesnesi: $_selectedBirthDate");
+
+    final updatedUser = u!.copyWith(
+      firstName: _nameController.text.trim(),
+      lastName: _surnameController.text.trim(),
+      email: _emailController.text.trim(),
+      birthDate: formattedDate, // Güvenli format: 1990-01-01
     );
 
+    print("📅 [UI] Backend'e giden tarih: $formattedDate");
+    print("📦 [UI-DEBUG] Notifier'a giden modeldeki tarih: ${updatedUser.birthDate}");
+    print("📦 [UI-DEBUG] Notifier'a giden email: ${updatedUser.email}");
+
     try {
-      await notifier.updateUser(updated);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Profil başarıyla güncellendi")),
-        );
-        context.pop();
-      }
+      await notifier.updateUser(updatedUser);
+      print("🎉 [UI] İşlem Başarılı!");
     } catch (e) {
-      if (mounted) _showError("Güncelleme başarısız: $e");
+      print("🚩 [UI] Hata: $e");
+      _showError("Hata: $e");
     }
   }
 
@@ -128,22 +138,26 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(userNotifierProvider);
     final notifier = ref.read(userNotifierProvider.notifier);
+    final user = state.user;
+
+    // 💡 BUTON METNİ İÇİN KONTROL
+    // Eğer isim boşsa ilk defa kayıt oluyordur.
+    final bool isFirstTime = user?.firstName == null || user!.firstName!.isEmpty;
 
     if (state.status == UserStatus.loading && !_initialized) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    if (!_initialized && state.user != null) {
+    if (!_initialized && user != null) {
       _populate(state);
       _initialized = true;
     }
 
-    final user = state.user;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Profil Detayları", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text("Profil Detayları",
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -167,7 +181,11 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
               const SizedBox(height: 20),
 
               _label("E-posta"),
-              _emailActionTile(user?.email ?? ""),
+              // Email varsa kilitli kutu, yoksa yazılabilir kutu gösterilir
+              user?.email != null && user!.email!.isNotEmpty
+                  ? _emailActionTile(user!.email!)
+                  : _emailEditableField(),
+
               const SizedBox(height: 20),
 
               _label("Telefon"),
@@ -178,7 +196,12 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
               _birthDateTile(),
               const SizedBox(height: 40),
 
-              _saveButton(() => _save(notifier, state), state.status == UserStatus.loading),
+              // 💡 GÜNCELLENMİŞ BUTON
+              _saveButton(
+                onTap: () => _save(notifier, state),
+                isLoading: state.status == UserStatus.loading,
+                isNewUser: isFirstTime,
+              ),
             ],
           ),
         ),
@@ -206,6 +229,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     );
   }
 
+// 1. MOD: E-mail doluysa (Senin metodun - Kilitli/OTP'li)
   Widget _emailActionTile(String email) {
     return InkWell(
       onTap: () => _showEmailChangeSheet(email),
@@ -220,6 +244,24 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
             const Spacer(),
             const Text("Değiştir", style: TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold)),
           ],
+        ),
+      ),
+    );
+  }
+
+// 2. MOD: E-mail boşsa (Yeni metot - Yazılabilir/Normal Giriş)
+  Widget _emailEditableField() {
+    return TextField(
+      controller: _emailController,
+      keyboardType: TextInputType.emailAddress,
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primaryDarkGreen),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none
         ),
       ),
     );
@@ -264,7 +306,11 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     );
   }
 
-  Widget _saveButton(VoidCallback onTap, bool isLoading) {
+  Widget _saveButton({
+    required VoidCallback onTap,
+    required bool isLoading,
+    required bool isNewUser
+  }) {
     return SizedBox(
       width: double.infinity,
       height: 56,
@@ -273,11 +319,13 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryDarkGreen,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 0,
         ),
         child: isLoading
             ? const CircularProgressIndicator(color: Colors.white)
-            : const Text("Bilgileri Güncelle", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            : Text(
+          isNewUser ? "Bilgilerimi Kaydet" : "Bilgilerimi Güncelle",
+          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }

@@ -138,7 +138,7 @@ class StoreDetailsContent extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20), // Daha yuvarlak köşeler
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
@@ -147,39 +147,69 @@ class StoreDetailsContent extends StatelessWidget {
               ),
             ],
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(12),
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                sanitizeImageUrl(product.imageUrl) ?? '',
-                width: 60, height: 60, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Image.asset('assets/images/sample_food3.jpg'),
-              ),
-            ),
-            title: Text(product.name ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(
-              "Bugün teslim al: ${product.startHour} - ${product.endHour}",
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-            ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (product.listPrice != null)
-                  Text("${product.listPrice} TL", style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 11, color: Colors.grey)),
-                Text(
-                  "${product.salePrice} TL",
-                  style: const TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold, fontSize: 16),
+          child: InkWell( // Kartın tamamını tıklanabilir yapar
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => onProductTap?.call(product),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  sanitizeImageUrl(product.imageUrl) ?? '',
+                  width: 60, height: 60, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Image.asset('assets/images/sample_food3.jpg'),
                 ),
-              ],
+              ),
+              title: Text(
+                  product.name ?? '',
+                  style: const TextStyle(fontWeight: FontWeight.bold)
+              ),
+              subtitle: Text(
+                "Bugün teslim al: ${product.startHour} - ${product.endHour}",
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              ),
+              // İkonu ve fiyatı yan yana getiren kısım burası
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (product.listPrice != null)
+                        Text(
+                            "${product.listPrice} TL",
+                            style: const TextStyle(
+                                decoration: TextDecoration.lineThrough,
+                                fontSize: 11,
+                                color: Colors.grey
+                            )
+                        ),
+                      Text(
+                        "${product.salePrice} TL",
+                        style: const TextStyle(
+                            color: AppColors.primaryDarkGreen,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  // İSTEDİĞİN İKON BURADA
+                  const Icon(
+                      Icons.chevron_right,
+                      color: Colors.grey,
+                      size: 20
+                  ),
+                ],
+              ),
             ),
           ),
         )),
       ],
     );
   }
-
   Widget _combinedInfoAndRatingCard(AverageRatingsModel? ratings) {
     debugPrint("🏗 [UI_BUILD] Kart çiziliyor. Mağaza: ${storeDetail.name} | Yıl: ${storeDetail.struggleYears}");
 

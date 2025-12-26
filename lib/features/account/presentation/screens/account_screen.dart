@@ -13,6 +13,7 @@ import '../../../saving/providers/saving_provider.dart';
 import '../../domain/providers/user_notifier.dart';
 import '../../domain/states/user_state.dart';
 import '../widgets/email_otp_dialog.dart';
+import 'legal_documents_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -267,10 +268,16 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 title: "Hesap Ayarları",
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.description_outlined),
+                    leading: const Icon(Icons.gavel_outlined),
                     title: const Text("Yasal Bilgiler"),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {},
+                    onTap: () {
+                      debugPrint("🔍 [AccountScreen] Yasal Bilgiler'e tıklandı.");
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LegalDocumentsScreen()),
+                      );
+                    },
                   ),
                   ListTile(
                     leading: const Icon(Icons.mail_outline),

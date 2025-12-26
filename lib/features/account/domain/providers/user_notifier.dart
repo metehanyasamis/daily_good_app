@@ -1,176 +1,155 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/providers/app_state_provider.dart';
 import '../../../auth/data/repositories/auth_repository.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/user_repository.dart';
 import '../states/user_state.dart';
 import '../../../../core/data/prefs_service.dart';
 
-final userNotifierProvider =
-StateNotifierProvider<UserNotifier, UserState>((ref) {
+final userNotifierProvider = StateNotifierProvider<UserNotifier, UserState>((ref) {
   return UserNotifier(
     ref: ref,
     repository: ref.read(userRepositoryProvider),
-    authRepository: ref.read(authRepositoryProvider), // 💡 AuthRepo eklendi
+    authRepository: ref.read(authRepositoryProvider),
   );
 });
 
 class UserNotifier extends StateNotifier<UserState> {
   final Ref ref;
   final UserRepository repository;
-  final AuthRepository authRepository; // 💡 AuthRepo eklendi
+  final AuthRepository authRepository;
 
   UserNotifier({
     required this.ref,
     required this.repository,
-    required this.authRepository, // 💡 AuthRepo eklendi
+    required this.authRepository,
   }) : super(const UserState.initial());
 
-  // ------------------------------------------------------------------
-  // EXISTING USER SAVE (token var → login veya /me sonrası)
-  // ------------------------------------------------------------------
+  // Giriş sonrası veya me sonrası kullanıcıyı kaydet
   Future<void> saveUser(UserModel user) async {
+    print("🛠 [DEBUG-SAVE] saveUser çağrıldı!");
+    print("🛠 [DEBUG-SAVE] Gelen Token: ${user.token}");
+    print("🛠 [DEBUG-SAVE] Gelen Phone: ${user.phone}");
+
     if (user.token != null && user.token!.isNotEmpty) {
       await PrefsService.saveToken(user.token!);
+      // Kaydettikten hemen sonra geri okumayı dene, bakalım gerçekten yazıyor mu?
+      final check = await PrefsService.getToken();
+      print("🛠 [DEBUG-SAVE] Prefs'e yazılan token kontrolü: $check");
+    } else {
+      print("🚨 [DEBUG-SAVE] DİKKAT: Token boş geldiği için Prefs'e hiçbir şey yazılmadı!");
     }
 
     state = UserState.ready(user);
-
-    print("📌 [USER] saveUser → ${user.phone}");
   }
 
-  // ------------------------------------------------------------------
-  // NEW USER SAVE — token yok ama user objesi lazım
-  // ------------------------------------------------------------------
+  // Yeni kullanıcıyı locale kaydet (Token henüz yokken)
   void saveUserLocally(UserModel user) {
-    state = UserState.ready(user); // 🚀 redirect çalışması için KRİTİK
-
-    print("📌 [USER] saveUserLocally → ${user.phone}");
+    state = UserState.ready(user);
+    debugPrint("📌 [USER] saveUserLocally → ${user.phone}");
   }
 
-  // ------------------------------------------------------------------
-  // LOGOUT — her şeyi temizle
-  // ------------------------------------------------------------------
+  // Çıkış yap
   void clearUser() {
     PrefsService.clearAll();
     state = const UserState.initial();
-
-    print("🧹 [USER] clearUser");
+    debugPrint("🧹 [USER] clearUser");
   }
 
-  // ------------------------------------------------------------------
-  // /me çağır — uygulama açılışında token varsa
-  // ------------------------------------------------------------------
+  // Kullanıcı bilgilerini backend'den tazele
   Future<void> loadUser({bool forceRefresh = true}) async {
     try {
       state = const UserState.loading();
-
       final user = await repository.fetchUser();
-
       state = UserState.ready(user);
-
-      print("🔄 [USER] loadUser → OK");
+      debugPrint("🔄 [USER] loadUser → OK");
     } catch (e) {
       state = UserState.error(e.toString());
-      print("❌ [USER] loadUser ERROR → $e");
+      debugPrint("❌ [USER] loadUser ERROR → $e");
     }
   }
 
+  // ------------------------------------------------------------------
+  // TEK VE ANA GÜNCELLEME METODU
+  // ------------------------------------------------------------------
 // ------------------------------------------------------------------
-  // PROFIL UPDATE VEYA REGISTER (ANA REFACTOR BURASI)
+  // TEK VE ANA GÜNCELLEME METODU (Düzeltilmiş Versiyon)
   // ------------------------------------------------------------------
   Future<void> updateUser(UserModel updated) async {
-    final previousUser = state.user; // Mevcut halini yedekle
+    print("🔎 [CHECK] Notifier'a gelen email: '${updated.email}'"); // Bunu kontrol et!
+    print("🔎 [CHECK] Notifier'a gelen phone: '${updated.phone}'"); // Bunu kontrol et!
+
+
+    final previousUser = state.user;
+
+    // 1. HATA DÜZELTME: appState üzerinden newUser kontrolü
+    // Eğer AppState modelinin içinde 'newUser' diye bir alan varsa bu şekilde okunur:
+    final bool isNewUser = ref.read(appStateProvider).isNewUser;
+
+    print("🚀 [NOTIFIER] İşlem başladı. Yeni kullanıcı mı?: $isNewUser");
 
     try {
+      // UserState içindeki copyWith ile status'u loading yapıyoruz
       state = state.copyWith(status: UserStatus.loading);
 
-      // 1. Backend'e gönder
-      final savedUser = await repository.updateUser(updated);
+      UserModel savedUser;
 
-      // 2. 🔥 HİBRİT GÜNCELLEME:
-      // Backend her şeyi dönmeyebilir. Backend'den gelen veriyi (savedUser),
-      // bizim gönderdiğimiz verideki (updated) sabitlerle birleştirelim.
-      final finalUser = savedUser.copyWith(
-        // Eğer backend email'i boş dönerse, eskisini koru
-        email: (savedUser.email == null || savedUser.email!.isEmpty)
-            ? updated.email
-            : savedUser.email,
+      if (isNewUser) {
+        // 1. Yeni Kayıt (AuthRepository üzerinden)
+        print("🎯 [NOTIFIER] AuthRepository.registerUser çağrılıyor...");
+        savedUser = await authRepository.registerUser(updated);
 
-        // Eğer backend birthDate'i null dönerse, bizim seçtiğimizi koru
-        birthDate: savedUser.birthDate ?? updated.birthDate,
+      } else {
+        // 2. Mevcut Güncelleme (UserRepository üzerinden)
+        print("📝 [NOTIFIER] UserRepository.updateUser çağrılıyor...");
+        savedUser = await repository.updateUser(updated);
+      }
 
-        // Token ve doğrulama durumlarını da mutlaka koru
-        token: savedUser.token ?? previousUser?.token,
-        isEmailVerified: savedUser.isEmailVerified,
-        isPhoneVerified: savedUser.isPhoneVerified,
-      );
-
-      state = UserState.ready(finalUser);
-      debugPrint("✔️ Profil hibrit olarak güncellendi.");
+      print("✅ [NOTIFIER] İşlem Başarılı: ${savedUser.firstName}");
+      // İşlem bitince User'ı state'e "ready" olarak koyuyoruz
+      state = UserState.ready(savedUser);
 
     } catch (e) {
-      debugPrint("❌ Update Error: $e");
+      print("❌ [NOTIFIER] HATA YAKALANDI: $e");
+
+      // 2. HATA DÜZELTME: Catch bloğunda state ataması
       if (previousUser != null) {
+        // Eğer eski bir kullanıcı verisi varsa onu geri yükle ve status'u error/ready yap
         state = UserState.ready(previousUser);
+      } else {
+        // Eğer hiç veri yoksa, UserState.initial() gibi bir başlangıç state'i ver
+        // 'state = UserStatus.initial' YANLIŞTI, doğrusu aşağıda:
+        state = const UserState.initial();
       }
       rethrow;
     }
   }
 
-
-// ------------------------------------------------------------------
-// EMAIL OTP GÖNDER
-// ------------------------------------------------------------------
+  // Email OTP işlemleri
   Future<void> sendEmailVerification(String email) async {
-    print("📧 [USER] Email OTP SEND → $email");
     await repository.sendEmailVerification(email);
   }
 
-// ------------------------------------------------------------------
-// EMAIL OTP DOĞRULA
-// ------------------------------------------------------------------
   Future<bool> verifyEmailOtp(String email, String otp) async {
     try {
-      print("📧 [USER] Email OTP VERIFY → email=$email, code=$otp");
-
-      // 1. Doğrulamayı yap
       await repository.verifyEmailOtpCode(email, otp);
-
-      // 2. 🔥 EN GARANTİ YOL: Backend'den en güncel profil bilgilerini tekrar çek
-      // Böylece email_verified_at kesinlikle dolu gelir.
       final updatedUser = await repository.fetchUser();
-
-      // 3. State'i yeni gelen veriyle güncelle
       state = UserState.ready(updatedUser);
-
-      print("📧 [USER] Email OTP VERIFIED & STATE UPDATED → ${updatedUser.email}");
       return true;
     } catch (e) {
-      print("❌ [USER] Email OTP VERIFY ERROR → $e");
-      // Hata durumunda state'i bozma, sadece false dön ki UI hata (kırmızı) göstersin
       return false;
     }
   }
 
-
-  // ------------------------------------------------------------------
-  // TELEFON GÜNCELLE
-  // ------------------------------------------------------------------
+  // Diğer işlemler
   Future<void> updatePhone(String phone) async {
     final user = await repository.updatePhoneNumber(phone);
     state = UserState.ready(user);
-
-    print("📞 [USER] updatePhone → $phone");
   }
 
-  // ------------------------------------------------------------------
-  // HESAP SİL
-  // ------------------------------------------------------------------
   Future<void> deleteUserAccount() async {
     await repository.deleteAccount();
     clearUser();
-
-    print("🗑 [USER] deleteUserAccount");
   }
 }
