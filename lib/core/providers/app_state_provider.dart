@@ -102,7 +102,7 @@ class AppStateNotifier extends StateNotifier<AppState> {
     }
 
     state = state.copyWith(
-      isInitialized: true,
+      isInitialized: false,
       isLoggedIn: loggedIn,
       isNewUser: newUser,
       hasSeenIntro: prefs.getBool("seen_intro") ?? false,
@@ -211,6 +211,18 @@ class AppStateNotifier extends StateNotifier<AppState> {
     debugPrint(
       "📍 [APP STATE] location selected → $value | $lat,$lng | $address",
     );
+  }
+
+// 🎯 Splash'te veriler çekildikten sonra çağrılır
+  Future<void> completeSync() async {
+    // Şimdilik sadece log basıyoruz, istersen ekstra flag ekleyebilirsin
+    debugPrint("🏁 [APP STATE] Tüm veriler senkronize edildi.");
+  }
+
+  // 🎯 Uygulamanın tamamen hazır olduğunu ve Router'ın kapıları açabileceğini söyler
+  Future<void> setInitialized(bool value) async {
+    state = state.copyWith(isInitialized: value);
+    debugPrint("🏗️ [APP STATE] isInitialized → $value");
   }
 
 

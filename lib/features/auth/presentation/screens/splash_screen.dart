@@ -7,6 +7,8 @@ import 'package:package_info_plus/package_info_plus.dart'; // 📦 Yeni eklendi
 import '../../../../core/data/prefs_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/app_state_provider.dart';
+import '../../../favorites/domain/favorites_notifier.dart';
+import '../../../product/domain/products_notifier.dart';
 import '../../../settings/data/repository/version_repository.dart';
 import '../../domain/providers/auth_notifier.dart';
 
@@ -36,21 +38,57 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _startup() async {
-    debugPrint("🚀 Splash başladı");
+    debugPrint("🚀 [SPLASH] Startup süreci başladı...");
 
-    // 1) AppState yükle
+    // 1) AppState yükle (Senin orijinal kodun)
     await ref.read(appStateProvider.notifier).load();
+    debugPrint("⚙️ [SPLASH] AppState Yüklendi");
 
-    // 🎯 2) VERSİYON KONTROLÜ
+    // 2) Versiyon Kontrolü (Az önce atlanan kısım, geri eklendi)
     await _checkAppVersion();
+    debugPrint("🔄 [SPLASH] Versiyon kontrolü tamamlandı.");
 
     // 3) Token işlemleri
     final token = await PrefsService.readToken();
+    debugPrint("🔑 [SPLASH] Token durumu: ${token != null && token.isNotEmpty}");
+
     if (token != null && token.isNotEmpty) {
+      debugPrint("👤 [SPLASH] Kullanıcı yükleniyor...");
+      // Kullanıcıyı yükle ve bitmesini BEKLE
       await ref.read(authNotifierProvider.notifier).loadUserFromToken();
+
+      // Kullanıcı nesnesi dolana kadar kısa bir güvenlik beklemesi
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      final user = ref.read(authNotifierProvider).user;
+
+      if (user != null) {
+        debugPrint("✅ [SPLASH] Kullanıcı onaylandı (ID: ${user.id}). Veriler senkronize ediliyor...");
+
+        try {
+          // 4) Ürünleri çek (Refresh et ki favorilerle eşleşsin)
+          await ref.read(productsProvider.notifier).refresh();
+
+          // 5) FAVORİLERİ ÇEK VE BEKLE
+          // Burası asıl favori listesinin dolmasını sağlayan yer
+          debugPrint("⭐ [SPLASH] Favoriler loadAll başlatılıyor...");
+          await ref.read(favoritesProvider.notifier).loadAll();
+          ref.read(appStateProvider.notifier).completeSync();
+
+          final finalFavs = ref.read(favoritesProvider);
+          debugPrint("📊 [SPLASH] Senkronizasyon Bitti: ${finalFavs.productIds.length} Ürün, ${finalFavs.storeIds.length} Mağaza");
+        } catch (e) {
+          debugPrint("❌ [SPLASH] Veri çekme sırasında hata: $e");
+        }
+      } else {
+        debugPrint("🚨 [SPLASH] Token var ama kullanıcı yüklenemedi!");
+      }
+    } else {
+      debugPrint("⚠️ [SPLASH] Token yok, login bekleniyor.");
     }
 
-    debugPrint("🎯 Splash bitti");
+    debugPrint("🎯 [SPLASH] Startup süreci bitti.");
+    await ref.read(appStateProvider.notifier).setInitialized(true);
   }
 
   Future<void> _checkAppVersion() async {

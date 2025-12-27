@@ -55,13 +55,19 @@ class _FavButtonState extends ConsumerState<FavButton>
   }
 
   String? _resolveId() {
-    if (widget.id != null && widget.id!.isNotEmpty) return widget.id!;
-    try {
-      final dynamic it = widget.item;
-      final dynamic maybeId = it?.id ?? it?.ID ?? it?.storeId ?? it?.productId;
-      if (maybeId != null) return maybeId.toString();
-    } catch (_) {}
-    return null;
+    String? rawId;
+    if (widget.id != null && widget.id!.isNotEmpty) {
+      rawId = widget.id!;
+    } else {
+      try {
+        final dynamic it = widget.item;
+        final dynamic maybeId = it?.id ?? it?.ID ?? it?.storeId ?? it?.productId;
+        if (maybeId != null) rawId = maybeId.toString();
+      } catch (_) {}
+    }
+
+    // 🎯 KRİTİK DOKUNUŞ: ID'yi temizle ve küçük harfe zorla
+    return rawId?.trim().toLowerCase();
   }
 
   bool _resolveIsStore() {
@@ -81,8 +87,19 @@ class _FavButtonState extends ConsumerState<FavButton>
 
   bool _isFavoriteFromState(String id, bool isStore) {
     final favState = ref.watch(favoritesProvider);
-    if (isStore) return favState.storeIds.contains(id);
-    return favState.productIds.contains(id);
+    // id zaten _resolveId içinde küçültüldü ama burada da trim yapalım
+    final cleanId = id.trim().toLowerCase();
+
+    if (isStore) {
+      final contains = favState.storeIds.contains(cleanId);
+      // 🔍 BUG'I BURADA YAKALAYACAĞIZ:
+      if (isStore && cleanId.contains('01kcgh')) {
+        debugPrint('🔎 [DEBUG_MATCH] Aranan: "$cleanId" | Set İçeriği: ${favState.storeIds}');
+        debugPrint('🔎 [DEBUG_MATCH] Sonuç: $contains');
+      }
+      return contains;
+    }
+    return favState.productIds.contains(cleanId);
   }
 
   Future<void> _toggleFavorite(String id, bool isStore) async {

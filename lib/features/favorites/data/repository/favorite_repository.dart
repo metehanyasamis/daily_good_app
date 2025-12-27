@@ -64,48 +64,77 @@ class FavoriteRepository {
   // ---------------- STORES ----------------
   Future<List<FavoriteStoreResponseModel>> fetchFavoriteStores() async {
     try {
+      debugPrint("📡 [REPO_FAV_STORES] İstek atılıyor: /customer/favorites");
       final res = await api.get('/customer/favorites');
+
+      // 1. Ham Body'i gör (Backend tam olarak ne gönderiyor?)
+      debugPrint("📦 [REPO_FAV_STORES] Ham Yanıt: ${res.body}");
+
       final body = json.decode(res.body);
 
       if (body['success'] == true) {
-        return (body['data'] as List)
-            .map((e) => FavoriteStoreResponseModel.fromJson(e))
-            .toList();
+        final List data = body['data'] ?? [];
+        debugPrint("📊 [REPO_FAV_STORES] Liste Uzunluğu: ${data.length}");
+
+        // 2. Her bir elemanı map ederken detayları bas
+        return data.map((e) {
+          debugPrint("🏢 [REPO_FAV_STORES] Map edilen eleman: $e");
+          try {
+            return FavoriteStoreResponseModel.fromJson(e);
+          } catch (mapError) {
+            debugPrint("❌ [REPO_FAV_STORES] Model Dönüştürme Hatası: $mapError");
+            rethrow;
+          }
+        }).toList();
+      } else {
+        debugPrint("⚠️ [REPO_FAV_STORES] API Success False döndü: ${body['message']}");
+        return [];
       }
-      return [];
-    } catch (e) {
-      debugPrint("Repo Error (fetchStores): $e");
+    } catch (e, stack) {
+      debugPrint("🚨 [REPO_FAV_STORES_CRITICAL] Hata: $e");
+      debugPrint("🚨 StackTrace: $stack");
       return [];
     }
   }
 
   Future<bool> addFavoriteStore(String id) async {
-    debugPrint('🚀 [REPO] Store Fav Ekleme İsteği: $id');
-    // Burada da boş body gönderiyoruz
-    final res = await api.post('/customer/favorites/add/$id', body: {});
-    final success = _isSuccess(res);
-    debugPrint('✅ [REPO] Store Fav Sonucu: $success (Kod: ${res.statusCode})');
-    return success;
+    final res = await api.post('/customer/favorites/add/$id');
+    debugPrint("🚩 [STORE_ADD_RES]: ${res.body}");
+    return _isSuccess(res); // 🎯 DÜZELTME: Burası _isSuccess olmalı
   }
 
   Future<bool> removeFavoriteStore(String id) async {
-    // 🚩 Dökümanındaki curl örneğinde DELETE '.../favorites/remove/1' kullanılmış.
-    // Bu doğru, ancak dönüş kodlarını kontrol etmeliyiz.
     final res = await api.delete('/customer/favorites/remove/$id');
-    return _isSuccess(res);
+    debugPrint("🚩 [STORE_REMOVE_RES]: ${res.body}");
+    return _isSuccess(res); // 🎯 DÜZELTME: Burası _isSuccess olmalı
   }
 
   // Helper: İsteğin başarılı olup olmadığını kontrol eder
   bool _isSuccess(dynamic res) {
     try {
+      // 1. Önce HTTP koduna bak (200 veya 201 her zaman başarıdır)
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final body = json.decode(res.body);
+        // Eğer 200 dönüp içinde success: false diyorsa bile "zaten" varsa true dön
+        if (body['success'] == false && body['message'].toString().contains('zaten')) {
+          return true;
+        }
+        return body['success'] == true;
+      }
+
+      // 2. Eğer 400 veya başka hata kodu geldiyse mesajı kontrol et
       final body = json.decode(res.body);
-      // Backend "zaten var" diyorsa veya success true ise başarılı say
-      if (res.statusCode == 400 && body['message'].toString().contains('zaten')) {
+      final message = body['message'].toString().toLowerCase();
+
+      if (message.contains('zaten') || message.contains('already')) {
+        debugPrint("ℹ️ [REPO] Zaten favori uyarısı alındı, başarı kabul ediliyor.");
         return true;
       }
+
       return body['success'] == true;
-    } catch (_) {
-      return res.statusCode == 200 || res.statusCode == 201;
+    } catch (e) {
+      // JSON parse edilemezse sadece HTTP koduna güven
+      return res.statusCode >= 200 && res.statusCode < 300;
     }
   }
 }

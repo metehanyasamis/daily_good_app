@@ -62,7 +62,7 @@ class ProductCard extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  _NetworkImageOrPlaceholder(
+                  NetworkImageOrPlaceholder(
                     url: product.imageUrl,
                     height: 120,
                     width: double.infinity,
@@ -142,7 +142,7 @@ class ProductCard extends StatelessWidget {
                           radius: 22,
                           backgroundColor: Colors.white,
                           child: ClipOval(
-                            child: _NetworkImageOrPlaceholder(
+                            child: NetworkImageOrPlaceholder(
                               url: storeLogoUrl,
                               width: 40,
                               height: 40,
@@ -294,14 +294,14 @@ class ProductCard extends StatelessWidget {
   }
 }
 
-class _NetworkImageOrPlaceholder extends StatelessWidget {
+class NetworkImageOrPlaceholder extends StatelessWidget {
   final String? url;
   final double? width;
   final double? height;
   final BoxFit fit;
   final IconData fallbackIcon;
 
-  const _NetworkImageOrPlaceholder({
+  const NetworkImageOrPlaceholder({
     required this.url,
     this.width,
     this.height,

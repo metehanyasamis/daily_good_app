@@ -94,7 +94,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       debugPrint("🔀 ROUTER REDIRECT ÇALIŞTI");
       //debugPrint("📍 Current: $loc");
 
-
+      if (loc != "/splash" && !app.isInitialized) {
+        debugPrint("⏳ [ROUTER] Veriler henüz senkronize değil, Splash'e yönlendiriliyor.");
+        return "/splash";
+      }
       // ───────────────────────────────────────────
       // SPLASH → initialize sonrası nereye gidilecek?
       // ───────────────────────────────────────────
