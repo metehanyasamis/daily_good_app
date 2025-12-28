@@ -22,10 +22,14 @@ class FavoriteShopsTab extends ConsumerWidget {
     return RefreshIndicator(
       color: AppColors.primaryDarkGreen,
       onRefresh: () => ref.read(favoritesProvider.notifier).loadAll(),
-      child: ListView.separated(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 100),
+      child: ListView.builder( // separated yerine builder kullanıyoruz
+        padding: EdgeInsets.fromLTRB(
+          12, // Product tab ile aynı
+          12,
+          12,
+          MediaQuery.of(context).padding.bottom + 80,
+        ),
         itemCount: activeShops.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 2), // Figma aralığı
         itemBuilder: (context, index) => _ShopCard(shop: activeShops[index]),
       ),
     );
@@ -41,21 +45,21 @@ class _ShopCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push('/store-detail/${shop.id}'),
       child: Container(
+        // 🎯 ProductCard ile birebir aynı margin:
         margin: const EdgeInsets.only(left: 10, right: 10, bottom: 20),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.08), // 0.06'yı 0.08 yaptık
+              blurRadius: 10, // 8'i 10 yaptık
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min, // Gereksiz uzamayı önler
+          mainAxisSize: MainAxisSize.min,
           children: [
             // --- BANNER ---
             ClipRRect(
@@ -64,7 +68,7 @@ class _ShopCard extends StatelessWidget {
                 children: [
                   NetworkImageOrPlaceholder(
                     url: shop.imageUrl,
-                    height: 120, // Sabit ve ideal yükseklik
+                    height: 120,
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
@@ -100,7 +104,7 @@ class _ShopCard extends StatelessWidget {
 
             // --- İÇERİK ---
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10), // Paddingler daraltıldı
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

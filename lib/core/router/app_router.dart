@@ -16,6 +16,7 @@ import '../../features/explore/presentation/screens/explore_map_screen.dart';
 import '../../features/favorites/presentation/screens/favorites_screen.dart';
 import '../../features/account/presentation/screens/account_screen.dart';
 import '../../features/location/presentation/screens/location_info_screen.dart';
+import '../../features/orders/presentation/screens/order_history_screen.dart';
 import '../../features/product/presentation/screens/product_detail_screen.dart';
 import '../../features/review/presentation/screens/store_review_screen.dart';
 import '../../features/stores/presentation/screens/store_detail_screen.dart';
@@ -162,6 +163,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/order-tracking/:id',
         builder: (_, state) => OrderTrackingScreen(orderId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/order-history',
+        builder: (_, __) => const OrderHistoryScreen(), // Henüz bu sayfa yok, 2. adımda oluşturacağız
       ),
 
       ShellRoute(
