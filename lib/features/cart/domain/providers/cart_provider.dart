@@ -40,10 +40,29 @@ class CartController extends StateNotifier<List<CartItem>> {
     _isProcessing = true;
 
     try {
-      final ok = await _repo.add(
-        productId: product.id,
-        quantity: qty,
-      );
+      // 1. Ürün zaten sepette var mı diye bak (null dönebilir)
+      CartItem? existingItem;
+      try {
+        existingItem = state.firstWhere((item) => item.productId == product.id);
+      } catch (_) {
+        existingItem = null; // Ürün bulunamadıysa hata fırlatır, catch ile null yapıyoruz
+      }
+
+      bool ok;
+      if (existingItem != null) {
+        // 2. ✅ ÜRÜN VARSA: Miktarı güncelle
+        ok = await _repo.updateQuantity(
+          cartItemId: existingItem.cartItemId,
+          productId: product.id,
+          quantity: existingItem.quantity + qty,
+        );
+      } else {
+        // 3. 🆕 ÜRÜN YOKSA: Yeni ekle
+        ok = await _repo.add(
+          productId: product.id,
+          quantity: qty,
+        );
+      }
 
       if (!ok) return false;
 

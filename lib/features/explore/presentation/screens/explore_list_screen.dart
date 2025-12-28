@@ -1,13 +1,4 @@
 // lib/features/explore/presentation/screens/explore_list_screen.dart
-// Full refactor: safe provider reads, backend-driven sort/category sheets, sanitize usage,
-// avoid bottom-bar overlap for sheets, robust init + filtering behavior.
-//
-// NOTE: This file expects these symbols to exist in your project:
-//  - addressProvider, productsProvider, categoryProvider, exploreStateProvider, sortByMapProvider
-//  - ProductModel, ProductCard, CategoryFilterOption, ExploreFilterOption
-//  - CustomHomeAppBar, CustomToggleButton, CategoryFilterSheet, ExploreFilterSheet
-//
-// If some provider/type names differ, adapt imports/usages accordingly.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,59 +38,95 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
   SortDirection sortDirection = SortDirection.ascending;
 
   CategoryFilterOption selectedCategory = CategoryFilterOption.all;
-  String? selectedCategoryId; // backend category id if available
+  String? selectedCategoryId;
 
   final TextEditingController _searchController = TextEditingController();
   List<ProductModel> filteredProducts = [];
 
-  // ---------------------------
-  // INIT / DISPOSE
-  // ---------------------------
+  bool _isInitialLoading = true; // 🔥 İlk açılışta "bulunamadı" yazısını engellemek için
+
+
+  bool _fromHomeFlag = false; // Yeni değişken
+
   @override
   void initState() {
     super.initState();
+    _isInitialLoading = true;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final address = ref.read(addressProvider);
-      if (!address.isSelected) return;
-
-      // parse route extra from home -> explore navigation
-      final routeState = GoRouterState.of(context);
-      final dynamic extra = routeState.extra;
-      String? categoryId;
+    Future.microtask(() {
+      if (!mounted) return;
+      final dynamic extra = GoRouterState.of(context).extra;
 
       if (extra is Map) {
-        final val = extra['categoryId'] ?? extra['category_id'] ?? extra['id'];
-        if (val != null) categoryId = val.toString();
-      } else if (extra != null) {
-        categoryId = extra.toString();
+        setState(() {
+          if (extra['filter'] is ExploreFilterOption) {
+            selectedFilter = extra['filter'];
+          }
+          // Home'dan gelip gelmediğini buradan da teyit edelim
+          _fromHomeFlag = extra['fromHome'] ?? widget.fromHome;
+
+          final val = extra['categoryId'] ?? extra['category_id'] ?? extra['id'];
+          if (val != null) selectedCategoryId = val.toString();
+          print("🏠 [EXPLORE_INIT] Extra Data: ${GoRouterState.of(context).extra}");
+        });
       }
-
-      // fallback to widget.initialCategory (legacy enum) if provided
-      categoryId ??= widget.initialCategory != null ? _mapCategoryToCategoryId(widget.initialCategory!) : null;
-
-      final apiSort = _apiSortFor(selectedFilter) ?? 'created_at';
-      final sortOrder = sortDirection == SortDirection.ascending ? 'asc' : 'desc';
-
-      if (categoryId != null && categoryId.isNotEmpty) {
-        selectedCategoryId = categoryId;
-        ref.read(exploreStateProvider.notifier).setCategoryId(categoryId);
-        ref.read(productsProvider.notifier).refresh(
-          latitude: address.lat,
-          longitude: address.lng,
-          categoryId: categoryId,
-          sortBy: apiSort,
-          sortOrder: sortOrder,
-        );
-      } else {
-        ref.read(productsProvider.notifier).loadOnce(
-          latitude: address.lat,
-          longitude: address.lng,
-          sortBy: apiSort,
-          sortOrder: sortOrder,
-        );
-      }
+      _fetchData();
     });
+  }
+
+  // API Çağrısını merkezi bir yere topladık
+  void _fetchData() async {
+    final address = ref.read(addressProvider);
+    if (!address.isSelected) return;
+
+    final String sortBy = _apiSortFor(selectedFilter) ?? 'created_at';
+    final String sortOrder = sortDirection == SortDirection.ascending ? 'asc' : 'desc';
+
+    // 🔴 DEBUG 1: İSTEK PARAMETRELERİ
+    print("--------------------------------------------------");
+    print("📡 [EXPLORE_DEBUG] İSTEK BAŞLATILDI");
+    print("   🔹 Hedef Filtre: $selectedFilter");
+    print("   🔹 API sortBy: $sortBy");
+    print("   🔹 Kategori ID: $selectedCategoryId");
+    print("   🔹 Koordinat: ${address.lat}, ${address.lng}");
+
+    setState(() {
+      _isInitialLoading = true;
+      filteredProducts = [];
+    });
+
+    try {
+      await ref.read(productsProvider.notifier).refresh(
+        latitude: address.lat,
+        longitude: address.lng,
+        categoryId: selectedCategoryId,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+      );
+
+      if (mounted) {
+        final allProducts = ref.read(productsProvider).products;
+
+        // 🔴 DEBUG 2: API SONUCU
+        print("📥 [EXPLORE_DEBUG] VERİ GELDİ");
+        print("   🔹 Ham Ürün Sayısı: ${allProducts.length}");
+
+        if (allProducts.isNotEmpty) {
+          print("   🔹 İlk Ürün: ${allProducts.first.name} (ID: ${allProducts.first.id})");
+        }
+
+        _applyFilters(allProducts);
+
+        // 🔴 DEBUG 3: FİLTRE SONRASI DURUM
+        print("   🔹 UI Listesi Sayısı (filteredProducts): ${filteredProducts.length}");
+        print("--------------------------------------------------");
+
+        setState(() => _isInitialLoading = false);
+      }
+    } catch (e) {
+      print("❌ [EXPLORE_DEBUG] HATA: $e");
+      setState(() => _isInitialLoading = false);
+    }
   }
 
   @override
@@ -108,340 +135,116 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     super.dispose();
   }
 
-  // ---------------------------
-  // FILTER (client-side fallback & search)
-  // ---------------------------
   void _applyFilters(List<ProductModel> allProducts) {
-    List<ProductModel> temp = List.from(allProducts);
+    if (allProducts.isEmpty) {
+      if (filteredProducts.isNotEmpty) setState(() => filteredProducts = []);
+      return;
+    }
 
+    List<ProductModel> temp = allProducts.where((p) {
+      final bool hasValidId = p.id != null && p.id.isNotEmpty;
+      final bool hasValidName = p.name != null && p.name.isNotEmpty && p.name != "İsimsiz Ürün";
+      final bool hasValidStore = p.store != null && p.store.name != null && p.store.name.isNotEmpty;
+      return hasValidId && hasValidName && hasValidStore;
+    }).toList();
+
+    // 🔥 HATALARI GİDEREN YENİ FİLTRELEME MANTIĞI
+    switch (selectedFilter) {
+      case ExploreFilterOption.sonSans:
+      // Modelinde 'isLastChance' yoksa, backend genelde stok miktarını gönderir.
+      // Logda 'stock' alanı varsa onu kullanıyoruz:
+        temp = temp.where((p) => (p.stock ?? 0) > 0 && (p.stock ?? 0) < 10).toList();
+        break;
+
+      case ExploreFilterOption.hemenYaninda:
+      // 'distance' modelde yoksa hata verir. Modelinde mesafe hangi isimle kayıtlı?
+      // Eğer mesafe verisi henüz modelde yoksa bu satırı yorum satırı yapabilirsin:
+      // temp = temp.where((p) => (p.store.distanceValue ?? 0) <= 5.0).toList();
+        break;
+
+      case ExploreFilterOption.yeni:
+      // 'createdAt' üzerinden manuel kontrol
+        final limit = DateTime.now().subtract(const Duration(days: 7));
+        temp = temp.where((p) => p.createdAt.isAfter(limit)).toList();
+        break;
+
+      default:
+        break;
+    }
+
+    // Arama Filtresi
     final q = _searchController.text.trim().toLowerCase();
     if (q.length >= 3) {
-      temp = temp.where((p) {
-        return p.name.toLowerCase().contains(q) || p.store.name.toLowerCase().contains(q);
-      }).toList();
+      temp = temp.where((p) => p.name.toLowerCase().contains(q) || p.store.name.toLowerCase().contains(q)).toList();
     }
 
+    // Sıralama
     temp.sort((a, b) {
-      int result;
-      switch (selectedFilter) {
-        case ExploreFilterOption.recommended:
-          result = b.createdAt.compareTo(a.createdAt);
-          break;
-        case ExploreFilterOption.price:
-          result = a.salePrice.compareTo(b.salePrice);
-          break;
-        case ExploreFilterOption.distance:
-          result = (a.store.distanceKm ?? 999).compareTo(b.store.distanceKm ?? 999);
-          break;
-        case ExploreFilterOption.rating:
-          result = (b.store.overallRating ?? 0.0).compareTo(a.store.overallRating ?? 0.0);
-          break;
+      if (selectedFilter == ExploreFilterOption.price) {
+        return (sortDirection == SortDirection.ascending)
+            ? a.salePrice.compareTo(b.salePrice)
+            : b.salePrice.compareTo(a.salePrice);
       }
-      return sortDirection == SortDirection.ascending ? result : -result;
+      if (selectedFilter == ExploreFilterOption.rating) {
+        return (sortDirection == SortDirection.ascending)
+            ? (a.store.overallRating ?? 0.0).compareTo(b.store.overallRating ?? 0.0)
+            : (b.store.overallRating ?? 0.0).compareTo(a.store.overallRating ?? 0.0);
+      }
+      return 0; // Diğer durumlarda API sırasını bozma
     });
 
-    setState(() {
-      filteredProducts = temp;
-    });
+    setState(() => filteredProducts = temp);
   }
 
-  // ---------------------------
-  // HELPERS
-  // ---------------------------
-  String? _mapCategoryToCategoryId(CategoryFilterOption c) {
-    switch (c) {
-      case CategoryFilterOption.all:
-        return null;
-      case CategoryFilterOption.food:
-        return 'food';
-      case CategoryFilterOption.bakery:
-        return 'bakery';
-      case CategoryFilterOption.breakfast:
-        return 'breakfast';
-      case CategoryFilterOption.market:
-        return 'market';
-      case CategoryFilterOption.vegetarian:
-        return 'vegetarian';
-      case CategoryFilterOption.vegan:
-        return 'vegan';
-      case CategoryFilterOption.glutenFree:
-        return 'gluten_free';
+  String? _apiSortFor(ExploreFilterOption opt) {
+    // Burada yeni eklediğin enum değerlerini backend tag'lerine eşliyoruz
+    switch (opt) {
+      case ExploreFilterOption.hemenYaninda: return 'hemen-yaninda';
+      case ExploreFilterOption.yeni: return 'yeni';
+      case ExploreFilterOption.sonSans: return 'son-sans';
+      case ExploreFilterOption.bugun: return 'bugun';
+      case ExploreFilterOption.yarin: return 'yarin';
+      default:
+        final raw = _readSortOptionsRaw();
+        return raw[opt];
     }
   }
 
-  // Read raw sort map from provider as Map<ExploreFilterOption,String?> safely.
   Map<ExploreFilterOption, String?> _readSortOptionsRaw() {
     final dynamic raw = ref.watch(sortByMapProvider);
     if (raw == null) return <ExploreFilterOption, String?>{};
     if (raw is Map<ExploreFilterOption, String?>) return raw;
-    if (raw is Map) {
-      final out = <ExploreFilterOption, String?>{};
-      raw.forEach((k, v) {
-        try {
-          if (k is ExploreFilterOption) out[k] = v?.toString();
-        } catch (_) {}
-      });
-      return out;
-    }
     return <ExploreFilterOption, String?>{};
   }
 
-  // Return a non-null map by dropping null values (for consumers that require non-null strings).
-  Map<ExploreFilterOption, String> _readSortOptionsNonNull() {
-    final raw = _readSortOptionsRaw();
-    return Map.fromEntries(
-      raw.entries.where((e) => e.value != null).map((e) => MapEntry(e.key, e.value!)),
-    );
-  }
-
-  // Return API key (nullable) for an ExploreFilterOption
-  String? _apiSortFor(ExploreFilterOption opt) {
-    final raw = _readSortOptionsRaw();
-    return raw[opt];
-  }
-
-  // Extract categories list safely from provider value
   List<dynamic> _extractCategories(dynamic catsRaw) {
     if (catsRaw == null) return [];
     if (catsRaw is List) return catsRaw;
     try {
       final dyn = catsRaw as dynamic;
       if (dyn.categories is List) return List<dynamic>.from(dyn.categories as List);
-      if (dyn.data is List) return List<dynamic>.from(dyn.data as List);
-      if (dyn.items is List) return List<dynamic>.from(dyn.items as List);
-      if (dyn.list is List) return List<dynamic>.from(dyn.list as List);
     } catch (_) {}
     return [];
   }
 
-  // Resolve category name from backend id; if not available return friendly enum label or 'Yükleniyor...'
-// use your central categoryLabel function here
   String _categoryNameFromId(String? id, dynamic catsRaw) {
     final list = _extractCategories(catsRaw);
-    // if backend selected id exists, try to find a backend name
     if (id != null && id.isNotEmpty) {
       final found = list.firstWhere((c) {
-        try {
-          final cid = (c as dynamic).id;
-          return cid != null && cid.toString() == id;
-        } catch (_) {
-          return false;
-        }
+        try { return (c as dynamic).id.toString() == id; } catch (_) { return false; }
       }, orElse: () => null);
-      if (found != null) {
-        return ((found as dynamic).name ?? (found as dynamic).title ?? id).toString();
-      }
-      // if not found, fallthrough to id string
+      if (found != null) return (found as dynamic).name.toString();
       return id;
     }
-
-    // no backend id -> if user chose an enum category (not 'all') show that friendly label
-    if (selectedCategory != CategoryFilterOption.all) {
-      return categoryLabel(selectedCategory);
-    }
-
-    // no id and enum is 'all' -> if we have categories list then "Hepsi", else "Yükleniyor..."
-    return list.isNotEmpty ? 'Hepsi' : 'Yükleniyor...';
+    return "Hepsi";
   }
 
-  /*
-  String _categoryLabel(CategoryFilterOption c) {
-    switch (c) {
-      case CategoryFilterOption.all:
-        return 'Tümü';
-      case CategoryFilterOption.food:
-        return 'Yemek';
-      case CategoryFilterOption.bakery:
-        return 'Fırın & Pastane';
-      case CategoryFilterOption.breakfast:
-        return 'Kahvaltı';
-      case CategoryFilterOption.market:
-        return 'Market & Manav';
-      case CategoryFilterOption.vegetarian:
-        return 'Vejetaryan';
-      case CategoryFilterOption.vegan:
-        return 'Vegan';
-      case CategoryFilterOption.glutenFree:
-        return 'Glutensiz';
-    }
-  }
-
-   */
-
-  String _sortLabel(ExploreFilterOption opt) {
-    switch (opt) {
-      case ExploreFilterOption.recommended:
-        return 'Önerilen';
-      case ExploreFilterOption.price:
-        return 'Fiyat';
-      case ExploreFilterOption.distance:
-        return 'Mesafe';
-      case ExploreFilterOption.rating:
-        return 'Puan';
-    }
-  }
-
-
-
-  // ---------------------------
-  // UI: backend-driven category sheet (returns selected id or null)
-  // ---------------------------
-  Future<String?> _showBackendCategoriesSheet(List categories) {
-    return showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        String? pickedId = selectedCategoryId ?? ref.read(exploreStateProvider).categoryId;
-        return StatefulBuilder(builder: (c, setState2) {
-          return SafeArea(
-            top: false,
-            child: FractionallySizedBox(
-              heightFactor: 0.80,
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    const Text('Kategori Seç', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const Divider(),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: categories.map<Widget>((cat) {
-                            final idStr = ((cat as dynamic).id).toString();
-                            final title = ((cat as dynamic).name ?? (cat as dynamic).title ?? idStr).toString();
-                            return RadioListTile<String>(
-                              value: idStr,
-                              groupValue: pickedId,
-                              title: Text(title),
-                              onChanged: (v) => setState2(() => pickedId = v),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(ctx).viewPadding.bottom + kBottomNavigationBarHeight / 1.5,
-                        top: 8,
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx, pickedId),
-                          child: const Text('Uygula'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        });
-      },
-    );
-  }
-
-  // ---------------------------
-  // UI: backend-driven SORT sheet (returns {opt, dir})
-  // Accepts nullable-value map (provider may return Map<ExploreFilterOption, String?>)
-  // ---------------------------
-  Future<Map<String, dynamic>?> _showBackendSortSheet(Map<ExploreFilterOption, String?>? sortOptions) {
-    final options = (sortOptions?.keys.toList() ?? []);
-    final available = options.isNotEmpty ? options : ExploreFilterOption.values;
-
-    return showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        ExploreFilterOption picked = selectedFilter;
-        SortDirection pickedDir = sortDirection;
-        return StatefulBuilder(builder: (c, setState2) {
-          return SafeArea(
-            top: false,
-            child: FractionallySizedBox(
-              heightFactor: 0.6,
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    const Text('Sırala', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const Divider(),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: available.map((opt) {
-                            return RadioListTile<ExploreFilterOption>(
-                              value: opt,
-                              groupValue: picked,
-                              title: Text(_sortLabel(opt)),
-                              onChanged: (v) => setState2(() => picked = v!),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('Sıralama yönü: '),
-                        IconButton(
-                          icon: Transform.rotate(
-                            angle: pickedDir == SortDirection.ascending ? 0 : 3.14159,
-                            child: const Icon(Icons.arrow_upward),
-                          ),
-                          onPressed: () => setState2(() {
-                            pickedDir = pickedDir == SortDirection.ascending ? SortDirection.descending : SortDirection.ascending;
-                          }),
-                        ),
-                        Text(pickedDir == SortDirection.ascending ? 'Artan' : 'Azalan'),
-                      ],
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(ctx).viewPadding.bottom + kBottomNavigationBarHeight / 1.5,
-                        top: 8,
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx, {'opt': picked, 'dir': pickedDir}),
-                          child: const Text('Uygula'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        });
-      },
-    );
-  }
-
-  // ---------------------------
-  // BUILD
-  // ---------------------------
   @override
   Widget build(BuildContext context) {
     final address = ref.watch(addressProvider);
     final productsState = ref.watch(productsProvider);
     final categoriesRaw = ref.watch(categoryProvider);
 
-    // listen to products state changes and apply filters when changed
     ref.listen<ProductsState>(productsProvider, (prev, next) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -449,38 +252,8 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
       });
     });
 
-    // ensure initial application if backend already provided items
-    final products = productsState.products;
-    if (filteredProducts.isEmpty && products.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _applyFilters(products);
-      });
-    }
-
-    // read sort options safely and pass to header & sort sheet
-    final sortOptionsRaw = _readSortOptionsRaw();
-    final sortOptionsNonNull = _readSortOptionsNonNull();
-
-    // compute current category label using categoriesRaw safely
     final currentCategoryId = selectedCategoryId ?? ref.read(exploreStateProvider).categoryId;
     final currentCategoryLabel = _categoryNameFromId(currentCategoryId, categoriesRaw);
-
-    debugPrint(
-      'EXPLORE LIST BUILD '
-          'products=${productsState.products.length} '
-          'filtered=${filteredProducts.length} '
-          'loading=${productsState.isLoadingList} '
-          'selectedCategoryId=$selectedCategoryId '
-          'exploreState.categoryId=${ref.read(exploreStateProvider).categoryId} '
-          'sortOptions=${sortOptionsNonNull.isEmpty ? "empty" : sortOptionsNonNull}',
-    );
-
-    if (productsState.isLoadingList && filteredProducts.isEmpty) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -488,39 +261,45 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
         address: address.title,
         onLocationTap: () => context.push('/location-picker'),
         onNotificationsTap: () {},
-        leadingOverride: widget.fromHome
-            ? IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop())
+        // 🔥 GÜNCELLEDİK: canPop varsa butonu göster
+        leadingOverride: (context.canPop() || _fromHomeFlag)
+            ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => context.pop(),
+        )
             : null,
       ),
       body: Stack(
         children: [
-          CustomScrollView(
-            slivers: [
-              _buildHeader(categoriesRaw, address, sortOptionsRaw, currentCategoryLabel),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                        (context, i) {
-                      final p = filteredProducts[i];
-                      debugPrint('SLIVER BUILD: index=$i id=${p.id} name=${p.name}');
-                      return ProductCard(
-                        product: p,
-                        // onTap: () => context.push('/product-detail/${p.id}'), // eskisi
-
-                        // yerine:
-                        onTap: () {
-                          debugPrint('TRACE: ProductCard tapped → index=$i id=${p.id} name=${p.name}');
-                          context.push('/product-detail/${p.id}');
-                        },
-                      );
-                    },
-                    childCount: filteredProducts.length,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            child: (_isInitialLoading) // 🔥 Sadece çekim bitene kadar loader göster
+                ? const Center(child: CircularProgressIndicator())
+                : CustomScrollView(
+              key: const ValueKey('content_scroll'),
+              slivers: [
+                _buildHeader(categoriesRaw, address, currentCategoryLabel),
+                if (filteredProducts.isEmpty)
+                  const SliverFillRemaining(
+                    child: Center(child: Text("Ürün bulunamadı.")),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                            (context, i) => ProductCard(
+                          key: ValueKey(filteredProducts[i].id),
+                          product: filteredProducts[i],
+                          onTap: () => context.push('/product-detail/${filteredProducts[i].id}'),
+                        ),
+                        childCount: filteredProducts.length,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 120)),
-            ],
+                const SliverToBoxAdapter(child: SizedBox(height: 120)),
+              ],
+            ),
           ),
           CustomToggleButton(
             label: "Harita",
@@ -532,130 +311,74 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     );
   }
 
-  // Header builder with injected nullable sortOptionsRaw (provider may have null values)
   SliverPersistentHeader _buildHeader(
       dynamic categoriesRaw,
       dynamic address,
-      Map<ExploreFilterOption, String?> sortOptionsRaw,
       String currentCategoryLabel,
       ) {
-    final categoriesList = _extractCategories(categoriesRaw);
-    final currentCategoryId = selectedCategoryId ?? ref.read(exploreStateProvider).categoryId;
-    final currentCategoryLabelComputed = _categoryNameFromId(currentCategoryId, categoriesRaw);
-
     return SliverPersistentHeader(
       pinned: true,
       delegate: ExploreHeaderDelegate(
         controller: _searchController,
         selectedSort: selectedFilter,
         sortDirection: sortDirection,
-        selectedCategory: selectedCategory,
-        currentCategoryLabel: currentCategoryLabelComputed,
-
-        // SEARCH → local filter
+        selectedCategory: selectedCategory, // Bu satırı ekledik
+        currentCategoryLabel: currentCategoryLabel,
         onSearchChanged: (_) {
           final all = ref.read(productsProvider).products;
           _applyFilters(all);
         },
-
-        // SORT → open backend/constructed sheet (Apply inside sheet)
-        onSortChanged: (opt) async {
-          final res = await _showBackendSortSheet(sortOptionsRaw);
-          if (res == null) return;
-
-          final picked = res['opt'] as ExploreFilterOption;
-          final dir = res['dir'] as SortDirection;
-
-          setState(() {
-            selectedFilter = picked;
-            sortDirection = dir;
-          });
-
-          if (address == null || address.isSelected == false) {
-            debugPrint('❌ ADDRESS NOT SELECTED → SKIP FETCH');
-            return;
+        // onQuickFilterSelected yerine onSortChanged üzerinden yürüyoruz
+        onSortChanged: (opt) {
+          if (opt != null && opt != selectedFilter) {
+            // Eğer hızlı filtre çipine tıklandıysa direkt filtrele
+            setState(() => selectedFilter = opt);
+            _fetchData(); // Sende refresh yapan metodun ismi
+          } else {
+            // Eğer zaten seçili olana tıklandıysa detaylı Sheet'i aç
+            _handleSortSelection(selectedFilter);
           }
-
-          final categoryIdFromState = selectedCategoryId ?? ref.read(exploreStateProvider).categoryId;
-          final apiSort = _apiSortFor(selectedFilter);
-          final sortOrder = sortDirection == SortDirection.ascending ? 'asc' : 'desc';
-
-          debugPrint('📡 SORT SELECTED → apiSort=$apiSort sortOrder=$sortOrder');
-
-          if (apiSort == null) {
-            // fallback client-side
-            final all = ref.read(productsProvider).products;
-            _applyFilters(all);
-            return;
-          }
-
-          await ref.read(productsProvider.notifier).refresh(
-            latitude: address.lat,
-            longitude: address.lng,
-            categoryId: categoryIdFromState,
-            sortBy: apiSort,
-            sortOrder: sortOrder,
-          );
         },
+        onCategoryTap: () => _handleCategorySelection(categoriesRaw),
+      ),
+    );
+  }
 
-        // CATEGORY → backend-driven sheet when available
-        onCategoryTap: () async {
-          if (categoriesList.isNotEmpty) {
-            final pickedId = await _showBackendCategoriesSheet(categoriesList);
-            if (pickedId == null) return;
+  // --- Sheet Yöneticileri ---
+  void _handleSortSelection(ExploreFilterOption? current) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => ExploreFilterSheet(
+        selected: selectedFilter,
+        direction: sortDirection,
+        availableOptions: [ExploreFilterOption.recommended, ExploreFilterOption.price, ExploreFilterOption.rating, ExploreFilterOption.distance],
+        onApply: (picked, dir) {
+          Navigator.pop(ctx);
+          setState(() { selectedFilter = picked; sortDirection = dir; });
+          _fetchData();
+        },
+      ),
+    );
+  }
 
-            debugPrint('🟡 UI CATEGORY SELECTED (ID) → $pickedId');
-            setState(() {
-              selectedCategoryId = pickedId;
-              selectedCategory = CategoryFilterOption.all; // show backend label instead of enum
-            });
-
-            ref.read(exploreStateProvider.notifier).setCategoryId(pickedId);
-
-            if (address == null || address.isSelected == false) return;
-
-            final apiSort = _apiSortFor(selectedFilter);
-            final sortOrder = sortDirection == SortDirection.ascending ? 'asc' : 'desc';
-
-            await ref.read(productsProvider.notifier).refresh(
-              latitude: address.lat,
-              longitude: address.lng,
-              categoryId: pickedId,
-              sortBy: apiSort ?? 'created_at',
-              sortOrder: apiSort == null ? 'desc' : sortOrder,
-            );
-
-            return;
-          }
-
-          // fallback legacy enum sheet
-          final res = await showModalBottomSheet<CategoryFilterOption>(
-            context: context,
-            isScrollControlled: true,
-            builder: (_) => CategoryFilterSheet(
-              selected: selectedCategory,
-              onApply: (c) => Navigator.pop(context, c),
-            ),
-          );
-          if (res == null) return;
-
-          final categoryId = _mapCategoryToCategoryId(res);
+  void _handleCategorySelection(dynamic categoriesRaw) async {
+    final categoriesList = _extractCategories(categoriesRaw);
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CategoryFilterSheet(
+        selectedId: selectedCategoryId,
+        backendCategories: categoriesList.isNotEmpty ? categoriesList : null,
+        onApply: (selectedMap) {
+          Navigator.pop(context);
           setState(() {
-            selectedCategory = res;
-            selectedCategoryId = categoryId;
+            selectedCategoryId = selectedMap['id'];
+            selectedCategory = CategoryFilterOption.all;
           });
-
-          ref.read(exploreStateProvider.notifier).setCategoryId(categoryId ?? '');
-
-          if (address == null || address.isSelected == false) return;
-
-          await ref.read(productsProvider.notifier).refresh(
-            latitude: address.lat,
-            longitude: address.lng,
-            categoryId: categoryId,
-            sortBy: _apiSortFor(selectedFilter) ?? 'created_at',
-            sortOrder: sortDirection == SortDirection.ascending ? 'asc' : 'desc',
-          );
+          _fetchData();
         },
       ),
     );
@@ -663,18 +386,18 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
 }
 
 // ---------------------------
-// Header delegate (unchanged layout, but accepts currentCategoryLabel)
+// HEADER DELEGATE - Tasarımı bozmadan Hızlı Filtreleri ekledik
 // ---------------------------
 class ExploreHeaderDelegate extends SliverPersistentHeaderDelegate {
   final TextEditingController controller;
   final ExploreFilterOption selectedSort;
   final SortDirection sortDirection;
-  final CategoryFilterOption selectedCategory;
+  final CategoryFilterOption selectedCategory; // Geri eklendi
   final String currentCategoryLabel;
-
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<ExploreFilterOption?> onSortChanged;
   final VoidCallback onCategoryTap;
+  final ScrollController _chipScrollController = ScrollController();
 
   ExploreHeaderDelegate({
     required this.controller,
@@ -687,125 +410,178 @@ class ExploreHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.onCategoryTap,
   });
 
-  @override
-  double get minExtent => 120;
-
-  @override
-  double get maxExtent => 120;
+  @override double get minExtent => 175;
+  @override double get maxExtent => 175;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    // 2. Seçili öğenin index'ini buluyoruz
+    final filters = [
+      ExploreFilterOption.hemenYaninda,
+      ExploreFilterOption.sonSans,
+      ExploreFilterOption.yeni,
+      ExploreFilterOption.bugun,
+      ExploreFilterOption.yarin,
+    ];
+    final selectedIndex = filters.indexOf(selectedSort);
+
+    // 3. Ekran çizildikten hemen sonra seçili öğeye kaydır
+    if (selectedIndex != -1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_chipScrollController.hasClients) {
+          // Çip genişliği + margin (yaklaşık 100-110 birim)
+          double offset = selectedIndex * 95.0;
+          _chipScrollController.animateTo(
+            offset.clamp(0.0, _chipScrollController.position.maxScrollExtent),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+
     return Container(
       color: AppColors.background,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            controller: controller,
-            onChanged: onSearchChanged,
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
-              hintText: 'Ürün veya işletme ara (3+ harf)',
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
+          // 1. SATIR: SIRALA BUTONU + KATEGORİLER (Yemek, Kahvaltı vb.)
           Row(
             children: [
-              _sortCapsule(context),
-              const SizedBox(width: 10),
-              _categoryButton(),
+              _sortTuneButton(),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _categoryModernButton(), // Kategorileri buraya aldık
+              ),
             ],
           ),
+          const SizedBox(height: 6),
+
+          // 2. SATIR: ARAMA FIELD
+          _buildSearchField(),
+          const SizedBox(height: 6),
+
+          // 3. SATIR: HIZLI FİLTRE BAŞLIKLARI (Hemen Yanında, Son Şans vb.)
+          SizedBox(
+            height: 40,
+            child: SingleChildScrollView(
+              controller: _chipScrollController, // Controller bağlandı
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  _quickChip("Hemen Yanımda", ExploreFilterOption.hemenYaninda),
+                  _quickChip("Son Şans", ExploreFilterOption.sonSans),
+                  _quickChip("Yeni", ExploreFilterOption.yeni),
+                  _quickChip("Bugün", ExploreFilterOption.bugun),
+                  _quickChip("Yarın", ExploreFilterOption.yarin),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _sortCapsule(BuildContext context) {
+  // Arama alanını temiz tutmak için ayırdım
+  Widget _buildSearchField() {
     return Container(
+      height: 44,
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          InkWell(
-            onTap: () => onSortChanged(selectedSort),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: AnimatedRotation(
-                turns: sortDirection == SortDirection.ascending ? 0 : 0.5,
-                duration: const Duration(milliseconds: 200),
-                child: const Icon(
-                  Icons.arrow_upward,
-                  color: AppColors.primaryDarkGreen,
-                ),
-              ),
-            ),
-          ),
-          InkWell(
-            onTap: () {
-              // open sheet handled by onSortChanged
-              onSortChanged(selectedSort);
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Text(
-                _labelForSort(selectedSort),
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
+      child: TextField(
+        controller: controller,
+        onChanged: onSearchChanged,
+        decoration: const InputDecoration(
+          prefixIcon: Icon(Icons.search_rounded, color: Colors.grey, size: 20),
+          hintText: 'Ürün veya işletme ara...',
+          hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 10),
+        ),
       ),
     );
   }
 
-  String _labelForSort(ExploreFilterOption opt) {
-    switch (opt) {
-      case ExploreFilterOption.recommended:
-        return "Önerilen";
-      case ExploreFilterOption.price:
-        return "Fiyat";
-      case ExploreFilterOption.distance:
-        return "Mesafe";
-      case ExploreFilterOption.rating:
-        return "Puan";
-    }
-  }
-
-  Widget _categoryButton() {
+  // Kategori butonu genişletildi
+  Widget _categoryModernButton() {
     return InkWell(
       onTap: onCategoryTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primaryDarkGreen.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.layers_outlined, size: 18, color: AppColors.primaryDarkGreen),
+                const SizedBox(width: 8),
+                Text(
+                  currentCategoryLabel,
+                  style: const TextStyle(
+                      color: AppColors.primaryDarkGreen,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14
+                  ),
+                ),
+              ],
+            ),
+            const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primaryDarkGreen),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sortTuneButton() {
+    return InkWell(
+      onTap: () => onSortChanged(selectedSort),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: const Icon(Icons.tune_rounded, size: 20, color: AppColors.primaryDarkGreen),
+      ),
+    );
+  }
+
+  Widget _quickChip(String label, ExploreFilterOption opt) {
+    final isSelected = selectedSort == opt;
+    return GestureDetector(
+      onTap: () => onSortChanged(opt),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryDarkGreen : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isSelected ? AppColors.primaryDarkGreen : Colors.grey.shade200),
         ),
         child: Text(
-          "Kategori: $currentCategoryLabel",
-          style: const TextStyle(
-            color: AppColors.primaryDarkGreen,
-            fontWeight: FontWeight.w600,
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           ),
         ),
       ),
     );
   }
 
-  @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => true;
+  @override bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => true;
 }

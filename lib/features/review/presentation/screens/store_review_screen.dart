@@ -1,0 +1,474 @@
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../stores/domain/providers/store_detail_provider.dart';
+import '../../../stores/presentation/widgets/store_review_item.dart';
+import '../widgets/store_rating_bars.dart';
+
+class StoreReviewScreen extends ConsumerWidget {
+  final String storeId;
+
+  const StoreReviewScreen({super.key, required this.storeId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(storeDetailProvider(storeId));
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      // AppBar'ı daha modern ve sade yaptık
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "Değerlendirmeler",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 19),
+        ),
+        centerTitle: true,
+      ),
+      body: _buildBody(context, state),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, dynamic state) {
+    final store = state.detail;
+    if (store == null) return const Center(child: CircularProgressIndicator());
+
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        // 1. KART: İŞLETME DEĞERLENDİRME
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20), // Oval Köşeler
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "İşletme Değerlendirmesi", // Başlık Büyüklüğü Eşitlendi
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                  ),
+                  const SizedBox(height: 16),
+                  StoreRatingBars(
+                    storeId: storeId,
+                    overallRating: store.overallRating,
+                    totalReviews: store.totalReviews,
+                    ratings: store.averageRatings!,
+                    showHeader: false, // Başlığı kendimiz yukarıda yazdık
+                    onTap: null,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // 2. KART: YORUMLAR BÖLÜMÜ
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          sliver: SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20), // Oval Köşeler
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Yorumlar", // Başlık Büyüklüğü Eşitlendi
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                  ),
+                  const SizedBox(height: 20),
+
+                  state.reviews.isEmpty
+                      ? const Center(child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Text("Henüz yorum yapılmamış."),
+                  ))
+                      : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: state.reviews.length,
+                    separatorBuilder: (context, index) => const Divider(height: 32, color: Color(0xFFF5F5F5)),
+                    itemBuilder: (context, index) {
+                      final review = state.reviews.reversed.toList()[index];
+
+                      // 🎯 YORUM LİSTELEME YAPISI
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // Yıldızlar ve İsim
+                              Row(
+                                children: [
+                                  _buildSmallStars(review.rating), // Küçük Yıldız Widgetı
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "${review.userFirstName} ${review.userLastName}",
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                              // Tarih
+                              Text(
+                                review.createdAt ?? "",
+                                style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          // Yorum Metni
+                          Text(
+                            review.comment ?? "",
+                            style: const TextStyle(color: Colors.black87, fontSize: 14, height: 1.4),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Yıldız yapısı için yardımcı widget
+  Widget _buildSmallStars(double rating) {
+    return Row(
+      children: List.generate(5, (index) {
+        return Icon(
+          index < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+          color: Colors.amber,
+          size: 16,
+        );
+      }),
+    );
+  }
+}
+
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverAppBarDelegate({required this.minHeight, required this.maxHeight, required this.child});
+  final double minHeight;
+  final double maxHeight;
+  final Widget child;
+
+  @override double get minExtent => minHeight;
+  @override double get maxExtent => maxHeight;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          if (shrinkOffset > 0)
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5)),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  @override bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => true;
+}
+
+
+/*
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../stores/domain/providers/store_detail_provider.dart';
+import '../../../stores/presentation/widgets/store_review_item.dart';
+import '../widgets/store_rating_bars.dart';
+
+class StoreReviewScreen extends ConsumerWidget {
+  final String storeId;
+
+  const StoreReviewScreen({super.key, required this.storeId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(storeDetailProvider(storeId));
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white, // Android'deki o morumsu gölgeyi siler
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "Değerlendirmeler",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 20),
+        ),
+        centerTitle: true,
+      ),
+      body: _buildBody(context, state),
+    );
+  }
+
+
+  Widget _buildBody(BuildContext context, dynamic state) {
+    // Yüklenme ve hata kontrolleri burada (öncekiyle aynı)
+    final store = state.detail;
+    if (store == null) return const SizedBox.shrink();
+
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        // 1. BÖLÜM: ÜST ÖZET KARTI
+        SliverToBoxAdapter(
+          child: Padding(
+            // Padding'i Container dışına aldık ki hizalama daha kolay olsun
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: StoreRatingBars(
+                storeId: storeId,
+                overallRating: store.overallRating,
+                totalReviews: store.totalReviews,
+                ratings: store.averageRatings!,
+                showHeader: true,
+                onTap: null,
+              ),
+            ),
+          ),
+        ),
+
+        // 2. BÖLÜM: YAPIŞKAN BAŞLIK (Hizalama Buradan Başlıyor)
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _SliverAppBarDelegate(
+            minHeight: 60.0,
+            maxHeight: 60.0,
+            child: Container(
+              // Arka plan rengini beyaz yapıyoruz ki scroll yaparken altındaki yorumlar görünmesin
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(bottom: BorderSide(color: Color(0xFFF1F1F1), width: 1)),
+              ),
+              // 🎯 SOL HİZALAMA: Kartın içindeki padding (16+20=36) ile eşitledik
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  const Text(
+                    "Kullanıcı Yorumları",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  )
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // 3. BÖLÜM: YORUMLAR (Aşağıda scroll olan kısım)
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          sliver: state.reviews.isEmpty
+              ? _buildEmptyState()
+              : SliverList(
+            delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                final review = state.reviews.reversed.toList()[index];
+                return StoreReviewItem(review: review);
+              },
+              childCount: state.reviews.length,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildEmptyState() {
+    return SliverToBoxAdapter(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 60),
+          Icon(Icons.chat_bubble_outline_rounded, size: 64, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          const Text("Henüz yorum yapılmamış.", style: TextStyle(color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+}
+
+// 📌 Başlığın yukarı yapışmasını sağlayan özel yardımcı sınıf
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverAppBarDelegate({required this.minHeight, required this.maxHeight, required this.child});
+  final double minHeight;
+  final double maxHeight;
+  final Widget child;
+
+  @override double get minExtent => minHeight;
+  @override double get maxExtent => maxHeight;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox.expand(child: child);
+  }
+
+  @override bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
+    return maxHeight != oldDelegate.maxHeight || minHeight != oldDelegate.minHeight || child != oldDelegate.child;
+  }
+}
+*/
+
+
+/*
+import 'package:flutter/material.dart';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../stores/domain/providers/store_detail_provider.dart';
+import '../../../stores/presentation/widgets/store_review_item.dart';
+import '../widgets/store_rating_bars.dart';
+
+class StoreReviewScreen extends ConsumerWidget {
+  final String storeId;
+
+  const StoreReviewScreen({super.key, required this.storeId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(storeDetailProvider(storeId));
+
+    return Scaffold(
+      backgroundColor: Colors.white, // Daha ferah bir beyaz
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.black),
+        title: const Text(
+          "Mağaza Değerlendirmeleri",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        centerTitle: true,
+      ),
+      body: _buildBody(context, state),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, dynamic state) {
+    if (state.loading && state.detail == null) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.primaryDarkGreen));
+    }
+
+    final store = state.detail;
+    if (store == null) return const Center(child: Text("Veri bulunamadı"));
+
+    return CustomScrollView( // Akıcı bir kaydırma deneyimi için
+      slivers: [
+        // 📊 Üst Bölüm: Özet Puanlar
+        SliverToBoxAdapter(
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade100),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: StoreRatingBars(
+              storeId: storeId,
+              overallRating: store.overallRating,
+              totalReviews: store.totalReviews,
+              ratings: store.averageRatings!,
+              showHeader: true,
+              onTap: null,
+            ),
+          ),
+        ),
+
+        // 💬 Orta Başlık
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Kullanıcı Yorumları (${state.reviews.length})",
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+                const Icon(Icons.sort, size: 20, color: Colors.grey),
+              ],
+            ),
+          ),
+        ),
+
+        // 📝 Alt Bölüm: Yorum Listesi
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          sliver: state.reviews.isEmpty
+              ? const SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.only(top: 50),
+                child: Text("Henüz yorum yapılmamış.", style: TextStyle(color: Colors.grey)),
+              ),
+            ),
+          )
+              : SliverList(
+            delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                // Yorumları ters çeviriyoruz ki "en yeni en üstte" olsun
+                final review = state.reviews.reversed.toList()[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: StoreReviewItem(review: review),
+                );
+              },
+              childCount: state.reviews.length,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+ */

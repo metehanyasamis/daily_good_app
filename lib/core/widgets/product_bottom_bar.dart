@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../features/cart/presentation/widgets/success_dialog.dart';
 
 class ProductBottomBar extends StatelessWidget {
   final int qty;
@@ -43,10 +44,12 @@ class ProductBottomBar extends StatelessWidget {
                 child: SizedBox(
                   height: 54,
                   child: ElevatedButton(
-                    onPressed: isDisabled
-                        ? null
-                        : () async {
+                    onPressed: isDisabled ? null : () async {
                       final ok = await onSubmit();
+
+                      if (ok && context.mounted) {
+                        showSuccessDialog(context, '$qty adet ürün sepete eklendi 💚');
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -96,5 +99,38 @@ class ProductBottomBar extends StatelessWidget {
       ),
     );
   }
+
+  /*
+  void _showSuccessDialog(BuildContext context, int quantity) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: AppColors.primaryDarkGreen, size: 60),
+            const SizedBox(height: 16),
+            const Text(
+              'Sepete Eklendi!',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            const SizedBox(height: 8),
+            Text('$quantity adet ürün başarıyla sepete eklendi 💚'),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryDarkGreen,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Tamam', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+*/
 }
 

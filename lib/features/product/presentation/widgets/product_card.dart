@@ -18,7 +18,6 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('PRODUCT CARD BUILD: id=${product.id} name=${product.name} — context mounted?');
 
     final oldPrice = product.listPrice;
     final newPrice = product.salePrice;
@@ -135,6 +134,7 @@ class ProductCard extends StatelessWidget {
                   Positioned(
                     bottom: 10,
                     left: 10,
+                    right: 10,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -152,19 +152,23 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          product.store.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            shadows: [
-                              Shadow(
-                                offset: Offset(0, 0),
-                                blurRadius: 4,
-                                color: Colors.black87,
-                              ),
-                            ],
+                        Expanded(
+                          child: Text(
+                            product.store.name,
+                            maxLines: 1, // Tek satırda tut
+                            overflow: TextOverflow.ellipsis, // Sığmazsa ... yap
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(0, 0),
+                                  blurRadius: 4,
+                                  color: Colors.black87,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -248,28 +252,41 @@ class ProductCard extends StatelessWidget {
             const SizedBox(height: 2),
 
             // ------------------------------------------------------------
-            // BOTTOM LINE: distance (rating backend’de yok şu an)
+            // BOTTOM LINE: distance + rating
             // ------------------------------------------------------------
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8), // Alt boşluğu biraz artırdık
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.place,
-                    size: 14,
-                    color: AppColors.primaryDarkGreen,
-                  ),
+                  // MESAFE
+                  const Icon(Icons.place, size: 14, color: AppColors.primaryDarkGreen),
                   const SizedBox(width: 4),
                   Text(
                     product.store.distanceKm != null
                         ? '${product.store.distanceKm!.toStringAsFixed(1)} km'
                         : '-',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                  ),
+
+                  // AYIRAÇ NOKTASI
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text("|", style: TextStyle(color: Colors.grey.shade400)),
+                  ),
+
+                  // PUAN (RATING)
+                  const Icon(Icons.star, size: 14, color: Colors.amber), // Figma'daki sarı yıldız
+                  const SizedBox(width: 4),
+                  Text(
+                    product.store.overallRating != null
+                        ? product.store.overallRating!.toStringAsFixed(1)
+                        : '0.0',
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
                   ),
-                  const SizedBox(height: 4), // 👈 overflow tamponu
                 ],
               ),
             ),

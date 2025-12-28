@@ -7,6 +7,7 @@ import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../../core/widgets/floating_order_button.dart';
 
 import '../../../category/domain/category_notifier.dart';
+import '../../../explore/presentation/widgets/explore_filter_sheet.dart';
 import '../../../location/domain/address_notifier.dart';
 
 import '../data/models/home_state.dart';
@@ -190,41 +191,52 @@ class HomeContent extends ConsumerWidget {
         homeState.sectionProducts[HomeSection.yarin] ?? const [];
 
     return ListView(
-      padding: const EdgeInsets.only(
-        bottom: kBottomNavigationBarHeight + 24,
-      ),
+      padding: const EdgeInsets.only(bottom: kBottomNavigationBarHeight + 24),
       children: [
         const HomeEmailWarningBanner(),
 
-        // 🔥 KOŞULLU GÖSTERİM BAŞLADI
-
         if (hemenYaninda.isNotEmpty) ...[
-          const HomeSectionTitle(title: "Hemen Yanımda"),
+          _buildSectionHeader(context, "Hemen Yanında", ExploreFilterOption.hemenYaninda),
           HomeProductList(products: hemenYaninda),
         ],
 
         if (sonSans.isNotEmpty) ...[
-          const HomeSectionTitle(title: "Son Şans"),
+          _buildSectionHeader(context, "Son Şans", ExploreFilterOption.sonSans),
           HomeProductList(products: sonSans),
         ],
 
         if (yeni.isNotEmpty) ...[
-          const HomeSectionTitle(title: "Yeni"),
+          _buildSectionHeader(context, "Yeni", ExploreFilterOption.yeni),
           HomeProductList(products: yeni),
         ],
 
         if (bugun.isNotEmpty) ...[
-          const HomeSectionTitle(title: "Bugün"),
+          _buildSectionHeader(context, "Bugün", ExploreFilterOption.bugun),
           HomeProductList(products: bugun),
         ],
 
         if (yarin.isNotEmpty) ...[
-          const HomeSectionTitle(title: "Yarın"),
+          _buildSectionHeader(context, "Yarın", ExploreFilterOption.yarin),
           HomeProductList(products: yarin),
         ],
 
         const SizedBox(height: 32),
       ],
+    );
+
+
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title, ExploreFilterOption filter) {
+    return InkWell(
+      onTap: () => context.push(
+        '/explore',
+        extra: {
+          'filter': filter,
+          'fromHome': true,
+        },
+      ),
+      child: HomeSectionTitle(title: title), // Mevcut widget'ın
     );
   }
 }

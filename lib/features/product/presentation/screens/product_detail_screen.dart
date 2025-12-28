@@ -140,31 +140,96 @@ class _ProductHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // İndirim hesaplama
+    final discount = product.listPrice > 0
+        ? ((product.listPrice - product.salePrice) / product.listPrice * 100).round()
+        : 0;
+
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 240,
+      expandedHeight: 280,
       backgroundColor: Colors.white,
       leading: _CircularIconButton(
         icon: Icons.arrow_back_ios_new_rounded,
         onTap: () => context.pop(),
       ),
       actions: [
-        FavButton(
-          id: product.id,
-          isStore: false, // 👈 Bu bir üründür
-        ),
+        // Sadece Favori Butonu kalıyor, indirim aşağıya Stack'e taşındı
+        FavButton(id: product.id, isStore: false),
         const SizedBox(width: 12),
       ],
       flexibleSpace: FlexibleSpaceBar(
-        background: Image.network(
-          product.imageUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200),
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Ürün Görseli
+            Image.network(
+              product.imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200),
+            ),
+
+            // 🟢 SOL DUVAR: STOK ADET ETİKETİ
+            Positioned(
+              top: kToolbarHeight + 60,
+              left: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(2, 2))
+                  ],
+                ),
+                child: Text(
+                  "${product.stock} adet",
+                  style: const TextStyle(
+                    color: AppColors.primaryDarkGreen,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+
+            // 🔴 SAĞ DUVAR: İNDİRİM ORANI ETİKETİ
+            if (discount > 0)
+              Positioned(
+                top: kToolbarHeight + 60,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primaryDarkGreen, // İndirim için kurumsal yeşil
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      bottomLeft: Radius.circular(20),
+                    ),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(-2, 2))
+                    ],
+                  ),
+                  child: Text(
+                    "-%$discount",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 }
+
 
 class _ProductInfoSection extends StatelessWidget {
   final ProductModel product;

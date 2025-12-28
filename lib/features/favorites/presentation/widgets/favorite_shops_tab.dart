@@ -187,16 +187,37 @@ class _EmptyShopsState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.store_outlined, size: 70, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          const Text(
-            'Favori işletmen bulunmuyor',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.grey),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.storefront_outlined, // Mağaza ikonunu daha modern olanla değiştirdik
+              size: 72,
+              color: AppColors.primaryDarkGreen,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Favori İşletmen Bulunmuyor 🏪',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryDarkGreen,
+              ),
+            ),
+            const SizedBox(height: 16), // Metinler arası biraz daha daraltıldı
+            Text(
+              'Takip ettiğin işletmeleri burada görebilirsin.\n'
+                  'Beğendiğin işletmeleri favorilerine ekleyerek yeni sürpriz paketlerden ilk sen haberdar ol! 💚',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                height: 1.5,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
 import 'category_filter_option.dart';
 
 class CategoryFilterSheet extends StatefulWidget {
-  final CategoryFilterOption selected;
-  final ValueChanged<CategoryFilterOption> onApply;
+  final String? selectedId;
+  final List<dynamic>? backendCategories; // Backend listesi gelirse buraya
+  final ValueChanged<Map<String, String>> onApply; // ID ve İsim döner
 
   const CategoryFilterSheet({
     super.key,
-    required this.selected,
+    this.selectedId,
+    this.backendCategories,
     required this.onApply,
   });
 
@@ -19,62 +20,111 @@ class CategoryFilterSheet extends StatefulWidget {
 }
 
 class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
-  late CategoryFilterOption _selected;
+  String? _tempSelectedId;
 
   @override
   void initState() {
     super.initState();
-    _selected = widget.selected;
+    _tempSelectedId = widget.selectedId;
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).padding.bottom;
+    final bottomPad = MediaQuery.of(context).padding.bottom; // Sistemsel alt boşluk
 
-    return SafeArea(
-      top: false,
-      bottom: true, // 🔥 bottom bar altında kalmasın diye
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 20,
-          bottom: MediaQuery.of(context).viewPadding.bottom + 20, // 🔥
-        ),
+    // Liste Hazırlama (Aynı kalıyor)
+    final List<Map<String, String>> items = widget.backendCategories != null
+        ? widget.backendCategories!.map((cat) {
+      final d = cat as dynamic;
+      return {
+        'id': d.id.toString(),
+        'name': (d.name ?? d.title ?? d.id).toString(),
+      };
+    }).toList()
+        : CategoryFilterOption.values.map((opt) {
+      return {
+        'id': opt.name,
+        'name': categoryLabel(opt),
+      };
+    }).toList();
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      // SafeArea bottom: true diyerek sistem barına çarpmasını engelliyoruz
+      child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              "Kategori Seç",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-
+            const SizedBox(height: 12),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 20),
+            const Text("Kategori Seç", style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
             const SizedBox(height: 20),
 
-            ...CategoryFilterOption.values.map((opt) {
-              return RadioListTile<CategoryFilterOption>(
-                title: Text(categoryLabel(opt)), // 👈 Ortak helper KULLANIYORUZ
-                value: opt,
-                groupValue: _selected,
-                activeColor: AppColors.primaryDarkGreen,
-                onChanged: (val) {
-                  setState(() => _selected = val!);
-                },
-              );
-            }).toList(),
-
-            const SizedBox(height: 16),
-
-            CustomButton(
-              text: "Uygula",
-              onPressed: () {
-                widget.onApply(_selected);
-              },
-              showPrice: false,
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: items.map((item) {
+                    final isSelected = _tempSelectedId == item['id'];
+                    return GestureDetector(
+                      onTap: () => setState(() => _tempSelectedId = item['id']),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primaryDarkGreen.withOpacity(0.05) : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: isSelected ? AppColors.primaryDarkGreen : Colors.transparent,
+                              width: 1.5
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(item['name']!,
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  color: isSelected ? AppColors.primaryDarkGreen : Colors.black87
+                              ),
+                            ),
+                            Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                                color: isSelected ? AppColors.primaryDarkGreen : Colors.grey.shade300,
+                                size: 22
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
 
-            // 🔥 Bottom nav üstüne çıkması için ekstra boşluk
-            SizedBox(height: bottomPad + 16),
+            // BUTON ALANI
+            Padding(
+              // Buradaki son değeri (80) senin Bottom Bar'ının yüksekliğine göre ayarlıyoruz.
+              // 80 birim genelde yüzen barın üstünde kalması için yeterlidir.
+                padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 85),
+                child: CustomButton(
+                  text: "Filtreleri Uygula",
+                  onPressed: () {
+                    final selectedItem = items.firstWhere(
+                          (e) => e['id'] == _tempSelectedId,
+                      orElse: () => items.first,
+                    );
+                    widget.onApply(selectedItem);
+                  },
+                  showPrice: false,
+                ),
+            ),
           ],
         ),
       ),
