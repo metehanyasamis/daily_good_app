@@ -50,8 +50,8 @@ class StoreSummary {
           json["banner_image"] ?? // Dökümanda bazen bu geliyor
           json["image"] ??        // Fallback
           "",
-      latitude: (json["latitude"] as num?)?.toDouble() ?? 0.0,
-      longitude: (json["longitude"] as num?)?.toDouble() ?? 0.0,
+      latitude: double.tryParse(json["latitude"]?.toString() ?? "") ?? 0.0,
+      longitude: double.tryParse(json["longitude"]?.toString() ?? "") ?? 0.0,
       bannerImageUrl: json["banner_image_url"],
       isFavorite: json["is_favorite"] ?? false,
       distanceKm: (json["distance_km"] as num?)?.toDouble(),

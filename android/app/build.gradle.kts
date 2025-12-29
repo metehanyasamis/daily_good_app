@@ -7,12 +7,12 @@ plugins {
 }
 
 android {
-    namespace = "com.metehanyasamis.dailygood"
+    namespace = "com.dijicrea.dailygoodapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     defaultConfig {
-        applicationId = "com.metehanyasamis.dailygood"
+        applicationId = "com.dijicrea.dailygoodapp"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

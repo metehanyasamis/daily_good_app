@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "728269761031",
-    "project_id": "daily-good-beta",
-    "storage_bucket": "daily-good-beta.firebasestorage.app"
+    "project_number": "391624582850",
+    "project_id": "dailygood-430e5",
+    "storage_bucket": "dailygood-430e5.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:728269761031:android:16788ea04664c3e219d8a2",
+        "mobilesdk_app_id": "1:391624582850:android:468bb9c3d95d9b0dc83d5b",
         "android_client_info": {
-          "package_name": "com.metehanyasamis.dailygood"
+          "package_name": "com.dijicrea.dailygoodapp"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAR3DNjqGsSeWbL5jq9A6tmT94j7xu9Ky8"
+          "current_key": "AIzaSyCFrB9qVT_NgqgpRCuoLrZhk3qPKIdnw5Q"
         }
       ],
       "services": {

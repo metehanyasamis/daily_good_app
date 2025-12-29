@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -32,6 +33,11 @@ Future<void> main() async {
 
   /// 🔥 Firebase
   await Firebase.initializeApp();
+
+  String? token = await FirebaseMessaging.instance.getToken();
+  print("-----------------------------------------");
+  print("🔥 FCM TOKEN: $token");
+  print("-----------------------------------------");
 
   /// 📅 Türkçe tarih formatları
   await initializeDateFormatting('tr_TR');
