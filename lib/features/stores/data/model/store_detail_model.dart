@@ -168,6 +168,7 @@ class AverageRatingsModel {
 }
 
 /// [MAPPER KALIYOR - DİĞER EKRANLAR İÇİN GEREKLİ]
+
 extension StoreDetailMapper on StoreDetailModel {
   StoreSummary toStoreSummary() {
     return StoreSummary(

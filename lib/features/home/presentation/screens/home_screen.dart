@@ -1,3 +1,5 @@
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,7 @@ import '../../../category/domain/category_notifier.dart';
 import '../../../explore/presentation/widgets/explore_filter_sheet.dart';
 import '../../../location/domain/address_notifier.dart';
 
+import '../../../notification/domain/providers/notification_provider.dart';
 import '../data/models/home_state.dart';
 import '../domain/providers/home_state_provider.dart';
 
@@ -20,6 +23,10 @@ import '../widgets/home_email_warning_banner.dart';
 import '../widgets/home_location_request_sheet.dart';
 import '../widgets/home_product_list.dart';
 import '../widgets/home_section_title.dart';
+
+import 'dart:io';
+import 'package:package_info_plus/package_info_plus.dart';
+
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -54,7 +61,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         latitude: address.lat,
         longitude: address.lng,
       );
+
+      _updateNotificationToken();
     });
+  }
+
+
+  Future<void> _updateNotificationToken() async {
+    try {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken == null) return;
+
+      final deviceInfo = DeviceInfoPlugin();
+      final packageInfo = await PackageInfo.fromPlatform();
+
+      String deviceName = "Unknown";
+      String deviceId = "Unknown";
+
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        deviceName = androidInfo.model;
+        deviceId = androidInfo.id;
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        deviceName = iosInfo.name;
+        deviceId = iosInfo.identifierForVendor ?? "unknown_ios";
+      }
+
+      // Repository üzerinden backend'e gönderiyoruz
+      await ref.read(notificationRepositoryProvider).saveDeviceToken(
+        fcmToken: fcmToken,
+        deviceId: deviceId,
+        deviceName: deviceName,
+        deviceType: Platform.isAndroid ? "android" : "ios",
+        appVersion: packageInfo.version,
+      );
+
+      debugPrint("✅ [FCM] Token başarıyla backend'e kaydedildi.");
+    } catch (e) {
+      debugPrint("❌ [FCM] Token kaydedilirken hata: $e");
+    }
   }
 
 

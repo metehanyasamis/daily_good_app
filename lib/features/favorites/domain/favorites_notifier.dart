@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../location/domain/address_notifier.dart';
 import '../../product/data/models/product_model.dart';
 import '../../product/data/repository/product_repository.dart';
 import '../../product/domain/products_notifier.dart';
 import '../../stores/data/model/store_summary.dart';
+import '../../stores/data/repository/store_repository.dart';
 import '../data/repository/favorite_repository.dart';
 
 class FavoritesState {
@@ -39,128 +41,142 @@ class FavoritesState {
 }
 
 final favoritesProvider = StateNotifierProvider<FavoritesNotifier, FavoritesState>((ref) {
-  final repo = ref.read(favoriteRepositoryProvider);
-  return FavoritesNotifier(repo, ref);
+  return FavoritesNotifier(
+    repo: ref.watch(favoriteRepositoryProvider),
+    storeRepo: ref.watch(storeRepositoryProvider), // 👈 Bunu eklemeyi unutma
+    ref: ref,
+  );
 });
 
 class FavoritesNotifier extends StateNotifier<FavoritesState> {
   final FavoriteRepository repo;
-  final Ref ref;
+  final StoreRepository storeRepo; // 1. Bunu ekledik
+  final Ref ref; // 2. Konum bilgisini okumak için ref lazım
 
-  FavoritesNotifier(this.repo, this.ref) : super(const FavoritesState());
+  FavoritesNotifier({
+    required this.repo,
+    required this.storeRepo,
+    required this.ref,
+  }) : super(const FavoritesState());
 
-  /// Tüm favorileri backend ile senkronize eder ve eksik verileri tamamlar.
+
   Future<void> loadAll() async {
-    debugPrint('📡 [FAV_ROOT] loadAll() tetiklendi...');
-    //state = state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true);
 
     try {
-      // 1. API'den verileri çek
-      final favProducts = await repo.fetchFavoriteProducts();
-      final favStores = await repo.fetchFavoriteStores();
+      final addressState = ref.read(addressProvider);
 
-      debugPrint('📊 [FAV_DATA] API Gelen Sayılar -> Ürün: ${favProducts.length}, Mağaza: ${favStores.length}');
+      // 1. Üç veriyi paralel çekiyoruz
+      final List<dynamic> results = await Future.wait([
+        repo.fetchFavoriteProducts(),
+        repo.fetchFavoriteStores(),
+        storeRepo.getStoresByLocation(
+          latitude: addressState.lat,
+          longitude: addressState.lng,
+          perPage: 100,
+        ),
+      ]);
 
-      // 2. RAM'deki ana listeyi oku
-      final allProducts = ref.read(productsProvider).products;
-      debugPrint('🔎 [FAV_RAM] RAMdeki Ürün Sayısı: ${allProducts.length}');
+      // 🔥 HATANIN ÇÖZÜMÜ: 'as' kullanarak türleri zorluyoruz
+      final List<dynamic> favProductsRaw = results[0] as List<dynamic>;
+      final List<dynamic> favStoresRaw = results[1] as List<dynamic>;
+      final List<StoreSummary> feedStores = results[2] as List<StoreSummary>;
 
-      List<ProductModel> enrichedProducts = [];
+      final List<ProductModel> enrichedProducts = [];
+      final List<StoreSummary> finalStores = [];
+      final Set<String> productIds = {};
+      final Set<String> storeIds = {};
 
-      // 3. Ürünleri Tek Tek Analiz Et
-      for (int i = 0; i < favProducts.length; i++) {
-        final favItem = favProducts[i];
-        debugPrint('--- [FAV_ITEM #$i] Analiz Başladı ---');
-        debugPrint('🆔 productId (API): ${favItem.productId}');
-
-        // toDomain() öncesi ham ürün ismini kontrol et
-        debugPrint('📦 Ham Ürün Adı: ${favItem.product.name}');
-        debugPrint('🏠 Ham Mağaza Bilgisi: ${favItem.product.store?.name ?? "NULL!"}');
-
-        final domainModel = favItem.toDomain();
-
-        // EŞLEŞTİRME TESTİ
-        final match = allProducts.where((p) => p.id.toString() == domainModel.id.toString()).toList();
-
-        if (match.isNotEmpty) {
-          debugPrint('✅ [MATCH] RAMde bulundu: ${match.first.name} (ID: ${match.first.id})');
-          enrichedProducts.add(match.first);
-        } else {
-          debugPrint('⚠️ [NO_MATCH] RAMde yok! ID: ${domainModel.id}. API detayına gidiliyor...');
-          try {
-            final detail = await ref.read(productRepositoryProvider).getProductDetail(domainModel.id);
-            debugPrint('🎯 [FIXED] Detay API ile kurtarıldı: ${detail.name}');
-            enrichedProducts.add(detail);
-          } catch (e) {
-            debugPrint('❌ [FATAL_ITEM] Detay da çekilemedi. Veri Hatası kaçınılmaz: $e');
-            enrichedProducts.add(domainModel);
-          }
+      // 2. MAĞAZALARI İŞLE (İşletme sekmesi için)
+      for (var item in favStoresRaw) {
+        if (item.store != null) {
+          final sid = item.store!.id.toString().toLowerCase();
+          storeIds.add(sid);
+          finalStores.add(item.store!);
         }
       }
 
-      // --- 4. MAĞAZALARI ANALİZ ET (YENİLENMİŞ GARANTİ VERSİYON) ---
-      final List<StoreSummary> finalEnrichedStores = [];
-      final Set<String> validStoreIds = {};
+      // 3. ÜRÜNLERİ İŞLE VE BESLE (Mesafe/Puan için)
+      for (var item in favProductsRaw) {
+        if (item.product != null) {
+          ProductModel pModel = item.toDomain();
 
-      // API'den (eğer gelirse) gelen mağazaları işle
-      for (var favItem in favStores) {
-        if (favItem.storeId.isNotEmpty) {
-          validStoreIds.add(favItem.storeId.toLowerCase().trim());
-        }
-        if (favItem.store != null) {
-          finalEnrichedStores.add(favItem.store!);
-          validStoreIds.add(favItem.store!.id.toLowerCase().trim());
-        }
-      }
+          // Genel havuzdan (results[2]) dükkan verisini çekip puan/mesafe dolduruyoruz
+          final matchingStore = feedStores.firstWhere(
+                (s) => s.id == pModel.store.id,
+            orElse: () => pModel.store,
+          );
 
-      // 💡 YAMA: Favori ürünlerin bağlı olduğu dükkanları LİSTEYE de ekle
-      for (var p in enrichedProducts) {
-        final String sId = p.store.id.toLowerCase().trim();
+          final enriched = pModel.copyWith(
+            store: matchingStore,
+            rating: matchingStore.overallRating ?? 0.0,
+          );
 
-        // Eğer bu dükkan zaten listede yoksa (API'den gelmemişse) listeye ekle
-        bool alreadyInList = finalEnrichedStores.any((s) => s.id.toLowerCase().trim() == sId);
-
-        if (!alreadyInList) {
-          finalEnrichedStores.add(p.store);
-          validStoreIds.add(sId);
-          debugPrint('📦 [YAMA_LIST] Favori ekranı için dükkan eklendi: ${p.store.name}');
+          enrichedProducts.add(enriched);
+          productIds.add(enriched.id.toString().toLowerCase());
         }
       }
 
+      // 4. STATE GÜNCELLE
       state = state.copyWith(
         products: enrichedProducts,
-        stores: finalEnrichedStores, // 🎯 BURASI ARTIK DOLU!
-        productIds: enrichedProducts.map((e) => e.id.toLowerCase().trim()).toSet(),
-        storeIds: validStoreIds,
+        stores: finalStores, // Artık boş değil, fava ekleme çalışacak
+        productIds: productIds,
+        storeIds: storeIds,  // Butonların rengi (kırmızı) buradan geliyor
         isLoading: false,
       );
 
-      debugPrint('🏁 [FAV_ROOT] BİTTİ. State Store ID Seti: ${state.storeIds}');
-      debugPrint('🏁 [FAV_ROOT] State Store ID Seti: ${state.storeIds}');
+      debugPrint('✅ [FAV_OK] Ürünler beslendi, Mağazalar yüklendi.');
 
-    } catch (e, stack) {
-      debugPrint("🚨 [CRITICAL_FAV_ERROR]: $e");
-      debugPrint(stack.toString());
+    } catch (e) {
+      debugPrint('🚨 [FAV_ERR] $e');
       state = state.copyWith(isLoading: false);
     }
   }
 
+
+
   /// Ürün Favori İşlemi
   Future<void> toggleProduct(String id) async {
-    final isFav = state.productIds.contains(id);
+    // 1. ADIM: ID'yi FavButton'ın aradığı formata getir (Küçük harf + Temiz)
+    final cleanId = id.trim().toLowerCase();
+
+    final isFav = state.productIds.contains(cleanId);
     final oldState = state;
 
-    _updateProductLocal(id, !isFav);
+    debugPrint('⚡ [FAV_TOGGLE] İşlem: ${isFav ? "Kaldır" : "Ekle"} | ID: $cleanId');
+
+    // 2. ADIM: Yerel state'i anında güncelle (Optimistic Update)
+    // Kullanıcı beklemesin, kalp anında dolsun/boşalsın
+    if (isFav) {
+      state = state.copyWith(
+        productIds: state.productIds.where((i) => i != cleanId).toSet(),
+      );
+    } else {
+      state = state.copyWith(
+        productIds: {...state.productIds, cleanId},
+      );
+    }
 
     try {
-      isFav
-          ? await repo.removeFavoriteProduct(id)
-          : await repo.addFavoriteProduct(id);
+      // 3. ADIM: API isteğini at
+      final success = isFav
+          ? await repo.removeFavoriteProduct(cleanId)
+          : await repo.addFavoriteProduct(cleanId);
 
+      if (!success) {
+        // API başarısızsa eski haline geri dön
+        debugPrint("❌ [TOGGLE_PRODUCT] API başarısız döndü, geri alınıyor.");
+        state = oldState;
+      }
+
+      // 4. ADIM: Her durumda loadAll() çağırarak backend ile eşleş
+      // Ama loadAll() içindeki toLowerCase() düzeltmesini yapmış olman lazım!
       await loadAll();
+
     } catch (e) {
       debugPrint("⚠️ [TOGGLE_PRODUCT_ERROR]: $e");
-      state = oldState;
+      state = oldState; // Hata anında kalbi eski durumuna çek
       await loadAll();
     }
   }

@@ -48,6 +48,21 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json, {String? token}) {
+// --- TEMİZ LOGLAR ---
+    debugPrint("--------------------------------------------------");
+    debugPrint("📡 [MODEL_CHECK] User ID: ${json["id"]}");
+    debugPrint("📧 [MODEL_CHECK] email_verified_at: ${json["email_verified_at"]}");
+    debugPrint("📱 [MODEL_CHECK] phone_verified_at: ${json["phone_verified_at"]}");
+
+    // Boolean değerleri burada hesaplayıp hemen loglayalım
+    final bool emailCheck = json["email_verified_at"] != null && json["email_verified_at"].toString().isNotEmpty;
+    final bool phoneCheck = json["phone_verified_at"] != null && json["phone_verified_at"].toString().toLowerCase() != "null";
+
+    debugPrint("✅ [MODEL_RESULT] E-posta Onaylı mı?: $emailCheck");
+    debugPrint("✅ [MODEL_RESULT] Telefon Onaylı mı?: $phoneCheck");
+    debugPrint("--------------------------------------------------");
+
+
     final location = json["location"];
     final statsJson = json["statistics"];
 
@@ -66,7 +81,9 @@ class UserModel {
       // 🔥 LOGA GÖRE GÜNCELLENEN KRİTİK ALANLAR:
       // phone_verified_at dolu gelirse true döner
       isEmailVerified: json["email_verified_at"] != null && json["email_verified_at"].toString().isNotEmpty,
-      isPhoneVerified: json["phone_verified_at"] != null && json["phone_verified_at"].toString().isNotEmpty,
+      isPhoneVerified: json["phone_verified_at"] != null &&
+          json["phone_verified_at"].toString().toLowerCase() != "null" &&
+          json["phone_verified_at"].toString().trim().isNotEmpty,
 
       latitude: json["latitude"] != null ? double.tryParse(json["latitude"].toString()) : null,
       longitude: json["longitude"] != null ? double.tryParse(json["longitude"].toString()) : null,

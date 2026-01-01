@@ -1,9 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../../../stores/domain/providers/store_detail_provider.dart';
-import '../../../stores/presentation/widgets/store_review_item.dart';
 import '../widgets/store_rating_bars.dart';
 
 class StoreReviewScreen extends ConsumerWidget {

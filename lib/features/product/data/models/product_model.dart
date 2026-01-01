@@ -11,6 +11,7 @@ class ProductModel {
   final String imageUrl;
   final String? description;
   final StoreSummary store;
+  final double rating;
   final String startHour;
   final String endHour;
   final String startDate;
@@ -26,6 +27,7 @@ class ProductModel {
     required this.imageUrl,
     required this.description,
     required this.store,
+    required this.rating,
     required this.startHour,
     required this.endHour,
     required this.startDate,
@@ -39,11 +41,26 @@ class ProductModel {
     if (raw is! Map) {
       throw FormatException('Ürün verisi beklenen formatta değil: ${raw.runtimeType}');
     }
-    // Map<dynamic, dynamic> gelirse Map<String, dynamic>'e güvenli döküm
     return ProductModel.fromJsonMap(Map<String, dynamic>.from(raw));
   }
 
+  // Geriye dönük uyumluluk için alias
+  factory ProductModel.fromJson(Map<String, dynamic> json) => ProductModel.fromJsonMap(json);
+
   factory ProductModel.fromJsonMap(Map<String, dynamic> json) {
+    // 🔥 SAYI KORUYUCU: Gelen değer String bile olsa sayıya çevirir
+    double toDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString()) ?? 0.0;
+    }
+
+    int toInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is num) return value.toInt();
+      return int.tryParse(value.toString()) ?? 0;
+    }
+
     // Mağaza bilgisini güvenli çöz
     final storeData = json["store"];
     final resolvedStore = (storeData is Map<String, dynamic>)
@@ -52,15 +69,16 @@ class ProductModel {
 
     return ProductModel(
       id: json["id"]?.toString() ?? "",
-      name: json["name"] ?? "İsimsiz Ürün",
-      listPrice: (json["list_price"] as num?)?.toDouble() ?? 0.0,
-      salePrice: (json["sale_price"] as num?)?.toDouble() ?? 0.0,
-      stock: (json["stock"] as num?)?.toInt() ?? 0,
+      name: json["name"]?.toString() ?? "İsimsiz Ürün",
+      listPrice: toDouble(json["list_price"]),
+      salePrice: toDouble(json["sale_price"]),
+      stock: toInt(json["stock"]),
       imageUrl: normalizeImageUrl(json["image_url"]),
-      description: json['description'],
+      description: json['description']?.toString(),
       store: resolvedStore,
+      rating: toDouble(json["overall_rating"] ?? json["rating"]),
 
-      // 🔥 SAATLER: Veri girerken TimeFormatter üzerinden yıkanıyor (00:00:00 -> 00:00)
+      // Saat Formatlayıcı
       startHour: TimeFormatter.hm(json["start_hour"]?.toString()),
       endHour: TimeFormatter.hm(json["end_hour"]?.toString()),
 
@@ -70,9 +88,41 @@ class ProductModel {
     );
   }
 
-  /// UI'da gösterilecek teslimat etiketi
+  ProductModel copyWith({
+    String? id,
+    String? name,
+    double? listPrice,
+    double? salePrice,
+    int? stock,
+    String? imageUrl,
+    String? description,
+    StoreSummary? store,
+    double? rating,
+    String? startHour,
+    String? endHour,
+    String? startDate,
+    String? endDate,
+    DateTime? createdAt,
+  }) {
+    return ProductModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      listPrice: listPrice ?? this.listPrice,
+      salePrice: salePrice ?? this.salePrice,
+      stock: stock ?? this.stock,
+      imageUrl: imageUrl ?? this.imageUrl,
+      description: description ?? this.description,
+      store: store ?? this.store,
+      rating: rating ?? this.rating,
+      startHour: startHour ?? this.startHour,
+      endHour: endHour ?? this.endHour,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   String get deliveryTimeLabel {
-    // Saatler fabrikada (fromJsonMap) temizlendiği için burada kontrol çok basit
     if (startHour == "00:00" || endHour == "00:00") {
       return "Teslimat saati belirtilmedi";
     }
@@ -80,19 +130,13 @@ class ProductModel {
   }
 }
 
-/// Görüntü URL'ini normalize eden private fonksiyon (Sadece bu dosyada lazım)
 String normalizeImageUrl(dynamic raw) {
   if (raw == null) return "";
   final url = raw.toString().trim();
   if (url.isEmpty) return "";
+  if (url.startsWith('http')) return url;
 
-  // Eğer zaten tam URL ise ve çift prefix yoksa döndür
-  if (url.startsWith('http')) {
-    // Bazen API hatalı olarak iç içe URL basabiliyor, onu temizle
-    return url.substring(url.lastIndexOf('http'));
-  }
-
-  // Path temizleme ve base URL ekleme
   final cleanPath = url.startsWith('/') ? url.substring(1) : url;
-  return 'https://dailygood.dijicrea.net/storage/$cleanPath';
+  const String activeStorageUrl = "https://dailygood.dijicrea.net/storage";
+  return '$activeStorageUrl/$cleanPath';
 }

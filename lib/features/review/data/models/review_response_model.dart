@@ -11,7 +11,8 @@ class ReviewCustomer {
 
   factory ReviewCustomer.fromJson(Map<String, dynamic> json) {
     return ReviewCustomer(
-      id: json["id"].toString(),
+      // json["id"] null gelebileceği için koruma ekledik
+      id: json["id"]?.toString() ?? "",
       name: json["name"],
     );
   }
@@ -30,32 +31,26 @@ class StoreRatingDetail {
 
   factory StoreRatingDetail.fromJson(Map<String, dynamic> json) {
     return StoreRatingDetail(
-      overallRating: (json["overall_rating"] as num).toDouble(),
+      overallRating: (json["overall_rating"] as num?)?.toDouble() ?? 0.0,
       totalReviews: json["total_reviews"] ?? 0,
-      averageRatings: (json["average_ratings"] as Map<String, dynamic>)
-          .map((k, v) => MapEntry(k, (v as num).toDouble())),
+      // average_ratings boş gelirse çökmemesi için {} ekledik
+      averageRatings: (json["average_ratings"] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, (v as num?)?.toDouble() ?? 0.0),
+      ) ?? {},
     );
   }
 }
 
 class ReviewResponseModel {
   final String id;
-
-  // 4 rating alanı
   final int serviceRating;
   final int productQuantityRating;
   final int productTasteRating;
   final int productVarietyRating;
-
   final String? comment;
-
-  // Kullanıcı bilgisi
   final ReviewCustomer? customer;
-
   final DateTime createdAt;
   final DateTime updatedAt;
-
-  // Mağazanın genel rating yapısı
   final StoreRatingDetail storeRatings;
 
   ReviewResponseModel({
@@ -73,7 +68,7 @@ class ReviewResponseModel {
 
   factory ReviewResponseModel.fromJson(Map<String, dynamic> json) {
     return ReviewResponseModel(
-      id: json["id"].toString(),
+      id: json["id"]?.toString() ?? "",
       serviceRating: json["service_rating"] ?? 0,
       productQuantityRating: json["product_quantity_rating"] ?? 0,
       productTasteRating: json["product_taste_rating"] ?? 0,
@@ -82,10 +77,18 @@ class ReviewResponseModel {
       customer: json["customer"] != null
           ? ReviewCustomer.fromJson(json["customer"])
           : null,
-      createdAt: DateTime.parse(json["created_at"]),
-      updatedAt: DateTime.parse(json["updated_at"]),
-      storeRatings: StoreRatingDetail.fromJson(
-        json["store_ratings"] as Map<String, dynamic>,
+      // Tarih parsing hatalarına karşı tryParse veya fallback
+      createdAt: DateTime.tryParse(json["created_at"] ?? "") ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json["updated_at"] ?? "") ?? DateTime.now(),
+
+      // 🔥 HATANIN KAYNAĞI BURASIYDI:
+      // Eğer store_ratings null gelirse direkt boş bir StoreRatingDetail oluşturuyoruz
+      storeRatings: json["store_ratings"] != null
+          ? StoreRatingDetail.fromJson(json["store_ratings"] as Map<String, dynamic>)
+          : StoreRatingDetail(
+        overallRating: 0.0,
+        totalReviews: 0,
+        averageRatings: {},
       ),
     );
   }

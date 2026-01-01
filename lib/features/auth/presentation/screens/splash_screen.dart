@@ -38,58 +38,65 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _startup() async {
-    debugPrint("🚀 [SPLASH] Startup süreci başladı...");
+    debugPrint("🚀 [SPLASH] Startup süreci başlatıldı...");
+    final stopwatch = Stopwatch()..start();
 
-    // 1) AppState yükle (Senin orijinal kodun)
-    await ref.read(appStateProvider.notifier).load();
-    debugPrint("⚙️ [SPLASH] AppState Yüklendi");
+    try {
+      // 1) TEMEL AYARLAR VE VERSİYON KONTROLÜ (PARALEL)
+      debugPrint("📡 [SPLASH] AppState ve Versiyon kontrolü paralel başlatılıyor...");
+      await Future.wait([
+        ref.read(appStateProvider.notifier).load(),
+        _checkAppVersion(),
+      ]);
+      debugPrint("⚙️ [SPLASH] Temel kontroller bitti. Geçen süre: ${stopwatch.elapsedMilliseconds}ms");
 
-    // 2) Versiyon Kontrolü (Az önce atlanan kısım, geri eklendi)
-    await _checkAppVersion();
-    debugPrint("🔄 [SPLASH] Versiyon kontrolü tamamlandı.");
+      // 2) TOKEN KONTROLÜ
+      final token = await PrefsService.readToken();
+      final bool hasToken = token != null && token.isNotEmpty;
+      debugPrint("🔑 [SPLASH] Token durumu: ${hasToken ? 'VAR' : 'YOK'}");
 
-    // 3) Token işlemleri
-    final token = await PrefsService.readToken();
-    debugPrint("🔑 [SPLASH] Token durumu: ${token != null && token.isNotEmpty}");
+      if (hasToken) {
+        debugPrint("👤 [SPLASH] Kullanıcı login durumda. Veri senkronizasyonu başlatılıyor...");
 
-    if (token != null && token.isNotEmpty) {
-      debugPrint("👤 [SPLASH] Kullanıcı yükleniyor...");
-      // Kullanıcıyı yükle ve bitmesini BEKLE
-      await ref.read(authNotifierProvider.notifier).loadUserFromToken();
+        // 🎯 DARBOĞAZI ÇÖZEN NOKTA: Tüm veri çekme işlerini aynı anda yapıyoruz.
+        // Biri takılsa bile (Örn: Konum güncelleme) uygulama tamamen donmaz.
+        await Future.wait([
+          ref.read(authNotifierProvider.notifier).loadUserFromToken().then((_) {
+            debugPrint("✅ [SPLASH] Kullanıcı bilgileri yüklendi.");
+          }),
+          ref.read(productsProvider.notifier).refresh().then((_) {
+            debugPrint("✅ [SPLASH] Ürünler güncellendi.");
+          }),
+          ref.read(favoritesProvider.notifier).loadAll().then((_) {
+            debugPrint("✅ [SPLASH] Favoriler senkronize edildi.");
+          }),
+        ]);
 
-      // Kullanıcı nesnesi dolana kadar kısa bir güvenlik beklemesi
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      final user = ref.read(authNotifierProvider).user;
-
-      if (user != null) {
-        debugPrint("✅ [SPLASH] Kullanıcı onaylandı (ID: ${user.id}). Veriler senkronize ediliyor...");
-
-        try {
-          // 4) Ürünleri çek (Refresh et ki favorilerle eşleşsin)
-          await ref.read(productsProvider.notifier).refresh();
-
-          // 5) FAVORİLERİ ÇEK VE BEKLE
-          // Burası asıl favori listesinin dolmasını sağlayan yer
-          debugPrint("⭐ [SPLASH] Favoriler loadAll başlatılıyor...");
-          await ref.read(favoritesProvider.notifier).loadAll();
-          ref.read(appStateProvider.notifier).completeSync();
-
-          final finalFavs = ref.read(favoritesProvider);
-          debugPrint("📊 [SPLASH] Senkronizasyon Bitti: ${finalFavs.productIds.length} Ürün, ${finalFavs.storeIds.length} Mağaza");
-        } catch (e) {
-          debugPrint("❌ [SPLASH] Veri çekme sırasında hata: $e");
-        }
-      } else {
-        debugPrint("🚨 [SPLASH] Token var ama kullanıcı yüklenemedi!");
+        // Verilerin birbirine bağlanmasını sağlar
+        ref.read(appStateProvider.notifier).completeSync();
+        debugPrint("📊 [SPLASH] Tüm veriler RAM'e işlendi.");
       }
-    } else {
-      debugPrint("⚠️ [SPLASH] Token yok, login bekleniyor.");
-    }
 
-    debugPrint("🎯 [SPLASH] Startup süreci bitti.");
-    await ref.read(appStateProvider.notifier).setInitialized(true);
+      // 3) LOGO ANİMASYONUNUN TAMAMLANMASI
+      // Eğer internet çok hızlıysa logo 'pat' diye kaybolmasın diye 1.2 sn'yi tamamlıyoruz.
+      if (_controller.isAnimating) {
+        debugPrint("🎬 [SPLASH] Animasyonun bitmesi bekleniyor...");
+        await _controller.forward();
+      }
+
+    } catch (e, stack) {
+      debugPrint("🚨 [SPLASH_CRITICAL_ERROR]: $e");
+      debugPrint("📦 [STACKTRACE]: $stack");
+      // Hata olsa bile kullanıcıyı içeride hapsetmiyoruz.
+    } finally {
+      stopwatch.stop();
+      debugPrint("🎯 [SPLASH] Startup bitti. Toplam Süre: ${stopwatch.elapsed.inSeconds}sn. Yönlendiriliyor...");
+
+      // Uygulamayı 'hazır' hale getir. Router bu değişkeni dinlediği için otomatik yönlenecek.
+      await ref.read(appStateProvider.notifier).setInitialized(true);
+    }
   }
+
 
   Future<void> _checkAppVersion() async {
     try {

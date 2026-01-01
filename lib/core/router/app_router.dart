@@ -1,3 +1,4 @@
+import 'package:daily_good/features/orders/presentation/screens/thank_you_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,8 @@ import '../../features/account/presentation/screens/profile_details_screen.dart'
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/intro_screen.dart';
+import '../../features/contact/presentation/contact_screen.dart';
+import '../../features/contact/presentation/contact_success_screen.dart';
 import '../../features/location/presentation/screens/location_picker_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -16,6 +19,9 @@ import '../../features/explore/presentation/screens/explore_map_screen.dart';
 import '../../features/favorites/presentation/screens/favorites_screen.dart';
 import '../../features/account/presentation/screens/account_screen.dart';
 import '../../features/location/presentation/screens/location_info_screen.dart';
+import '../../features/orders/data/models/order_details_response.dart';
+import '../../features/orders/data/models/order_list_item.dart';
+import '../../features/orders/presentation/screens/order_detail_screen.dart';
 import '../../features/orders/presentation/screens/order_history_screen.dart';
 import '../../features/product/presentation/screens/product_detail_screen.dart';
 import '../../features/review/presentation/screens/store_review_screen.dart';
@@ -70,44 +76,69 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final user = userState.user;
       final loc = state.uri.toString();
 
-      // 1. İstisnalar (Hiçbir koşula bakılmadan izin verilenler)
+      // 🔥 RÖNTGEN LOGLARI (Hata ayıklama için kalsın)
+      debugPrint("""
+  🔍 [ROUTER CHECK]
+  📍 Mevcut Konum: $loc
+  🔑 LoggedIn: ${app.isLoggedIn}
+  👶 NewUser: ${app.isNewUser}
+  👤 User Data: ${user != null ? 'VAR (Ad: ${user.firstName})' : 'YOK'}
+  🗺️ Location Selected: ${app.hasSelectedLocation}
+  ---------------------------------
+  """);
+
+      // 1️⃣ İSTİSNALAR (Her zaman serbest olanlar)
       if (loc.startsWith('/order-tracking')) return null;
       if (loc.startsWith('/store-detail')) return null;
-      if (loc.contains('/reviews')) return null; // 🎯 Review sayfasına gidişi serbest bırak
+      if (loc.contains('/reviews')) return null;
 
-      // 2. Initialize Kontrolü
+      // 2️⃣ BAŞLATMA KONTROLÜ (Initialize bitmeden hiçbir yere gidemez)
       if (loc != "/splash" && !app.isInitialized) return "/splash";
+      if (loc == "/splash" && !app.isInitialized) return null;
 
-      // 3. Splash Kontrolü
-      if (loc == "/splash") {
-        if (!app.isInitialized) return null;
-        if (!app.isLoggedIn) return !app.hasSeenIntro ? "/intro" : "/login";
-
-        if (app.isNewUser) {
-          if (user?.firstName?.isEmpty ?? true) return "/profileDetail";
-          if (!app.hasSeenOnboarding) return "/onboarding";
-          if (!app.hasSelectedLocation) return "/location-info";
-          return "/home";
-        }
-        if (!app.hasSelectedLocation) return "/location-info";
-        return "/home";
-      }
-
-      // 4. Auth Kontrolü
+      // 3️⃣ AUTH KONTROLÜ (Giriş yapılmadıysa)
       if (!app.isLoggedIn) {
-        if (loc == "/intro" || loc == "/login") return null;
+        if (loc == "/intro" || loc == "/login" || loc == "/splash") {
+          // Eğer splash bittiyse ve intro görülmediyse introya, aksi halde logine
+          if (loc == "/splash") return !app.hasSeenIntro ? "/intro" : "/login";
+          return null;
+        }
         return "/login";
       }
 
-      // 5. Konum Kontrolü
-      if (!app.hasSelectedLocation && loc != "/location-info" && loc != "/location-picker") {
+      // 4️⃣ YENİ KULLANICI AKIŞI (AŞIRI KRİTİK: Konumdan önce gelmeli)
+      // Loglarda gördüğümüz "Ad: null" durumunu burada yakalıyoruz
+      if (app.isNewUser) {
+        // Profil detayları (Ad-Soyad) eksik mi?
+        if (user?.firstName == null || user!.firstName!.isEmpty) {
+          if (loc == "/profileDetail") return null;
+          return "/profileDetail";
+        }
+
+        // Onboarding süreci tamamlandı mı?
+        if (!app.hasSeenOnboarding) {
+          if (loc == "/onboarding") return null;
+          return "/onboarding";
+        }
+      }
+
+      // 5️⃣ KONUM KONTROLÜ (Sadece Profil ve Onboarding TAMAMSA bakılır)
+      if (!app.hasSelectedLocation) {
+        if (loc == "/location-info" || loc == "/location-picker") return null;
         return "/location-info";
       }
 
-      // Diğer durumlarda gitmek istediği yere izin ver
+      // 6️⃣ ANA SAYFAYA YÖNLENDİRME
+      // Eğer kullanıcı loginse ve tüm süreçleri tamamsa ama hala auth sayfalarındaysa /home'a at
+      if (loc == "/login" || loc == "/intro" || loc == "/splash" || loc == "/profileDetail") {
+        return "/home";
+      }
+
+      // Diğer tüm durumlarda kullanıcının gitmek istediği yere izin ver
       return null;
     },
     routes: [
+      // ... routes listen aynen kalıyor, oraya dokunmaya gerek yok ...
       GoRoute(
         path: '/splash',
         pageBuilder: (_, state) => buildAnimatedPage(child: const SplashScreen(), key: state.pageKey),
@@ -128,19 +159,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/location-picker', builder: (_, __) => const LocationPickerScreen()),
       GoRoute(path: '/profileDetail', builder: (_, __) => const ProfileDetailsScreen()),
 
+      // ... ve diğer tüm rotaların ...
       GoRoute(
         path: '/product-detail/:productId',
         name: AppRoutes.productDetail,
         builder: (_, state) => ProductDetailScreen(productId: state.pathParameters['productId']!),
       ),
-
       GoRoute(
         path: '/store-detail/:id',
         name: AppRoutes.storeDetail,
         builder: (context, state) => StoreDetailScreen(storeId: state.pathParameters['id']!),
       ),
-
-// 🎯 REVIEWS ROTASINI DIŞARI ÇIKARDIK (Bağımsız hale getirdik)
       GoRoute(
         path: '/store-reviews/:id',
         name: AppRoutes.storeReviews,
@@ -152,22 +181,66 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-
       GoRoute(path: '/payment', builder: (_, __) => const PaymentScreen()),
       GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
-      GoRoute(path: '/notifications', builder: (_, __) => const NotificationScreen()),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => NotificationScreen(),
+      ),
       GoRoute(
         path: '/order-success',
         builder: (_, state) => OrderSuccessScreen(orderId: state.uri.queryParameters['id']),
       ),
+
       GoRoute(
         path: '/order-tracking/:id',
         builder: (_, state) => OrderTrackingScreen(orderId: state.pathParameters['id']!),
       ),
       GoRoute(
-        path: '/order-history',
-        builder: (_, __) => const OrderHistoryScreen(), // Henüz bu sayfa yok, 2. adımda oluşturacağız
+        path: '/thank-you',
+        builder: (_, __) => const ThankYouScreen(),
       ),
+
+      GoRoute(
+        path: '/order-history',
+        builder: (context, state) => const OrderHistoryScreen(),
+        routes: [
+          // 🟢 Burası /order-history/detail/:orderId olur
+          GoRoute(
+            path: 'detail/:orderId',
+            builder: (context, state) {
+              // 🔥 Burayı OrderListItem olarak değiştiriyoruz
+              final orderObj = state.extra as OrderListItem;
+
+              // Detay ekranına gönderiyoruz
+              return OrderDetailScreen(order: orderObj);
+            },
+          ),
+        ],
+      ),
+
+
+      GoRoute(
+        path: 'detail/:orderId',
+        builder: (context, state) {
+          // state.extra, senin gönderdiğin OrderDetailResponse objesidir.
+          final orderObj = state.extra as OrderDetailResponse;
+
+          return OrderDetailScreen(order: orderObj); // Hata veren yer burasıydı, düzeldi.
+        },
+      ),
+
+      GoRoute(
+        path: '/contact',
+        builder: (context, state) => const ContactScreen(), // Artık bu sayfa bulunabilir olacak
+      ),
+
+      // 🚀 EKSİK OLAN ROTA BURASI:
+      GoRoute(
+        path: '/contact-success',
+        builder: (context, state) => const ContactSuccessScreen(),
+      ),
+
 
       ShellRoute(
         builder: (_, state, child) => AppShell(location: state.uri.toString(), child: child),

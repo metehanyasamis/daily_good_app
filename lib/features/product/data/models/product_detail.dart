@@ -27,51 +27,53 @@ class ProductDetail {
   });
 
   factory ProductDetail.fromJson(Map<String, dynamic> json) {
+    // 🛡️ Koruyucu Fonksiyonlar
+    double toDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString()) ?? 0.0;
+    }
+
+    int toInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is num) return value.toInt();
+      return int.tryParse(value.toString()) ?? 0;
+    }
+
     try {
       debugPrint("🛠️ ProductDetail Parse Başladı: ID=${json['id']}");
 
-      // 1. ADIM: Store verisini akıllıca ayıkla (Senin dediğin List vs Map hatasını çözer)
       final dynamic rawStore = json['store'];
       Map<String, dynamic>? storeMap;
-
       if (rawStore is List && rawStore.isNotEmpty) {
-        // Eğer liste geldiyse ilk elemanı Map olarak al
         storeMap = rawStore.first as Map<String, dynamic>;
       } else if (rawStore is Map<String, dynamic>) {
-        // Zaten Map ise doğrudan kullan
         storeMap = rawStore;
       }
 
-      // 2. ADIM: Nesneyi oluştur
       return ProductDetail(
         id: json['id']?.toString() ?? "",
         name: json['name']?.toString() ?? "İsimsiz Ürün",
-
-        listPrice: (json['list_price'] as num?)?.toDouble() ?? 0.0,
-        salePrice: (json['sale_price'] as num?)?.toDouble() ?? 0.0,
-        stock: (json['stock'] as num?)?.toInt() ?? 0,
-
+        // 🔥 AS NUM? YERİNE BURALARI DÜZELTTİK
+        listPrice: toDouble(json['list_price']),
+        salePrice: toDouble(json['sale_price']),
+        stock: toInt(json['stock']),
         imageUrl: normalizeImageUrl(json["image_url"]),
         description: json['description']?.toString() ?? "",
-
-        // Saat ve Tarihler: Null gelirse .toString() "null" kelimesini üretmesin diye ?. kullanıyoruz
         startHour: json['start_hour']?.toString(),
         endHour: json['end_hour']?.toString(),
         startDate: json['start_date']?.toString(),
         endDate: json['end_date']?.toString(),
-
-        // Temizlediğimiz storeMap'i gönderiyoruz
         store: StoreInProductDetail.fromJson(storeMap),
-
         createdAt: json['created_at']?.toString() ?? "",
       );
-    } catch (e, stackTrace) {
-      debugPrint("❌❌ KRİTİK HATA: ProductDetail parse edilemedi!");
-      debugPrint("Hata Mesajı: $e");
+    } catch (e) {
+      debugPrint("❌❌ KRİTİK HATA: ProductDetail parse edilemedi! Hata: $e");
 
-      // Çökmemesi için acil durum modeli
+      // 🎯 BURASI ÇOK ÖNEMLİ: Hata alsa bile ID'yi "error" yapma!
+      // Ham verideki ID'yi string olarak kurtar ki kalp sönmesin.
       return ProductDetail(
-        id: "error",
+        id: json['id']?.toString() ?? "id-kurtarilamadi",
         name: "Veri Hatası",
         listPrice: 0,
         salePrice: 0,
@@ -83,8 +85,8 @@ class ProductDetail {
     }
   }
 
+
   String get deliveryTimeLabel {
-    // startHour veya endHour null/boş ise direkt uyarı dön
     if (startHour == null || endHour == null ||
         startHour!.isEmpty || endHour!.isEmpty ||
         startHour == "00:00:00" || endHour == "00:00:00") {

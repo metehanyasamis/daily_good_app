@@ -130,7 +130,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ],
         ),
 
-        // ✅ Altta sabit CTA (ESKİ UX)
         bottomNavigationBar: items.isEmpty
             ? null
             : Padding(
@@ -153,8 +152,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               }
 
               // Tik varsa ödemeye devam et
-              context.push('/payment', extra: total);
-            },
+              context.push(
+                '/payment',
+                extra: {
+                  'total': total,
+                  'note': _noteController.text,
+                },
+              );
+              },
           ),
         ),
       ),

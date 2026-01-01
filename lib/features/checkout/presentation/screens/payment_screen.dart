@@ -29,6 +29,21 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   final _cardNameController = TextEditingController();
   final _expiryController = TextEditingController();
   final _cvvController = TextEditingController();
+  String? orderNote;
+
+  @override
+  void initState() {
+    super.initState();
+    // BuildContext hazır olduğunda extra'yı okuyalım
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
+      if (extra != null && extra.containsKey('note')) {
+        setState(() {
+          orderNote = extra['note'];
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -124,6 +139,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       ) async {
     if (!_formKey.currentState!.validate()) return;
 
+    // 🔥 DEBUG LOG: Verinin transferini kontrol ediyoruz
+    debugPrint('📝 [ORDER_NOTE] Sepetten Gelen Not: $orderNote');
+    debugPrint('📦 [ORDER_ITEMS] Ürün Sayısı: ${cartItems.length}');
+    for (var item in cartItems) {
+      debugPrint('   - Ürün: ${item.name}, Not: $orderNote');
+    }
+
     setState(() => _isProcessing = true);
 
     try {
@@ -145,6 +167,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             quantity: c.quantity,
             unitPrice: c.price,
             totalPrice: c.price * c.quantity,
+            notes: (orderNote != null && orderNote!.trim().isNotEmpty) ? orderNote : null,
           );
         }).toList(),
       );

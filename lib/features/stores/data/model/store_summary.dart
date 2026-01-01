@@ -70,7 +70,41 @@ class StoreSummary {
           : null,
     );
   }
+
+  StoreSummary copyWith({
+    String? id,
+    String? name,
+    String? address,
+    String? imageUrl,
+    double? latitude,
+    double? longitude,
+    String? bannerImageUrl,
+    bool? isFavorite,
+    double? distanceKm,
+    BrandSummary? brand,
+    double? overallRating,
+    int? totalReviews,
+    AverageRatings? averageRatings,
+  }) {
+    return StoreSummary(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      address: address ?? this.address,
+      imageUrl: imageUrl ?? this.imageUrl,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      bannerImageUrl: bannerImageUrl ?? this.bannerImageUrl,
+      isFavorite: isFavorite ?? this.isFavorite,
+      distanceKm: distanceKm ?? this.distanceKm,
+      brand: brand ?? this.brand,
+      overallRating: overallRating ?? this.overallRating,
+      totalReviews: totalReviews ?? this.totalReviews,
+      averageRatings: averageRatings ?? this.averageRatings,
+    );
+  }
 }
+
+
 
 // ============================================================================
 // ⭐ AVERAGE RATINGS MODEL

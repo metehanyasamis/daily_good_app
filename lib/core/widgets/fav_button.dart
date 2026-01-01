@@ -58,15 +58,11 @@ class _FavButtonState extends ConsumerState<FavButton>
     String? rawId;
     if (widget.id != null && widget.id!.isNotEmpty) {
       rawId = widget.id!;
-    } else {
-      try {
-        final dynamic it = widget.item;
-        final dynamic maybeId = it?.id ?? it?.ID ?? it?.storeId ?? it?.productId;
-        if (maybeId != null) rawId = maybeId.toString();
-      } catch (_) {}
+    } else if (widget.item != null) {
+      final it = widget.item;
+      rawId = it.id?.toString() ?? it.storeId?.toString() ?? it.productId?.toString();
     }
-
-    // 🎯 KRİTİK DOKUNUŞ: ID'yi temizle ve küçük harfe zorla
+    // 🎯 Notifier ile %100 aynı format: trim + lowercase
     return rawId?.trim().toLowerCase();
   }
 

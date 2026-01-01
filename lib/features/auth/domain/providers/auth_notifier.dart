@@ -60,22 +60,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
 // REGISTER/OTP DOĞRULAMA (YENİ KULLANICI İÇİN)
 // ---------------------------------------------------------------------------
   Future<UserModel?> verifyOtpModel(String phone, String code) async {
+    debugPrint("🚀 [VERIFY-OTP] İşlem başladı. Tel: $phone");
     state = const AuthState.loading();
     try {
       final user = await repo.verifyOtp(phone, code);
 
       if (user != null) {
-        // Yeni kullanıcı olsa bile sisteme "girdi" diyoruz ki ProfileDetail'e gidebilsin
+        debugPrint("✅ [VERIFY-OTP] Başarılı! UserID: ${user.id}, Token: ${user.token != null ? 'VAR' : 'YOK'}");
+
+        // 1. Önce global kullanıcı bilgisini dolduruyoruz (Router buraya bakıyor!)
+        ref.read(userNotifierProvider.notifier).saveUser(user);
+        debugPrint("📢 [USER DATA] UserNotifier güncellendi.");
+
+        // 2. Sisteme giriş durumlarını set ediyoruz
         await ref.read(appStateProvider.notifier).setLoggedIn(true);
         await ref.read(appStateProvider.notifier).setIsNewUser(true);
+        debugPrint("📢 [STATE UPDATE] LoggedIn ve NewUser set edildi.");
 
+        // 3. State'i güncelleyip kullanıcıyı döndürüyoruz
         state = const AuthState.authenticated();
         return user;
       }
 
+      debugPrint("⚠️ [VERIFY-OTP] User null döndü!");
       state = const AuthState.invalidOtp();
       return null;
     } catch (e) {
+      debugPrint("❌ [VERIFY-OTP] Hata: $e");
       state = AuthState.error(e.toString());
       return null;
     }
@@ -104,6 +115,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // ---------------------------------------------------------------------------
   // /me
   // ---------------------------------------------------------------------------
+
+  Future<bool> loadUserFromToken() async {
+    debugPrint("📡 [AUTH] loadUserFromToken başlatıldı...");
+    try {
+      final user = await repo.me();
+
+      if (user == null) {
+        state = const AuthState.unauthenticated();
+        return false;
+      }
+
+      ref.read(userNotifierProvider.notifier).saveUser(user);
+      state = AuthState.authenticated(user);
+      return true;
+    } catch (e) {
+      // Hata olsa bile Splash'ten çıkmak için false dön
+      state = const AuthState.unauthenticated();
+      return false;
+    }
+  }
+
+  /*
   Future<bool> loadUserFromToken() async {
     final user = await repo.me();
 
@@ -116,6 +149,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState.authenticated(user);
     return true;
   }
+
+   */
 
   // ---------------------------------------------------------------------------
   // LOGOUT

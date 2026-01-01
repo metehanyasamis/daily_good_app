@@ -1,5 +1,6 @@
 // lib/features/review/providers/review_provider.dart
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/dio_provider.dart';
 import '../data/repository/review_repository.dart';
@@ -22,7 +23,16 @@ class ReviewController
     required String? existingReviewId,
     required Map<String, int> ratings,
     required String comment,
+    String? orderId,
   }) async {
+    // 🔍 DEBUG PRINT: Gönderilen ham veriyi kontrol et
+    debugPrint("🚀 Review Submission Started");
+    debugPrint("📍 Store ID: $storeId");
+    debugPrint("📦 Order ID: $orderId");
+    debugPrint("⭐ Ratings: $ratings");
+    debugPrint("💬 Comment: $comment");
+    debugPrint("🔄 Existing Review ID: $existingReviewId");
+
     state = const AsyncValue.loading();
 
     try {
@@ -31,6 +41,7 @@ class ReviewController
       if (existingReviewId == null) {
         result = await _repo.createReview(
           storeId: storeId,
+          orderId: orderId,
           serviceRating: ratings["Servis"]!,
           productQuantityRating: ratings["Ürün Miktarı"]!,
           productTasteRating: ratings["Ürün Lezzeti"]!,
@@ -51,8 +62,10 @@ class ReviewController
 
       final review = ReviewModel.fromResponse(storeId, result);
       state = AsyncValue.data(review);
+      debugPrint("✅ Review Submitted Successfully: ${result.id}"); // Başarı logu
       return true;
     } catch (e, st) {
+      debugPrint("❌ Review Submission Failed: $e"); // Hata logu
       state = AsyncValue.error(e, st);
       return false;
     }

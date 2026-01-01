@@ -54,45 +54,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  /*
-  Future<void> _onSubmit() async {
-    if (_isOtpOpen) return;
-
-    final input = _phoneController.text.trim();
-    final phone = _normalizePhone(input);
-
-    if (phone.length != 11) {
-      return _error("Lütfen geçerli bir telefon numarası girin.");
-    }
-
-    // 🔥 KAYIT OL SEKMESİNDE 3 KUTUCUK ZORUNLULUĞU
-    if (!isLoginTab) {
-      if (!isUyelikAccepted || !isKvkkAccepted || !isGizlilikAccepted) {
-        return _error("Lütfen tüm yasal metinleri işaretleyerek onaylayınız.");
-      }
-    }
-
-    final auth = ref.read(authNotifierProvider.notifier);
-    final String currentPurpose = isLoginTab ? "login" : "register";
-
-    final success = await auth.sendOtp(phone, purpose: currentPurpose);
-
-    if (!success) {
-      return _error("İşlem başarısız. Lütfen bilgilerinizi kontrol edin.");
-    }
-
-    setState(() => _isOtpOpen = true);
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => OtpBottomSheet(phone: phone, isLogin: isLoginTab),
-    );
-
-    if (mounted) setState(() => _isOtpOpen = false);
-  }
-*/
   Future<void> _onSubmit() async {
     if (_isOtpOpen) return;
 

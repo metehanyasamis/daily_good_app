@@ -61,9 +61,20 @@ class UserNotifier extends StateNotifier<UserState> {
   Future<void> loadUser({bool forceRefresh = true}) async {
     try {
       state = const UserState.loading();
-      final user = await repository.fetchUser();
-      state = UserState.ready(user);
-      debugPrint("🔄 [USER] loadUser → OK");
+
+      // 1. Doğrulama bilgilerini al (/auth/me)
+      final meUser = await repository.fetchMe();
+
+      // 2. İstatistikleri al (/customer/profile)
+      final profileUser = await repository.fetchUser();
+
+      // 3. İkisini harmanla: Me'deki tam verilere, profile'daki istatistikleri ekle
+      final finalUser = meUser.copyWith(
+        statistics: profileUser.statistics,
+      );
+
+      state = UserState.ready(finalUser);
+      debugPrint("🔄 [USER] loadUser (Me + Profile Merged) → OK");
     } catch (e) {
       state = UserState.error(e.toString());
       debugPrint("❌ [USER] loadUser ERROR → $e");
@@ -137,12 +148,29 @@ class UserNotifier extends StateNotifier<UserState> {
   }
 
   Future<bool> verifyEmailOtp(String email, String otp) async {
+    debugPrint("🚀 [EMAIL_VERIFY] İşlem Başladı. Email: $email, Kod: $otp");
+
     try {
+      // 1. Adım: Kodu gönder ve backend'e "onayla" de
+      debugPrint("📡 [EMAIL_VERIFY] verifyEmailOtpCode isteği atılıyor...");
       await repository.verifyEmailOtpCode(email, otp);
-      final updatedUser = await repository.fetchUser();
+      debugPrint("✅ [EMAIL_VERIFY] Kod backend tarafından onaylandı.");
+
+      // 2. Adım: Güncel veriyi çek (fetchMe ile tam kimlik verisini alıyoruz)
+      debugPrint("🔄 [EMAIL_VERIFY] Güncel kullanıcı verisi /me üzerinden çekiliyor...");
+      final updatedUser = await repository.fetchMe();
+
+      // 3. Adım: Gelen veriyi kontrol et (Senin modelindeki değişkenler)
+      // UserModel'inde emailVerifiedAt yok, direkt isEmailVerified'ı logluyoruz:
+      debugPrint("🔍 [EMAIL_VERIFY] Model isEmailVerified sonucu: ${updatedUser.isEmailVerified}");
+
+      // 4. Adım: State'i yeni kullanıcı verisiyle güncelle
       state = UserState.ready(updatedUser);
+      debugPrint("🏁 [EMAIL_VERIFY] State güncellendi, işlem başarılı.");
+
       return true;
     } catch (e) {
+      debugPrint("❌ [EMAIL_VERIFY] HATA OLUŞTU: $e");
       return false;
     }
   }

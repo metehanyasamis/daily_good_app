@@ -8,7 +8,6 @@ class ReviewRepository {
   ReviewRepository(this._dio);
 
   /// 1. Değerlendirme Oluşturma (POST)
-  /// Doküman: /customer/stores/{storeId}/reviews
   Future<ReviewResponseModel> createReview({
     required String storeId,
     required int serviceRating,
@@ -16,8 +15,8 @@ class ReviewRepository {
     required int productTasteRating,
     required int productVarietyRating,
     String? comment,
-    String? orderId,    // Sipariş bazlı yorum desteği
-    String? productId,  // Ürün bazlı yorum desteği
+    String? orderId,
+    String? productId,
   }) async {
     final payload = {
       "service_rating": serviceRating,
@@ -35,16 +34,20 @@ class ReviewRepository {
         data: payload,
       );
 
-      // Backend 'data' objesi içinde dönüyor
+      // 🔥 KRİTİK DÜZELTME: Veri var mı ve success mi kontrol et
+      if (res.data == null || res.data["data"] == null) {
+        throw res.data?["message"] ?? "Sunucudan boş veri döndü.";
+      }
+
       return ReviewResponseModel.fromJson(res.data["data"]);
     } on DioException catch (e) {
+      // Hata durumunda buraya düşer (400, 401, 500 vb.)
       _handleDioError(e, "Değerlendirme oluşturulamadı");
-      rethrow; // _handleDioError hata fırlatmazsa diye güvenlik önlemi
+      rethrow;
     }
   }
 
   /// 2. Değerlendirme Güncelleme (PUT)
-  /// Doküman: /customer/stores/{storeId}/reviews/{reviewId}
   Future<ReviewResponseModel> updateReview({
     required String storeId,
     required String reviewId,
@@ -67,6 +70,11 @@ class ReviewRepository {
         "/customer/stores/$storeId/reviews/$reviewId",
         data: payload,
       );
+
+      if (res.data == null || res.data["data"] == null) {
+        throw res.data?["message"] ?? "Güncelleme için veri dönmedi.";
+      }
+
       return ReviewResponseModel.fromJson(res.data["data"]);
     } on DioException catch (e) {
       _handleDioError(e, "Değerlendirme güncellenemedi");
@@ -75,7 +83,6 @@ class ReviewRepository {
   }
 
   /// 3. Değerlendirme Silme (DELETE)
-  /// Doküman: /customer/stores/{storeId}/reviews/{reviewId}
   Future<bool> deleteReview({
     required String storeId,
     required String reviewId,
@@ -84,9 +91,9 @@ class ReviewRepository {
       final res = await _dio.delete(
         "/customer/stores/$storeId/reviews/$reviewId",
       );
-      // Dokümana göre success: true dönüyor
       return res.data["success"] == true;
     } on DioException catch (e) {
+      // Silme hatasını da kullanıcıya düzgün gösterelim
       _handleDioError(e, "Değerlendirme silinemedi");
       return false;
     }
@@ -94,11 +101,19 @@ class ReviewRepository {
 
   /// Merkezi Hata Yönetimi
   void _handleDioError(DioException e, String defaultMessage) {
-    debugPrint("❌ Review API Error: ${e.response?.data}");
+    // Backend'den gelen hata yapısını debug edelim
+    debugPrint("❌ Review API Error Response: ${e.response?.data}");
 
-    // Backend'den gelen spesifik hata mesajını (örneğin: "Zaten yorum yaptınız") yakalar
-    final errorMessage = e.response?.data["message"] ?? defaultMessage;
+    String errorMessage = defaultMessage;
 
+    if (e.response?.data != null && e.response?.data is Map) {
+      // Backend'den gelen "message" alanını al (Örn: "Zaten değerlendirme yapılmış")
+      errorMessage = e.response?.data["message"] ?? defaultMessage;
+    } else if (e.type == DioExceptionType.connectionTimeout) {
+      errorMessage = "Bağlantı zaman aşımına uğradı.";
+    }
+
+    // Bu throw, Controller'daki try-catch'e gider ve SnackBar'da görünür
     throw errorMessage;
   }
 }

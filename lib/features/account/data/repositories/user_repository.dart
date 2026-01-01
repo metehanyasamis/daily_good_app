@@ -7,6 +7,7 @@ import '../models/user_model.dart';
 
 abstract class UserRepository {
   Future<UserModel> fetchUser();
+  Future<UserModel> fetchMe();
   Future<UserModel> updateUser(UserModel data);
   Future<void> sendEmailVerification(String email);
   Future<UserModel> verifyEmailOtpCode(String email, String code);
@@ -42,6 +43,33 @@ class UserRepositoryImpl implements UserRepository {
       print("✅ [REPO] İstatistikler Bulundu: ${decoded["data"]["statistics"]}");
     } else {
       print("⚠️ [REPO] İstatistik verisi boş (null) geliyor!");
+    }
+
+    return UserModel.fromJson(decoded["data"]);
+  }
+
+
+  @override
+  Future<UserModel> fetchMe() async {
+    print("📡 [REPO] fetchMe İsteği Atılıyor: /customer/auth/me");
+
+    final response = await api.get("/customer/auth/me");
+
+    if (response.statusCode != 200) {
+      throw Exception("Kullanıcı doğrulama bilgileri alınamadı");
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    // 🎯 İŞTE ARADIĞIMIZ LOGLAR BURADA:
+    if (decoded["data"] != null) {
+      final emailVerifiedAt = decoded["data"]["email_verified_at"];
+      final phoneVerifiedAt = decoded["data"]["phone_verified_at"];
+
+      print("--------------------------------------------------");
+      print("🔍 [BACKEND_RAW_DATA] E-posta Onay Tarihi: $emailVerifiedAt");
+      print("🔍 [BACKEND_RAW_DATA] Telefon Onay Tarihi: $phoneVerifiedAt");
+      print("--------------------------------------------------");
     }
 
     return UserModel.fromJson(decoded["data"]);

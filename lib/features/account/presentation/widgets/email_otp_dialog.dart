@@ -46,15 +46,42 @@ class _EmailOtpSheetState extends ConsumerState<EmailOtpSheet> {
 
   Future<void> _submit() async {
     final otp = _pin.text.trim();
-    if (otp.length != 6) return;
-    setState(() { _loading = true; _error = false; });
+
+    // 1. Kural: 6 hane değilse işlem yapma
+    if (otp.length != 6) {
+      debugPrint("⚠️ [SHEET] Kod 6 haneden kısa: $otp");
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = false;
+    });
+
+    debugPrint("🚀 [SHEET] Doğrulama başlatılıyor... Email: ${widget.email}, OTP: $otp");
 
     try {
+      // UserNotifier'daki verifyEmailOtp'yi çağırıyoruz
       final success = await ref.read(userNotifierProvider.notifier).verifyEmailOtp(widget.email, otp);
+
+      debugPrint("📥 [SHEET] Notifier'dan gelen yanıt: $success");
+
       if (!mounted) return;
-      if (success) Navigator.of(context).pop("OK");
-      else _handleError();
-    } catch (e) { _handleError(); }
+
+      if (success) {
+        debugPrint("🥳 [SHEET] Doğrulama BAŞARILI. Sayfa kapatılıyor.");
+        // "OK" döndürüyoruz ki AccountScreen gerekirse işlem yapabilsin
+        Navigator.of(context).pop("OK");
+      } else {
+        debugPrint("❌ [SHEET] Doğrulama BAŞARISIZ (success false döndü).");
+        _handleError();
+      }
+    } catch (e) {
+      debugPrint("💥 [SHEET] Beklenmedik HATA: $e");
+      _handleError();
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   void _handleError() {

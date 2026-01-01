@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:daily_good/features/stores/data/model/store_detail_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import '../../../../core/widgets/store_delivery_info_card.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
 import '../../../cart/presentation/widgets/cart_warning_modal.dart';
 import '../../../settings/domain/providers/legal_settings_provider.dart';
+import '../../../stores/data/model/store_summary.dart';
 import '../../../stores/domain/providers/store_detail_provider.dart';
 import '../../../stores/presentation/widgets/store_map_card.dart';
 import '../../domain/products_notifier.dart';
@@ -86,8 +88,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 8)),
-              _StoreSection(product: product),
-              _RatingSection(product: product),
+              _StoreSection(product: product, freshStore: store.toStoreSummary()),              //_RatingSection(product: product),
               SliverToBoxAdapter(
                 child: store.latitude != 0.0 && store.longitude != 0.0
                     ? StoreMapCard(
@@ -291,19 +292,25 @@ class _PriceWidget extends StatelessWidget {
 
 class _StoreSection extends StatelessWidget {
   final ProductModel product;
-  const _StoreSection({required this.product});
+  final StoreSummary? freshStore; // 👈 Taze veri
+  const _StoreSection({required this.product, this.freshStore});
 
   @override
   Widget build(BuildContext context) {
+    // Eğer freshStore (detaylı API'den gelen) varsa onu kullan,
+    // yoksa ürünün içindekini (puanı 0.0 olanı) kullan.
+    final storeToShow = freshStore ?? product.store;
+
     return SliverToBoxAdapter(
       child: StoreDeliveryInfoCard(
-        store: product.store,
-        onStoreTap: () => context.push('/store-detail/${product.store.id}'),
+        store: storeToShow, // 👈 Artık puanı dolu olanı basacak
+        onStoreTap: () => context.push('/store-detail/${storeToShow.id}'),
       ),
     );
   }
 }
 
+/*
 class _RatingSection extends StatelessWidget {
   final ProductModel product;
   const _RatingSection({required this.product});
@@ -339,8 +346,10 @@ class _RatingSection extends StatelessWidget {
   }
 }
 
+*/
 // --- Alt Bileşenler ---
 
+/*
 class _RatingBar extends StatelessWidget {
   final String label;
   final double value;
@@ -357,6 +366,7 @@ class _RatingBar extends StatelessWidget {
   }
 }
 
+ */
 class _CircularIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;

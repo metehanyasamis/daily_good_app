@@ -95,8 +95,12 @@ class OrderHistoryScreen extends ConsumerWidget {
                           ),
                           ...entry.value.map(
                                 (order) => GestureDetector(
-                              onTap: () =>
-                                  context.push('/orders/${order.id}'),
+                                  onTap: () {
+                                    context.push(
+                                      '/order-history/detail/${order.id}',
+                                      extra: order, // Cebi doldurduk, paketi yanımıza aldık!
+                                    );
+                                  },
                               child: _buildOrderCard(
                                 context: context,
                                 order: order,

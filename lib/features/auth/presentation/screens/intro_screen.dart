@@ -38,13 +38,11 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
 
   Future<void> _goNext() async {
     if (_isCompleted) return;
-
     setState(() => _isCompleted = true);
 
-    // ✅ Intro görüldü flag
+    // Uygulama durumunu güncelle
     await ref.read(appStateProvider.notifier).setHasSeenIntro(true);
 
-    // Login ekranına geç
     if (mounted) {
       context.go('/login');
     }
@@ -53,42 +51,51 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final double buttonWidth = size.width - 56;
-    final double maxDrag = buttonWidth - 100;
+    final double systemBottomPadding = MediaQuery.of(context).padding.bottom;
+
+    // Tasarımın güvenli alanları
+    const double horizontalPadding = 35.0;
+    const double sliderHeight = 84.0;
+    const double thumbSize = 90.0;
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppGradients.dark,
-        ),
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(gradient: AppGradients.dark),
         child: FadeTransition(
           opacity: _fadeIn,
           child: SafeArea(
+            bottom: false, // Manuel kontrol edeceğiz
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 35),
+              padding: const EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 28),
+                  const Spacer(flex: 2), // Üstten esnek boşluk
+
+                  // 1. Görsel Alanı
                   Center(
                     child: Image.asset(
                       'assets/images/intro_image.png',
-                      height: size.height * 0.3,
+                      height: size.height * 0.28,
                       fit: BoxFit.contain,
                     ),
                   ),
-                  const SizedBox(height: 28),
+
+                  const Spacer(flex: 1),
+
+                  // 2. Metin Alanı
                   Text(
                     'Hızlı,\nLezzetli,\nHesaplı! 🥣',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                       color: Colors.white,
                       height: 1.1,
                       fontWeight: FontWeight.w900,
-                      fontSize: 52,
+                      fontSize: size.width * 0.12, // Responsive font
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
                   Text(
                     'Kalan yiyecekleri ucuza al,\nhem tasarruf et hem dünyayı koru.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -97,143 +104,144 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                       height: 1.5,
                     ),
                   ),
-                  SizedBox(height: size.height * 0.06),
 
-                  Center(
-                    child: SizedBox(
-                      height: 80,
-                      width: double.infinity,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        alignment: Alignment.centerLeft,
-                        children: [
-                          // Arka plan butonu
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 100),
-                            height: 84,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(50),
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFFE3FFE7),
-                                  Color.lerp(
-                                    AppColors.primaryLightGreen,
-                                    AppColors.primaryDarkGreen,
-                                    _dragPosition / maxDrag,
-                                  )!,
-                                ],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Opacity(
-                                opacity: 1 -
-                                    (_dragPosition / maxDrag)
-                                        .clamp(0.0, 1.0),
-                                child: const Text(
-                                  'Başlayalım',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                  const Spacer(flex: 2),
 
-                          // Ok ikonları
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 20),
-                              child: Opacity(
-                                opacity: 1 -
-                                    (_dragPosition / maxDrag)
-                                        .clamp(0.0, 1.0),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.chevron_right_rounded,
-                                      color:
-                                      Colors.black.withOpacity(0.4),
-                                      size: 30,
-                                    ),
-                                    Icon(
-                                      Icons.chevron_right_rounded,
-                                      color:
-                                      Colors.black.withOpacity(0.7),
-                                      size: 30,
-                                    ),
-                                    const Icon(
-                                      Icons.chevron_right_rounded,
-                                      color: Colors.black,
-                                      size: 30,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
+                  // 3. Kaydırma Butonu (Slide to Unlock)
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final double maxDrag = constraints.maxWidth - thumbSize;
 
-                          // Sürüklenebilir logo
-                          Positioned(
-                            left: _dragPosition,
-                            child: GestureDetector(
-                              onHorizontalDragUpdate: (details) {
-                                setState(() {
-                                  _dragPosition += details.delta.dx;
-                                  if (_dragPosition < 0) {
-                                    _dragPosition = 0;
-                                  }
-                                  if (_dragPosition > maxDrag) {
-                                    _dragPosition = maxDrag;
-                                    _goNext();
-                                  }
-                                });
-                              },
-                              onHorizontalDragEnd: (_) {
-                                if (_dragPosition < maxDrag * 0.7) {
-                                  setState(() => _dragPosition = 0);
-                                } else {
-                                  _goNext();
-                                }
-                              },
-                              child: AnimatedContainer(
-                                duration:
-                                const Duration(milliseconds: 200),
-                                height: 90,
-                                width: 90,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                ),
-                                child: Center(
-                                  child: Image.asset(
-                                    'assets/logos/dailyGood_tekSaatLogo.png',
-                                    height: 60,
-                                    color: AppColors.primaryLightGreen,
-                                    colorBlendMode: BlendMode.srcIn,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                      return Container(
+                        height: thumbSize,
+                        margin: EdgeInsets.only(
+                          bottom: systemBottomPadding > 0 ? systemBottomPadding + 10 : 40,
+                        ),
+                        child: Stack(
+                          alignment: Alignment.centerLeft,
+                          clipBehavior: Clip.none,
+                          children: [
+                            // Arka Plan Kanalı
+                            _buildSliderBackground(maxDrag),
+
+                            // İpucu Okları
+                            _buildArrowHints(maxDrag),
+
+                            // Sürüklenebilir Buton (Handle)
+                            _buildDraggableThumb(maxDrag),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSliderBackground(double maxDrag) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 100),
+      height: 74, // Thumb'dan biraz daha küçük
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(50),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFE3FFE7),
+            Color.lerp(
+              AppColors.primaryLightGreen,
+              AppColors.primaryDarkGreen,
+              _dragPosition / maxDrag,
+            )!,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Opacity(
+          opacity: (1 - (_dragPosition / maxDrag)).clamp(0.0, 1.0),
+          child: const Text(
+            'Başlayalım',
+            style: TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildArrowHints(double maxDrag) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 20),
+        child: Opacity(
+          opacity: (1 - (_dragPosition / (maxDrag * 0.5))).clamp(0.0, 1.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(3, (index) {
+              return Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.black.withOpacity(0.3 * (index + 1)),
+                size: 28,
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDraggableThumb(double maxDrag) {
+    return Positioned(
+      left: _dragPosition,
+      child: GestureDetector(
+        onHorizontalDragUpdate: (details) {
+          setState(() {
+            _dragPosition += details.delta.dx;
+            _dragPosition = _dragPosition.clamp(0.0, maxDrag);
+
+            if (_dragPosition >= maxDrag) {
+              _goNext();
+            }
+          });
+        },
+        onHorizontalDragEnd: (_) {
+          if (_dragPosition < maxDrag) {
+            setState(() => _dragPosition = 0);
+          }
+        },
+        child: Container(
+          height: 90,
+          width: 90,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(2, 2))
+            ],
+          ),
+          child: Center(
+            child: Image.asset(
+              'assets/logos/dailyGood_tekSaatLogo.png',
+              height: 55,
+              color: AppColors.primaryLightGreen,
+              colorBlendMode: BlendMode.srcIn,
             ),
           ),
         ),

@@ -1,11 +1,13 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/prefs_service.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
-      baseUrl: "https://dailygood.dijicrea.net/api/v1",  // ← DÜZELTİLDİ
+      baseUrl: "https://dailygood.dijicrea.net/api/v1", // ✅ Yeni Domain
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 30),
@@ -14,6 +16,15 @@ final dioProvider = Provider<Dio>((ref) {
       },
       validateStatus: (status) => status != null && status < 500,
     ),
+  );
+
+  // 🛡️ SSL HATASINI ÇÖZEN BYPASS KODU (Chrome'daki "Gelişmiş -> Devam Et" gibi)
+  dio.httpClientAdapter = IOHttpClientAdapter(
+    createHttpClient: () {
+      final client = HttpClient();
+      client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+      return client;
+    },
   );
 
   dio.interceptors.add(
@@ -25,35 +36,24 @@ final dioProvider = Provider<Dio>((ref) {
         print("📡 API REQUEST");
         print("➡️ URL: ${options.method} ${options.baseUrl}${options.path}");
 
-        if (options.data != null) {
-          print("📤 BODY: ${options.data}");
-        }
-
         if (token != null && token.isNotEmpty) {
           options.headers["Authorization"] = "Bearer $token";
-          print("🔐 TOKEN header eklendi → $token");
-        } else {
-          print("⚠️ TOKEN YOK (HEADER EKLENMEDİ)");
+          print("🔐 TOKEN EKLENDİ");
         }
 
-        print("📑 HEADERS: ${options.headers}");
+        if (options.data != null) print("📤 BODY: ${options.data}");
         print("──────────────────────────────");
 
         handler.next(options);
       },
-
       onResponse: (r, h) {
-        print("📥 API RESPONSE → ${r.statusCode}");
-        print(r.data);
-        print("──────────────────────────────");
+        print("📥 API RESPONSE [${r.statusCode}] <- ${r.realUri.path}");
         h.next(r);
       },
-
       onError: (e, h) {
-        print("❌ API ERROR");
-        print("STATUS: ${e.response?.statusCode}");
-        print("DATA: ${e.response?.data}");
-        print("MESSAGE: ${e.message}");
+        print("❌ API ERROR [${e.response?.statusCode}]");
+        print("💬 MESAJ: ${e.message}");
+        print("📦 DATA: ${e.response?.data}");
         print("──────────────────────────────");
         h.next(e);
       },

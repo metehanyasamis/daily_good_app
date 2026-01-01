@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/time_formatter.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
+import '../../../settings/domain/providers/legal_settings_provider.dart';
 import '../../data/models/order_details_response.dart';
 import '../../domain/providers/active_order_provider.dart';
 
@@ -46,10 +48,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     final orderAsync =
     ref.watch(activeOrderProvider(widget.orderId));
 
+    final settingsAsync = ref.watch(legalSettingsProvider);
+
     return orderAsync.when(
       loading: () => _loadingScaffold(theme),
       error: (e, _) => _errorScaffold(theme, e.toString()),
-      data: (order) => _content(context, theme, order),
+      data: (order) => _content(context, theme, order, settingsAsync),
     );
   }
 
@@ -97,6 +101,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
       BuildContext context,
       ThemeData theme,
       OrderDetailResponse order,
+      AsyncValue settingsAsync,
       ) {
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -109,13 +114,41 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           const SizedBox(height: 12),
           _buildOrderSummary(theme, order),
           const SizedBox(height: 16),
-          const KnowMoreFull(forceBoxMode: true),
+          KnowMoreFull(
+            forceBoxMode: true,
+            customInfo: settingsAsync.value?.importantInfo,
+          ),
           const SizedBox(height: 16),
+
+
           CustomButton(
             text: 'Teslim Almayı Onayla',
-            onPressed: () => context.go('/thank-you'),
+            onPressed: () async {
+              // Kullanıcıya bir onay penceresi açalım
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text("Teslimat Onayı"),
+                  content: const Text("Ürünü mağazadan teslim aldığınızı onaylıyor musunuz?"),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Vazgeç")),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryDarkGreen),
+                      child: const Text("Evet, Aldım"),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                // Burada normalde API çağrısı olurdu. Şimdilik direkt gidiyoruz.
+                context.go('/thank-you');
+              }
+            },
             showPrice: false,
           ),
+
           const SizedBox(height: 16),
 
           CustomButton(
@@ -212,8 +245,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
       OrderDetailResponse order,
       ) {
     final item = order.items.first;
-    final start = item.product.startHour ?? "09:00";
-    final end = item.product.endHour ?? "18:00";
+    final start = TimeFormatter.hm(item.product.startHour ?? "09:00");
+    final end = TimeFormatter.hm(item.product.endHour ?? "18:00");
 
     return Container(
       padding: const EdgeInsets.all(16),

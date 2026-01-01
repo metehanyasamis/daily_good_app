@@ -21,6 +21,8 @@ import '../widgets/category_filter_option.dart';
 import '../widgets/explore_filter_sheet.dart';
 import '../widgets/category_filter_sheet.dart';
 
+bool hataVarmisGibiYap = false; // Bunu sınıfın en üstüne değişken olarak ekle
+
 enum SortDirection { ascending, descending }
 
 class ExploreListScreen extends ConsumerStatefulWidget {
@@ -245,6 +247,11 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     final productsState = ref.watch(productsProvider);
     final categoriesRaw = ref.watch(categoryProvider);
 
+// 💣 EĞER BUTONA BASILDIYSA EKRANI PATLAT
+    if (hataVarmisGibiYap) {
+      throw Exception("Phoenix Testi: Ekran Çizilemedi!");
+    }
+
     ref.listen<ProductsState>(productsProvider, (prev, next) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -304,7 +311,12 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
           CustomToggleButton(
             label: "Harita",
             icon: Icons.map_outlined,
-            onPressed: () => context.push('/explore-map'),
+            onPressed: () {
+              setState(() {
+                hataVarmisGibiYap = true; // Ekranın yeniden çizilmesini tetikler ve build'deki throw çalışır
+              });
+            },
+            //onPressed: () => context.push('/explore-map'),
           ),
         ],
       ),

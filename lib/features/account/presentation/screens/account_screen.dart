@@ -165,6 +165,17 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final saving = ref.watch(savingProvider);
     final user = userState.user;
 
+    // 🔥 TELEFON DOĞRULAMA DURUMUNU BURADA RÖNTGENLİYORUZ
+    if (user != null) {
+      debugPrint("🚨 [TELEFON_TEYİT] Numara: ${user.phone}");
+      debugPrint("🚨 [TELEFON_TEYİT] isPhoneVerified Değeri: ${user.isPhoneVerified}");
+
+      // Eğer false geliyorsa, Ali'ye atmak için ekran görüntüsü alacağın yer burası:
+      if (!user.isPhoneVerified) {
+        debugPrint("⚠️ DİKKAT: OTP ile girildi ama backend 'phone_verified_at' bilgisini boş gönderiyor.");
+      }
+    }
+
     // 1) İLK YÜKLEME KONTROLÜ
     // Eğer elimizde hiç user yoksa ve hala yükleniyorsa o zaman tam ekran loading göster.
     if (user == null && userState.status == UserStatus.loading) {
@@ -258,7 +269,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     value: user.email ?? "-",
                     isVerified: user.isEmailVerified,
                     onVerify: (user.email != null && !user.isEmailVerified)
-                        ? () => _verifyEmail(user.email!)
+                        ? () {
+                      print("🚨 [UI_TIKLAMA] E-posta doğrulama butonuna basıldı!"); // <--- BU LOGU EKLE
+                      _verifyEmail(user.email!);
+                    }
                         : null,
                   ),
                   const SizedBox(height: 8),

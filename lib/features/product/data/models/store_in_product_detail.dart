@@ -9,6 +9,8 @@ class StoreInProductDetail {
   final double latitude;
   final double longitude;
   final String bannerImage;
+  final double overallRating;
+  final double? distanceKm; // 👈 1. BURASI: Mesafeyi ekledik
 
   StoreInProductDetail({
     required this.id,
@@ -18,38 +20,45 @@ class StoreInProductDetail {
     required this.latitude,
     required this.longitude,
     required this.bannerImage,
+    required this.overallRating,
+    this.distanceKm, // 👈 2. BURASI: Mesafeyi ekledik
   });
 
   factory StoreInProductDetail.fromJson(Map<String, dynamic>? json) {
-    // 🛡️ 1. KORUMA: Eğer 'store' objesi komple null geldiyse
-    if (json == null) {
-      return StoreInProductDetail(
-        id: "",
-        name: "Mağaza Bilgisi Yok",
-        address: "",
-        phone: "",
-        latitude: 0.0,
-        longitude: 0.0,
-        bannerImage: "",
-      );
+    double toDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString()) ?? 0.0;
     }
 
-    // 🛡️ 2. KORUMA: Her bir alanı tek tek null check'ten geçiriyoruz
+    if (json == null) return StoreInProductDetail.empty();
+
     return StoreInProductDetail(
-      // .toString() öncesi '?' koymak hayati önem taşır!
       id: json['id']?.toString() ?? "",
       name: json['name']?.toString() ?? "Bilinmeyen Mağaza",
-      address: json['address']?.toString() ?? "Adres bilgisi yok",
+      address: json['address']?.toString() ?? "",
       phone: json['phone']?.toString() ?? "",
+      latitude: toDouble(json['latitude']),
+      longitude: toDouble(json['longitude']),
+      bannerImage: normalizeImageUrl(json['banner_image_url'] ?? json['banner_image'] ?? ""),
 
-      // 🔥 Akman Elektrik burada patlıyor: num? as double? ?? 0.0
-      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
-      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+      // 🔥 3. BURASI: Hem puanı hem mesafeyi API'den gelen farklı isimlere karşı korumalı alıyoruz
+      overallRating: toDouble(json['overall_rating'] ?? json['rating'] ?? json['store_rating']),
+      distanceKm: json['distance_km'] != null ? toDouble(json['distance_km']) : null,
+    );
+  }
 
-      // Resim URL'sini normalize ediyoruz
-      bannerImage: normalizeImageUrl(
-          json['banner_image_url'] ?? json['banner_image'] ?? ""
-      ),
+  // Boş mağaza durumu için isimlendirilmiş constructor (Temiz kod)
+  factory StoreInProductDetail.empty() {
+    return StoreInProductDetail(
+      id: "",
+      name: "Mağaza Bilgisi Yok",
+      address: "",
+      phone: "",
+      latitude: 0.0,
+      longitude: 0.0,
+      bannerImage: "",
+      overallRating: 0.0,
     );
   }
 
@@ -61,8 +70,8 @@ class StoreInProductDetail {
       latitude: latitude,
       longitude: longitude,
       imageUrl: bannerImage,
-      distanceKm: null,
-      overallRating: 0.0,
+      distanceKm: distanceKm,
+      overallRating: overallRating,
       isFavorite: false,
     );
   }

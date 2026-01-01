@@ -10,11 +10,13 @@ class RatingFormCard extends ConsumerStatefulWidget {
   final String storeId;
   final String? existingReviewId;
   final Map<String, int> initialRatings;
+  final String? orderId;
 
   const RatingFormCard({
     super.key,
     required this.storeId,
     this.existingReviewId,
+    this.orderId,
     required this.initialRatings, // Varsayılan veya mevcut oyları almak için
   });
 
@@ -103,7 +105,8 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
 
   // ⭐ YENİ METOT: Asenkron işi senkron onPressed içinden çağırır.
   Future<void> _handleSubmit(BuildContext context, ReviewController controller) async {
-    // En az bir rating seçildi mi kontrol et
+    debugPrint("button pressed: _handleSubmit triggered");
+
     if (_ratings.values.every((r) => r == 0)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lütfen en az bir kategoriye puan verin.')),
@@ -116,28 +119,101 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
       existingReviewId: widget.existingReviewId,
       ratings: _ratings,
       comment: _commentController.text,
+      orderId: widget.orderId,
     );
 
+    if (!context.mounted) return;
+
     if (success) {
-      // Başarılı bildirim
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(widget.existingReviewId != null
-              ? 'Değerlendirmen güncellendi 💚'
-              : 'Geri bildirimin için teşekkür ederiz 💚'),
-        ),
-      );
-      // Opsiyonel: Başarılı olduktan sonra yorum alanını temizleyebilirsiniz.
-      // _commentController.clear();
-      // Opsiyonel: Başarılı olduktan sonra puanları sıfırlayabilirsiniz.
-      // setState(() { _ratings = Map.from(widget.initialRatings); });
+      debugPrint("🎉 UI Update: Success Dialog shown");
+
+      // 1. ADIM: Jenerik SnackBar yerine Popup gösterelim
+      _showSuccessDialog(context);
+
+      // 2. ADIM: Formu temizleyelim
+      setState(() {
+        _ratings = Map.from(widget.initialRatings);
+        _commentController.clear();
+      });
 
     } else {
-      // Hata bildirimi
+      debugPrint("❗ UI Update: Dynamic error message shown");
+
+      // 🔥 DEĞİŞİKLİK BURADA:
+      // Sabit metin yerine Controller içindeki gerçek hata mesajını çekiyoruz
+      final errorState = ref.read(reviewControllerProvider);
+      final errorMessage = errorState.maybeWhen(
+        error: (error, _) => error.toString(),
+        orElse: () => 'İşlem sırasında bir hata oluştu.',
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('İşlem sırasında bir hata oluştu.')),
+        SnackBar(
+          content: Text(errorMessage), // Artık "Zaten mevcut" yazacak!
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
+  }
+
+// Teşekkür Pop-up'ı metodu
+  void _showSuccessDialog(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, anim1, anim2) {
+        return Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Material( // Text stilleri için gerekli
+              color: Colors.white,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle, color: AppColors.primaryDarkGreen, size: 64),
+                  const SizedBox(height: 16),
+                  const Text("Harika!", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Geri bildirimin başarıyla iletildi. Deneyimini paylaştığın için teşekkür ederiz 💚",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryDarkGreen,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Kapat", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return ScaleTransition(
+          // backOut yerine easeOutBack kullanıyoruz
+          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
+          child: child,
+        );
+      },
+    );
   }
 
   Widget _ratingRow(String label) {
