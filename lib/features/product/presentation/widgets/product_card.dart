@@ -1,5 +1,6 @@
 // lib/features/product/presentation/widgets/product_card.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -319,6 +320,7 @@ class NetworkImageOrPlaceholder extends StatelessWidget {
   final IconData fallbackIcon;
 
   const NetworkImageOrPlaceholder({
+    super.key,
     required this.url,
     this.width,
     this.height,
@@ -329,30 +331,43 @@ class NetworkImageOrPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final u = (url ?? '').trim();
+
     if (u.isEmpty) {
-      return Container(
-        width: width,
-        height: height,
-        color: Colors.grey.shade200,
-        alignment: Alignment.center,
-        child: Icon(fallbackIcon, color: Colors.grey),
-      );
+      return _buildFallback();
     }
 
-    return Image.network(
-      u,
+    return CachedNetworkImage(
+      imageUrl: u,
       width: width,
       height: height,
       fit: fit,
-      errorBuilder: (_, __, ___) {
-        return Container(
-          width: width,
-          height: height,
-          color: Colors.grey.shade200,
-          alignment: Alignment.center,
-          child: Icon(fallbackIcon, color: Colors.grey),
-        );
-      },
+      // 🚀 RESİM YÜKLENİRKEN GÖSTERİLECEK (Saniyeler süren o boşluğu bu kapatır)
+      placeholder: (context, url) => Container(
+        width: width,
+        height: height,
+        color: Colors.grey.shade100,
+        child: const Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryLightGreen),
+          ),
+        ),
+      ),
+      // ❌ HATA OLURSA GÖSTERİLECEK
+      errorWidget: (context, url, error) => _buildFallback(),
+      // 💾 ÖNBELLEK AYARI
+      memCacheHeight: 400, // RAM kullanımını optimize etmek için resmi küçülterek sakla
+    );
+  }
+
+  Widget _buildFallback() {
+    return Container(
+      width: width,
+      height: height,
+      color: Colors.grey.shade200,
+      alignment: Alignment.center,
+      child: Icon(fallbackIcon, color: Colors.grey),
     );
   }
 }

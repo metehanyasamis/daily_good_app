@@ -1,3 +1,4 @@
+import 'package:daily_good/features/account/presentation/screens/profile_details_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -143,6 +144,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     if (mounted) {
       showModalBottomSheet(
         context: context,
+        useRootNavigator: true,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (context) => EmailOtpSheet(email: email), // Senin yeni sheet'in
@@ -252,7 +254,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               // -------------------------------------------------- PROFILE CARD
               _buildCard(
                 title: "Profil",
-                onEdit: () => context.push('/profileDetail'),
+                onEdit: () {
+                  Navigator.of(context, rootNavigator: true).push( // 🔥 rootNavigator eklendi
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileDetailsScreen(),
+                    ),
+                  );
+                },
                 children: [
                   InfoRowWidget(
                     icon: Icons.person,

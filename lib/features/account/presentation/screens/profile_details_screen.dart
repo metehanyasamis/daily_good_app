@@ -48,9 +48,14 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     // Tek bir sheet üzerinden tüm akışı yönetiyoruz
     final result = await showModalBottomSheet<String>(
       context: context,
+      useRootNavigator: true, // 🔥 Eklendi: Custom Bar'ın üstüne çıkar
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => EmailChangeSheet(currentEmail: currentEmail),
+      builder: (context) => Padding(
+        // Klavye desteği için padding ekle
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: EmailChangeSheet(currentEmail: currentEmail),
+      ),
     );
 
     // Eğer her şey bitti ve Navigator.pop(context, "OK") dendiyse:

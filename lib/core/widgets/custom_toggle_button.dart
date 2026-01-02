@@ -25,7 +25,7 @@ class CustomToggleButton extends StatelessWidget {
       bottom: (MediaQuery.of(context).padding.bottom > 0
           ? MediaQuery.of(context).padding.bottom
           : 20) +
-          80,
+          90,
       child: ElevatedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, color: isActive ? Colors.white : AppColors.primaryDarkGreen),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pinput/pinput.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/providers/user_notifier.dart';
+import '../../domain/states/user_state.dart'; // UserState tipini tanıması için
 
 class EmailChangeSheet extends ConsumerStatefulWidget {
   final String currentEmail;
@@ -18,7 +19,7 @@ class _EmailChangeSheetState extends ConsumerState<EmailChangeSheet> {
   final TextEditingController _pinController = TextEditingController();
   final FocusNode _pinFocusNode = FocusNode();
 
-  bool _isOtpSent = false; // Kod gönderildi mi?
+  bool _isOtpSent = false;
   bool _isLoading = false;
   bool _isError = false;
 
@@ -59,8 +60,8 @@ class _EmailChangeSheetState extends ConsumerState<EmailChangeSheet> {
         _startTimer();
       }
     } catch (e) {
-      setState(() => _isLoading = false);
-      _showSnackBar(e.toString(), Colors.red);
+      if (mounted) setState(() => _isLoading = false);
+      // Notifier zaten state.errorMessage'ı güncellediği için SnackBar'a gerek kalmadı.
     }
   }
 
@@ -75,7 +76,7 @@ class _EmailChangeSheetState extends ConsumerState<EmailChangeSheet> {
       final success = await ref.read(userNotifierProvider.notifier).verifyEmailChangeOtp(email, otp);
       if (mounted) {
         if (success) {
-          Navigator.pop(context, "OK"); // Her şey bitti!
+          Navigator.pop(context, "OK");
         } else {
           _handleOtpError();
         }
@@ -97,15 +98,13 @@ class _EmailChangeSheetState extends ConsumerState<EmailChangeSheet> {
     });
   }
 
-  void _showSnackBar(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: color),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    // 📐 PIN TEMASI (SMS ile aynı)
+    // 1. State'i burada dinliyoruz
+    final userState = ref.watch(userNotifierProvider);
+    final String? backendError = userState.errorMessage;
+
+    // 📐 PIN TEMASI
     final baseTheme = PinTheme(
       height: 56, width: 50,
       textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -119,51 +118,67 @@ class _EmailChangeSheetState extends ConsumerState<EmailChangeSheet> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Container(
-        padding: EdgeInsets.fromLTRB(28, 28, 28, MediaQuery.of(context).viewInsets.bottom + 28),
+        padding: EdgeInsets.fromLTRB(28, 20, 28, 20),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
         ),
         child: SafeArea(
-          child: AnimatedSwitcher( // Ekranlar arası yumuşak geçiş
+          child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            child: _isOtpSent ? _buildOtpStep(baseTheme) : _buildEmailStep(),
+            // 2. Alt metodlara verileri parametre olarak geçiyoruz
+            child: _isOtpSent
+                ? _buildOtpStep(baseTheme)
+                : _buildEmailStep(userState, backendError),
           ),
         ),
       ),
     );
   }
 
-  // E-POSTA GİRİŞ EKRANI
-  Widget _buildEmailStep() {
-    return Column(
-      key: const ValueKey("email_step"),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text("E-posta Değiştir", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        const Text("Yeni e-posta adresinizi giriniz. Size bir doğrulama kodu göndereceğiz.",
-            textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
-        const SizedBox(height: 24),
-        TextField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            hintText: "Yeni e-posta adresi",
-            prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primaryDarkGreen),
-            filled: true, fillColor: Colors.grey[50],
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: AppColors.primaryDarkGreen)),
+  // E-POSTA GİRİŞ EKRANI (Parametreli)
+  Widget _buildEmailStep(UserState userState, String? backendError) {
+    return SingleChildScrollView( // 🔥 Taşmayı önleyen dokunuş
+      child: Column(
+        key: const ValueKey("email_step"),
+        mainAxisSize: MainAxisSize.min, // İçerik kadar yer kapla
+        children: [
+          // Tutamaç (Handle) - Sheet'in çekilebilir olduğunu gösterir
+          Container(
+            width: 40, height: 4,
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
           ),
-        ),
-        const SizedBox(height: 24),
-        _buildButton(onPressed: _sendOtp, label: "Kod Gönder"),
-        const SizedBox(height: 20),
-      ],
+          const Text("E-posta Değiştir", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          const Text("Yeni e-posta adresinizi giriniz. Size bir doğrulama kodu göndereceğiz.",
+              textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
+          const SizedBox(height: 24),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              hintText: "Yeni e-posta adresi",
+              errorText: backendError,
+              prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primaryDarkGreen),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: const BorderSide(color: AppColors.primaryDarkGreen)
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildButton(onPressed: _sendOtp, label: "Kod Gönder"),
+          const SizedBox(height: 10), // Padding'i biraz daralttık sığması için
+        ],
+      ),
     );
   }
 
-  // OTP GİRİŞ EKRANI (Pinput)
+  // OTP GİRİŞ EKRANI
   Widget _buildOtpStep(PinTheme baseTheme) {
     return Column(
       key: const ValueKey("otp_step"),

@@ -47,8 +47,15 @@ class UserModel {
     this.statistics,
   });
 
+
+  // lib/features/account/data/models/user_model.dart
+
   factory UserModel.fromJson(Map<String, dynamic> json, {String? token}) {
-// --- TEMİZ LOGLAR ---
+    debugPrint("--------------------------------------------------");
+    debugPrint("🚀 [MODEL-IN] Gelen Ham Veri: $json");
+
+
+    // --- TEMİZ LOGLAR ---
     debugPrint("--------------------------------------------------");
     debugPrint("📡 [MODEL_CHECK] User ID: ${json["id"]}");
     debugPrint("📧 [MODEL_CHECK] email_verified_at: ${json["email_verified_at"]}");
@@ -63,40 +70,50 @@ class UserModel {
     debugPrint("--------------------------------------------------");
 
 
-    final location = json["location"];
-    final statsJson = json["statistics"];
+    // Backend bazen veriyi 'customer' içinde bazen direkt gönderiyor olabilir.
+    // İkisini de kapsayacak bir çözüm:
+    final Map<String, dynamic> data = json.containsKey('customer')
+        ? json['customer']
+        : json;
 
-    // Debug için kalsın, veriyi gördük
-    debugPrint("🔍 [PARSE-START] ID: ${json["id"]}");
+    final String? extractedToken = token ?? json['token'];
 
-    return UserModel(
-      id: json["id"]?.toString() ?? "",
-      phone: json["phone"]?.toString() ?? "",
-      firstName: json["first_name"], // Logda "first_name"
-      lastName: json["last_name"],   // Logda "last_name"
-      fullName: json["full_name"],   // Logda "full_name"
-      email: json["email"],
-      birthDate: json["birth_date"]?.toString(), // 🎯 Logda: "birth_date"
+    debugPrint("🧐 [MODEL-PARSE] Hedeflenen Data: $data");
+    debugPrint("🔑 [MODEL-PARSE] Extracted Token: $extractedToken");
 
-      // 🔥 LOGA GÖRE GÜNCELLENEN KRİTİK ALANLAR:
-      // phone_verified_at dolu gelirse true döner
-      isEmailVerified: json["email_verified_at"] != null && json["email_verified_at"].toString().isNotEmpty,
-      isPhoneVerified: json["phone_verified_at"] != null &&
-          json["phone_verified_at"].toString().toLowerCase() != "null" &&
-          json["phone_verified_at"].toString().trim().isNotEmpty,
+    final location = data["location"];
+    final statsJson = data["statistics"];
 
-      latitude: json["latitude"] != null ? double.tryParse(json["latitude"].toString()) : null,
-      longitude: json["longitude"] != null ? double.tryParse(json["longitude"].toString()) : null,
+    final user = UserModel(
+      id: data["id"]?.toString() ?? "",
+      phone: data["phone"]?.toString() ?? "",
+      firstName: data["first_name"],
+      lastName: data["last_name"],
+      fullName: data["full_name"],
+      email: data["email"],
+      birthDate: data["birth_date"]?.toString(),
+
+      isEmailVerified: data["email_verified_at"] != null && data["email_verified_at"].toString().isNotEmpty,
+      isPhoneVerified: data["phone_verified_at"] != null && data["phone_verified_at"].toString().toLowerCase() != "null",
+
+      latitude: data["latitude"] != null ? double.tryParse(data["latitude"].toString()) : null,
+      longitude: data["longitude"] != null ? double.tryParse(data["longitude"].toString()) : null,
 
       locationLat: location != null ? (location["lat"]?.toDouble()) : null,
       locationLng: location != null ? (location["lng"]?.toDouble()) : null,
 
-      fcmToken: json["fcm_token"],
-      createdAt: json["created_at"],
-      updatedAt: json["updated_at"],
-      token: token ?? json["token"],
+      fcmToken: data["fcm_token"],
+      createdAt: data["created_at"],
+      updatedAt: data["updated_at"],
+      token: extractedToken, // Token'ı doğru yere bağladık
       statistics: statsJson != null ? UserStatistics.fromJson(statsJson) : null,
     );
+
+    debugPrint("✅ [MODEL-OUT] Oluşan Kullanıcı Adı: ${user.firstName}");
+    debugPrint("✅ [MODEL-OUT] Oluşan Token Durumu: ${user.token != null ? 'DOLU' : 'BOŞ'}");
+    debugPrint("--------------------------------------------------");
+
+    return user;
   }
 
   Map<String, dynamic> toJson() => {

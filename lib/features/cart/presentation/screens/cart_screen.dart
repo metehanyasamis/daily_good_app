@@ -11,6 +11,7 @@ import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 
 import '../../../../core/widgets/navigation_link.dart';
+import '../../../settings/domain/providers/legal_settings_provider.dart';
 import '../../domain/models/cart_item.dart';
 import '../../domain/providers/cart_provider.dart';
 import '../../domain/providers/checkout_contracts_provider.dart';
@@ -38,6 +39,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final items = ref.watch(cartProvider);
     final total = ref.watch(cartTotalProvider);
+    final settingsAsync = ref.watch(legalSettingsProvider);
 
     return GestureDetector(
       onTap: () => _focusNode.unfocus(),
@@ -85,10 +87,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ),
 
             // ℹ️ Bilgilendirme kutusu (Bilmeniz gerekenler)
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: KnowMoreFull(forceBoxMode: true),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: KnowMoreFull(
+                  forceBoxMode: true,
+                  customInfo: settingsAsync.value?.importantInfo,
+                ),
               ),
             ),
 

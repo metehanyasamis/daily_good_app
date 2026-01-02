@@ -57,40 +57,58 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 
 // ---------------------------------------------------------------------------
-// REGISTER/OTP DOĞRULAMA (YENİ KULLANICI İÇİN)
+// REGISTER/OTP DOĞRULAMA (Refactored: Dinamik NewUser Kontrolü)
 // ---------------------------------------------------------------------------
-  Future<UserModel?> verifyOtpModel(String phone, String code) async {
-    debugPrint("🚀 [VERIFY-OTP] İşlem başladı. Tel: $phone");
+
+  Future<UserModel?> verifyOtpModel(String phone, String code, {bool isLogin = true}) async {
+    debugPrint("🚀 [AUTH-FLOW] İşlem başladı. Tel: $phone | Mod: ${isLogin ? 'LOGIN' : 'REGISTER'}");
     state = const AuthState.loading();
+
     try {
-      final user = await repo.verifyOtp(phone, code);
+      UserModel? user;
+
+      if (isLogin) {
+        // 1. DURUM: Kullanıcı zaten var, sadece giriş yapıyor
+        user = await repo.login(phone, code);
+      } else {
+        // 2. DURUM: Kullanıcı yeni kayıt oluyor, önce OTP doğrulanmalı
+        // Repository'deki verifyOtp metodunu çağırıyoruz
+        user = await repo.verifyOtp(phone, code);
+      }
 
       if (user != null) {
-        debugPrint("✅ [VERIFY-OTP] Başarılı! UserID: ${user.id}, Token: ${user.token != null ? 'VAR' : 'YOK'}");
+        debugPrint("✅ [AUTH-SUCCESS] İşlem Başarılı. User: ${user.firstName ?? 'Yeni Kullanıcı'}");
 
-        // 1. Önce global kullanıcı bilgisini dolduruyoruz (Router buraya bakıyor!)
-        ref.read(userNotifierProvider.notifier).saveUser(user);
-        debugPrint("📢 [USER DATA] UserNotifier güncellendi.");
+        // Global kullanıcı bilgisini kaydet
+        await ref.read(userNotifierProvider.notifier).saveUser(user);
 
-        // 2. Sisteme giriş durumlarını set ediyoruz
+        // Profil eksik mi kontrolü (Eğer isim yoksa bu kullanıcı yenidir)
+        final bool isProfileMissing = user.firstName == null ||
+            user.firstName!.trim().isEmpty ||
+            user.firstName == "null";
+
+        // Uygulama durumlarını güncelle
         await ref.read(appStateProvider.notifier).setLoggedIn(true);
-        await ref.read(appStateProvider.notifier).setIsNewUser(true);
-        debugPrint("📢 [STATE UPDATE] LoggedIn ve NewUser set edildi.");
+        await ref.read(appStateProvider.notifier).setIsNewUser(isProfileMissing);
 
-        // 3. State'i güncelleyip kullanıcıyı döndürüyoruz
+        debugPrint("📢 [STATE] LoggedIn: true, NewUser: $isProfileMissing");
+
         state = const AuthState.authenticated();
         return user;
       }
 
-      debugPrint("⚠️ [VERIFY-OTP] User null döndü!");
+      // Eğer repo null döndüyse (Hatalı kod veya 404 durumu)
+      debugPrint("⚠️ [AUTH] İşlem başarısız. Repo null döndü.");
       state = const AuthState.invalidOtp();
       return null;
+
     } catch (e) {
-      debugPrint("❌ [VERIFY-OTP] Hata: $e");
+      debugPrint("❌ [AUTH-ERROR] Hata: $e");
       state = AuthState.error(e.toString());
       return null;
     }
   }
+
 
   // ---------------------------------------------------------------------------
 // LOGIN (SADE VE MODEL DÖNEN)
@@ -112,10 +130,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return null;
     }
   }
-  // ---------------------------------------------------------------------------
-  // /me
-  // ---------------------------------------------------------------------------
 
+
+  // ---------------------------------------------------------------------------
+// /ME (Refactored: Uygulama Açılışında NewUser Temizliği)
+// ---------------------------------------------------------------------------
   Future<bool> loadUserFromToken() async {
     debugPrint("📡 [AUTH] loadUserFromToken başlatıldı...");
     try {
@@ -126,31 +145,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return false;
       }
 
+      // 1. Kullanıcıyı kaydet
       ref.read(userNotifierProvider.notifier).saveUser(user);
+
+      // 🔥 2. DİNAMİK KONTROL: Uygulama her açıldığında profil durumunu kontrol et
+      // Bu sayede başka cihazdaki profil tamamlama bilgisi buraya da yansır.
+      final bool isReallyNew = user.firstName == null || user.firstName!.trim().isEmpty;
+      await ref.read(appStateProvider.notifier).setIsNewUser(isReallyNew);
+
+      debugPrint("📢 [AUTH LOAD] Profil Dolu mu?: ${!isReallyNew}");
+
       state = AuthState.authenticated(user);
       return true;
     } catch (e) {
-      // Hata olsa bile Splash'ten çıkmak için false dön
+      debugPrint("❌ [AUTH LOAD] Hata: $e");
       state = const AuthState.unauthenticated();
       return false;
     }
   }
 
-  /*
-  Future<bool> loadUserFromToken() async {
-    final user = await repo.me();
-
-    if (user == null) {
-      state = const AuthState.unauthenticated();
-      return false;
-    }
-
-    ref.read(userNotifierProvider.notifier).saveUser(user);
-    state = AuthState.authenticated(user);
-    return true;
-  }
-
-   */
 
   // ---------------------------------------------------------------------------
   // LOGOUT

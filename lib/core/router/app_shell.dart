@@ -9,21 +9,25 @@ class AppShell extends StatelessWidget {
 
   const AppShell({super.key, required this.child, required this.location});
 
+// lib/core/router/app_shell.dart
+
   @override
   Widget build(BuildContext context) {
+    // Sistemin alt bar yüksekliğini alıyoruz
+    final double bottomGap = MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
-      extendBody: true, // 👈 içerik barın altına “akar”
+      extendBody: true,
       body: Stack(
-       // clipBehavior: Clip.none,
         children: [
-          child, // ekranın asıl içeriği
+          child, // Ekran içeriği
 
-          // 👇 bar artık sayfa içinde ayrı bir overlay
           Positioned(
             left: 16,
             right: 16,
-            bottom: 12,
+            // 🛡️ ÇÖZÜM: Eğer bottomGap (sistem barı) 0'dan büyükse onu kullan,
+            // değilse güvenli bir padding (20) ekle ki yapışmasın.
+            bottom: (bottomGap > 0 ? bottomGap : 20) + 8,
             child: CustomBottomNavBar(
               currentIndex: _calculateSelectedIndex(location),
               onTabSelected: (index) {

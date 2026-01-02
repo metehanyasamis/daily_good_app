@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../account/data/models/user_model.dart';
 import '../../../account/domain/providers/user_notifier.dart';
 import '../../domain/providers/auth_notifier.dart';
 
@@ -87,11 +88,12 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
     _startTimer();
   }
 
-  // ---------------------------------------------------------------------------
-  // SUBMIT
+
+// ---------------------------------------------------------------------------
+  // SUBMIT (Güncellenmiş Versiyon)
   // ---------------------------------------------------------------------------
   Future<void> _submit() async {
-    debugPrint("🔘 [UI-OTP] Doğrula butonuna basıldı.");
+    debugPrint("🔘 [UI-OTP] Doğrula butonuna basıldı. Amaç: ${widget.isLogin ? 'Giriş' : 'Kayıt'}");
     final code = _pin.text.trim();
     if (code.length != 6) return;
 
@@ -101,17 +103,31 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
       final auth = ref.read(authNotifierProvider.notifier);
       final userNotif = ref.read(userNotifierProvider.notifier);
 
-      final userModel = await auth.verifyOtpModel(widget.phone, code);
+      // 🔥 İŞTE ÇÖZÜM BURASI:
+      // widget.isLogin değerini isLogin parametresine gönderiyoruz.
+      // widget.isLogin false ise (register ise), verifyOtpModel gidip repo.verifyOtp'yi çalıştıracak.
+      final userModel = await auth.verifyOtpModel(
+        widget.phone,
+        code,
+        isLogin: widget.isLogin, // 👈 Bunu mutlaka ekle!
+      );
 
       if (userModel != null) {
         debugPrint("💾 [UI-OTP] UserNotifier.saveUser çağrılıyor...");
         await userNotif.saveUser(userModel);
 
         if (!mounted) return;
-        debugPrint("🚢 [UI-OTP] Yönlendirme yapılıyor: /profileDetail");
-        context.go("/profileDetail");
+
+        // Yönlendirme mantığı:
+        if (widget.isLogin) {
+          debugPrint("🚢 [UI-OTP] Giriş başarılı, ana sayfaya...");
+          context.go("/home");
+        } else {
+          debugPrint("🚢 [UI-OTP] Kayıt başarılı, profil detayına...");
+          context.go("/profileDetail");
+        }
       } else {
-        debugPrint("🚨 [UI-OTP] İşlem başarısız, hata gösteriliyor.");
+        debugPrint("🚨 [UI-OTP] İşlem başarısız (User null), hata gösteriliyor.");
         _handleError();
       }
     } catch (e) {
@@ -119,8 +135,6 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
       _handleError();
     }
   }
-
-
 
 
   // ---------------------------------------------------------------------------

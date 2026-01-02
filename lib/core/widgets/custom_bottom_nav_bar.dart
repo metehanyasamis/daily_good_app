@@ -17,7 +17,7 @@ class CustomBottomNavBar extends StatelessWidget {
     return Material( // beyaz oval bar
       color: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white, // bar’ın beyaz zemini
           borderRadius: BorderRadius.only(

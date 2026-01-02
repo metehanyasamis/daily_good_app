@@ -33,6 +33,8 @@ class HomeProductList extends StatelessWidget {
       height: 230,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
+        cacheExtent: 1000,
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         itemCount: products.length,
         itemBuilder: (context, index) {

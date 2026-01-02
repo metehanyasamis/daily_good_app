@@ -115,13 +115,30 @@ class UserNotifier extends StateNotifier<UserState> {
   // ------------------------------------------------------------------
 
   // 1. OTP Kodu Gönder (Eksik olan metot buydu)
+// 1. OTP Kodu Gönder (Hata mesajı yönetimi eklendi)
   Future<void> sendEmailChangeOtp(String newEmail) async {
+    // Önce loading durumuna çek ve varsa eski hataları temizle
+    state = state.copyWith(status: UserStatus.loading, errorMessage: null);
+
     try {
       print("🚀 [NOTIFIER] Email Change OTP İstendi: $newEmail");
       await repository.sendEmailChangeOtp(newEmail);
+
+      // Başarılıysa durumu success yap (Sheet'te bir sonraki adıma geçmek için)
+      state = state.copyWith(status: UserStatus.ready);
     } catch (e) {
       print("❌ [NOTIFIER] sendEmailChangeOtp Hata: $e");
-      rethrow;
+
+      // Backend'den gelen "Geçerli bir e-posta adresi giriniz." mesajını yakala
+      final cleanMessage = e.toString().replaceAll("Exception: ", "");
+
+      // State'e hata mesajını yaz ki UI bunu görebilsin
+      state = state.copyWith(
+          status: UserStatus.error,
+          errorMessage: cleanMessage
+      );
+
+      rethrow; // UI'daki try-catch'in de yakalaması için
     }
   }
 
