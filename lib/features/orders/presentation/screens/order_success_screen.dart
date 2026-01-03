@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
+import '../../domain/providers/order_provider.dart';
 
 class OrderSuccessScreen extends ConsumerStatefulWidget {
   /// Ödeme tamamlandıktan sonra gelen sipariş ID'si
@@ -47,7 +48,8 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
       if (mounted) {
         // widget.orderId zaten String? olarak tanımlı olmalı
         final targetId = widget.orderId ?? "last";
-        context.go('/order-tracking/$targetId');
+        ref.invalidate(activeOrdersProvider);
+        context.go('/order-tracking');
       }
     });
   }

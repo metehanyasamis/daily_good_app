@@ -7,6 +7,7 @@ import '../../data/models/home_state.dart';
 
 class HomeStateNotifier extends StateNotifier<HomeState> {
   final ProductRepository repo;
+  DateTime? _lastFetchTime;
 
   HomeStateNotifier(this.repo) : super(HomeState.initial());
 
@@ -21,26 +22,38 @@ class HomeStateNotifier extends StateNotifier<HomeState> {
   Future<void> loadHome({
     required double latitude,
     required double longitude,
+    bool forceRefresh = false, // 🔄 Elle çekince (Pull to refresh) kilidi kırmak için
   }) async {
-    debugPrint("🏠 [HOME] loadHome");
+    // ⏱️ ZAMAN KONTROLÜ: Eğer son 30 saniye içinde çekildiyse ve zorlanmıyorsa ÇIK!
+    if (!forceRefresh && _lastFetchTime != null &&
+        DateTime.now().difference(_lastFetchTime!) < const Duration(seconds: 30)) {
+      debugPrint("🏠 [HOME] İstek reddedildi: Veriler zaten güncel (30sn kuralı).");
+      return;
+    }
+
+    debugPrint("🏠 [HOME] Gerçekten istek atılıyor...");
+    _lastFetchTime = DateTime.now();
 
     state = state.copyWith(
-      loadingSections: {
-        for (var s in HomeSection.values) s: true,
-      },
+      loadingSections: { for (var s in HomeSection.values) s: true },
     );
 
-    final sections = await repo.fetchHomeSections(
-      latitude: latitude,
-      longitude: longitude,
-    );
+    try {
+      final sections = await repo.fetchHomeSections(
+        latitude: latitude,
+        longitude: longitude,
+      );
 
-    state = state.copyWith(
-      sectionProducts: sections,
-      loadingSections: {
-        for (var s in HomeSection.values) s: false,
-      },
-    );
+      state = state.copyWith(
+        sectionProducts: sections,
+        loadingSections: { for (var s in HomeSection.values) s: false },
+      );
+    } catch (e) {
+      // Hata durumunda loading'i kapatmayı unutma
+      state = state.copyWith(
+        loadingSections: { for (var s in HomeSection.values) s: false },
+      );
+    }
   }
 }
 

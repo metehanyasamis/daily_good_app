@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 // Screens
 import '../../features/account/domain/providers/user_notifier.dart';
+import '../../features/account/presentation/screens/legal_documents_screen.dart';
 import '../../features/account/presentation/screens/profile_details_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -129,8 +130,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // 6️⃣ ANA SAYFAYA YÖNLENDİRME
-      // Eğer kullanıcı loginse ve tüm süreçleri tamamsa ama hala auth sayfalarındaysa /home'a at
-      if (loc == "/login" || loc == "/intro" || loc == "/splash" || loc == "/profileDetail") {
+      if ((loc == "/login" || loc == "/intro" || loc == "/splash") && app.isLoggedIn && !app.isNewUser) {
         return "/home";
       }
 
@@ -157,9 +157,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/location-info', builder: (_, __) => const LocationInfoScreen()),
       GoRoute(path: '/location-picker', builder: (_, __) => const LocationPickerScreen()),
-      GoRoute(path: '/profileDetail', builder: (_, __) => const ProfileDetailsScreen()),
+      GoRoute(
+        path: '/profileDetail',
+        builder: (context, state) {
+          final bool isFromReg = (state.extra is bool) ? (state.extra as bool) : false;
 
-      // ... ve diğer tüm rotaların ...
+          return ProfileDetailsScreen(isFromRegister: isFromReg);
+        },
+      ),
+
+
       GoRoute(
         path: '/product-detail/:productId',
         name: AppRoutes.productDetail,
@@ -192,10 +199,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => OrderSuccessScreen(orderId: state.uri.queryParameters['id']),
       ),
 
+      /*
       GoRoute(
         path: '/order-tracking/:id',
         builder: (_, state) => OrderTrackingScreen(orderId: state.pathParameters['id']!),
       ),
+       */
+      GoRoute(
+        path: '/order-tracking',
+        builder: (_, __) => const OrderTrackingScreen(),
+      ),
+
       GoRoute(
         path: '/thank-you',
         builder: (_, __) => const ThankYouScreen(),
@@ -241,6 +255,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ContactSuccessScreen(),
       ),
 
+      GoRoute(
+        path: '/legal-documents',
+        name: 'legal_docs',
+        builder: (context, state) => const LegalDocumentsScreen(),
+      ),
 
       ShellRoute(
         builder: (_, state, child) => AppShell(location: state.uri.toString(), child: child),

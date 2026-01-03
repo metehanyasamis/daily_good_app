@@ -14,28 +14,31 @@ class FloatingOrderButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return ref.watch(orderHistoryProvider).maybeWhen(
       data: (summary) {
-        final activeOrder = summary.orders
-            .firstWhereOrNull((o) => o.status == 'pending');
+        // 🎯 Tam olarak istediğin kurgu:
+        final hasActiveOrder = summary.orders.any((o) =>
+        o.status == 'pending' ||
+            o.status == 'processing' ||
+            o.status == 'confirmed'
+        );
 
-        if (activeOrder == null) {
+        if (!hasActiveOrder) {
           return const SizedBox.shrink();
         }
 
         return Positioned(
           right: 0,
-          bottom: MediaQuery.of(context).padding.bottom + 90,
+          bottom: MediaQuery.of(context).padding.bottom + 100,
           child: ElevatedButton.icon(
-            onPressed: () {
-              context.push('/order-tracking/${activeOrder.id}');
-            },
+            onPressed: () => context.push('/order-tracking'), // Parametresiz yeni rota
             icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white),
             label: const Text(
               'Siparişimi Takip Et',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryDarkGreen,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              elevation: 8,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(30),

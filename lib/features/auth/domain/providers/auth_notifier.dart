@@ -26,40 +26,40 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required this.repo,
   }) : super(const AuthState.initial());
 
-// auth_notifier.dart içindeki metod
+
   Future<void> sendOtp({required String phone, required String purpose}) async {
     state = const AuthState.loading();
     debugPrint("📡 [OTP REQUEST] $phone ($purpose)");
 
     try {
+      // Repository artık success: false durumunda hata fırlatıyor
       final bool ok = await repo.sendOtp(phone, purpose: purpose);
 
       if (ok) {
         debugPrint("✅ [OTP RESPONSE] Başarılı");
         state = const AuthState.otpSent();
       } else {
+        // Burası artık neredeyse hiç tetiklenmez çünkü repo hata fırlatıyor
         state = const AuthState.error("Beklenmedik bir sorun oluştu.");
       }
     } on DioException catch (e) {
-      // 🔥 Backend'den gelen o meşhur mesajları burada yakalıyoruz:
+      // 🔥 Backend'den gelen o gerçek mesajı yakaladığımız yer:
       final String serverMessage = e.response?.data?['message'] ?? "İşlem başarısız oldu.";
-      final String? errorCode = e.response?.data?['error_code'];
 
-      debugPrint("❌ [BACKEND ERROR] Message: $serverMessage, Code: $errorCode");
+      debugPrint("❌ [BACKEND ERROR] Message: $serverMessage");
 
-      // State'e gerçek mesajı basıyoruz
+      // UI'da (LoginScreen) snackbar'da görünecek mesaj bu:
       state = AuthState.error(serverMessage);
     } catch (e) {
       debugPrint("💥 [FATAL ERROR] $e");
-      state = const AuthState.error("Bağlantı hatası: Lütfen internetinizi kontrol edin.");
+      state = const AuthState.error("Bağlantı hatası: İnternetinizi kontrol edin.");
     }
   }
 
 
-// ---------------------------------------------------------------------------
-// REGISTER/OTP DOĞRULAMA (Refactored: Dinamik NewUser Kontrolü)
-// ---------------------------------------------------------------------------
-
+  // ---------------------------------------------------------------------------
+  // REGISTER/OTP DOĞRULAMA
+  // ---------------------------------------------------------------------------
   Future<UserModel?> verifyOtpModel(String phone, String code, {bool isLogin = true}) async {
     debugPrint("🚀 [AUTH-FLOW] İşlem başladı. Tel: $phone | Mod: ${isLogin ? 'LOGIN' : 'REGISTER'}");
     state = const AuthState.loading();
@@ -67,22 +67,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       UserModel? user;
 
+      // 1. ADIM: Backend İsteği
       if (isLogin) {
-        // 1. DURUM: Kullanıcı zaten var, sadece giriş yapıyor
+        // Kullanıcı mevcutsa giriş yap
         user = await repo.login(phone, code);
       } else {
-        // 2. DURUM: Kullanıcı yeni kayıt oluyor, önce OTP doğrulanmalı
-        // Repository'deki verifyOtp metodunu çağırıyoruz
+        // Yeni kullanıcıysa OTP doğrula
         user = await repo.verifyOtp(phone, code);
       }
 
+      // 2. ADIM: Başarılı Giriş Kontrolü
       if (user != null) {
         debugPrint("✅ [AUTH-SUCCESS] İşlem Başarılı. User: ${user.firstName ?? 'Yeni Kullanıcı'}");
 
         // Global kullanıcı bilgisini kaydet
         await ref.read(userNotifierProvider.notifier).saveUser(user);
 
-        // Profil eksik mi kontrolü (Eğer isim yoksa bu kullanıcı yenidir)
+        // Profil eksik mi kontrolü (İsim yoksa kullanıcı yeni kayıt aşamasındadır)
         final bool isProfileMissing = user.firstName == null ||
             user.firstName!.trim().isEmpty ||
             user.firstName == "null";
@@ -97,36 +98,60 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return user;
       }
 
-      // Eğer repo null döndüyse (Hatalı kod veya 404 durumu)
-      debugPrint("⚠️ [AUTH] İşlem başarısız. Repo null döndü.");
-      state = const AuthState.invalidOtp();
+      // 3. ADIM: Beklenmedik Boş Yanıt Durumu
+      debugPrint("⚠️ [AUTH] İşlem başarısız: Repo null döndü.");
+      state = const AuthState.error("Sunucudan geçerli bir yanıt alınamadı.");
+      return null;
+
+    } on DioException catch (e) {
+      // 🎯 4. ADIM: Backend Hata Mesajını Yakalama
+      // Loglarında gördüğümüz o meşhur "message" alanını buradan çekiyoruz
+      final String serverMessage = e.response?.data?['message'] ?? "Kod doğrulanamadı, lütfen tekrar deneyin.";
+
+      debugPrint("❌ [OTP-ERROR-BACKEND]: $serverMessage");
+
+      // State'e "Geçersiz OTP" yerine backend'den gelen gerçek mesajı basıyoruz
+      state = AuthState.error(serverMessage);
       return null;
 
     } catch (e) {
-      debugPrint("❌ [AUTH-ERROR] Hata: $e");
-      state = AuthState.error(e.toString());
+      // 5. ADIM: Yazılımsal veya Bağlantı Hataları
+      debugPrint("❌ [AUTH-FATAL-ERROR] Hata: $e");
+      state = AuthState.error("Beklenmedik bir hata oluştu: Lütfen internetinizi kontrol edin.");
       return null;
     }
   }
 
 
-  // ---------------------------------------------------------------------------
-// LOGIN (SADE VE MODEL DÖNEN)
 // ---------------------------------------------------------------------------
+  // LOGIN (Eksiksiz & Akıllı Hata Yönetimi)
+  // ---------------------------------------------------------------------------
   Future<UserModel?> login(String phone, String code) async {
     state = const AuthState.loading();
     try {
       final user = await repo.login(phone, code);
 
       if (user != null) {
+        // Giriş başarılı
         await ref.read(appStateProvider.notifier).setLoggedIn(true);
         state = AuthState.authenticated(user);
-        return user; // ✨ ARTIK DOĞRU TİP DÖNÜYOR (UserModel)
+        return user;
       }
 
+      // User null geldiyse
+      state = const AuthState.error("Kullanıcı bilgileri alınamadı.");
+      return null;
+
+    } on DioException catch (e) {
+      // 🎯 Backend'den gelen mesajı yakalıyoruz: "Hatalı kod", "Hesap donduruldu" vb.
+      final String serverMessage = e.response?.data?['message'] ?? "Giriş yapılamadı.";
+      debugPrint("❌ [AUTH-LOGIN-ERROR]: $serverMessage");
+
+      state = AuthState.error(serverMessage);
       return null;
     } catch (e) {
-      state = AuthState.error(e.toString());
+      debugPrint("💥 [AUTH-LOGIN-FATAL]: $e");
+      state = const AuthState.error("Bağlantı hatası: Lütfen internetinizi kontrol edin.");
       return null;
     }
   }

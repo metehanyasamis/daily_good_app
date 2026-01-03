@@ -79,10 +79,6 @@ class HalfStoreSheet extends StatelessWidget {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const Text(
-                                "Bugün teslim al",
-                                style: TextStyle(color: Colors.grey, fontSize: 13),
-                              ),
                               const SizedBox(height: 6),
                               NavigationLink(
                                 address: store.address,

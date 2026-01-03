@@ -48,8 +48,7 @@ class UserModel {
   });
 
 
-  // lib/features/account/data/models/user_model.dart
-
+/*
   factory UserModel.fromJson(Map<String, dynamic> json, {String? token}) {
     debugPrint("--------------------------------------------------");
     debugPrint("🚀 [MODEL-IN] Gelen Ham Veri: $json");
@@ -93,7 +92,9 @@ class UserModel {
       email: data["email"],
       birthDate: data["birth_date"]?.toString(),
 
-      isEmailVerified: data["email_verified_at"] != null && data["email_verified_at"].toString().isNotEmpty,
+      isEmailVerified: (data["email_verified_at"] != null &&
+          data["email_verified_at"].toString().toLowerCase() != "null" &&
+          data["email_verified_at"].toString().isNotEmpty),
       isPhoneVerified: data["phone_verified_at"] != null && data["phone_verified_at"].toString().toLowerCase() != "null",
 
       latitude: data["latitude"] != null ? double.tryParse(data["latitude"].toString()) : null,
@@ -112,9 +113,67 @@ class UserModel {
     debugPrint("✅ [MODEL-OUT] Oluşan Kullanıcı Adı: ${user.firstName}");
     debugPrint("✅ [MODEL-OUT] Oluşan Token Durumu: ${user.token != null ? 'DOLU' : 'BOŞ'}");
     debugPrint("--------------------------------------------------");
+    debugPrint("🚀 [MODEL-IN] Gelen Ham Veri: $json");
 
     return user;
   }
+
+ */
+
+  factory UserModel.fromJson(Map<String, dynamic> json, {String? token}) {
+    print("🛠 [RAW_JSON] email_verified_at: ${json['email_verified_at']}");
+
+
+    // 1. ADIM: Önce verinin nerede olduğunu bul (customer içinde mi değil mi)
+    final Map<String, dynamic> data = json.containsKey('customer')
+        ? json['customer']
+        : json;
+
+    // 2. ADIM: Doğrulama kontrolünü 'data' üzerinden yap ve bir değişkene ata
+    final bool emailCheck = data["email_verified_at"] != null &&
+        data["email_verified_at"].toString().toLowerCase() != "null" &&
+        data["email_verified_at"].toString().isNotEmpty;
+
+    final bool phoneCheck = data["phone_verified_at"] != null &&
+        data["phone_verified_at"].toString().toLowerCase() != "null" &&
+        data["phone_verified_at"].toString().isNotEmpty;
+
+    // --- TEMİZ LOGLAR ---
+    debugPrint("--------------------------------------------------");
+    debugPrint("📧 [MODEL_CHECK] email_verified_at: ${data["email_verified_at"]}");
+    debugPrint("✅ [MODEL_RESULT] Sonuç: E-posta Onaylı mı? -> $emailCheck");
+    debugPrint("--------------------------------------------------");
+
+    final String? extractedToken = token ?? json['token'];
+    final location = data["location"];
+    final statsJson = data["statistics"];
+
+    // 3. ADIM: Kullanıcıyı oluştururken yukarıdaki 'emailCheck' sonucunu kullan
+    return UserModel(
+      id: data["id"]?.toString() ?? "",
+      phone: data["phone"]?.toString() ?? "",
+      firstName: data["first_name"],
+      lastName: data["last_name"],
+      fullName: data["full_name"],
+      email: data["email"],
+      birthDate: data["birth_date"]?.toString(),
+
+      // 🔥 Burası çok önemli: Yukarıda hesapladığımız sonucu buraya veriyoruz
+      isEmailVerified: emailCheck,
+      isPhoneVerified: phoneCheck,
+
+      latitude: data["latitude"] != null ? double.tryParse(data["latitude"].toString()) : null,
+      longitude: data["longitude"] != null ? double.tryParse(data["longitude"].toString()) : null,
+      locationLat: location != null ? (location["lat"]?.toDouble()) : null,
+      locationLng: location != null ? (location["lng"]?.toDouble()) : null,
+      fcmToken: data["fcm_token"],
+      createdAt: data["created_at"],
+      updatedAt: data["updated_at"],
+      token: extractedToken,
+      statistics: statsJson != null ? UserStatistics.fromJson(statsJson) : null,
+    );
+  }
+
 
   Map<String, dynamic> toJson() => {
     "id": id,

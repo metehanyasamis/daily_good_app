@@ -1,171 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
-import 'package:http/http.dart' as http;
-import '../../../location/domain/address_state.dart';
-import '../../../stores/data/model/store_summary.dart';
-
-class StoreMarkerLayer extends StatefulWidget {
-  final AddressState address;
-  final List<StoreSummary> stores;
-  final void Function(StoreSummary store) onStoreSelected;
-  final VoidCallback onMapTap;
-
-  const StoreMarkerLayer({
-    super.key,
-    required this.address,
-    required this.stores,
-    required this.onStoreSelected,
-    required this.onMapTap,
-  });
-
-  @override
-  State<StoreMarkerLayer> createState() => _StoreMarkerLayerState();
-}
-
-class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
-  MapboxMap? _map;
-  CircleAnnotationManager? _circleManager;
-  PointAnnotationManager? _logoManager;
-
-  final Map<String, StoreSummary> _storeByCircleId = {};
-  final Set<String> _loadedBrandLogos = {};
-  String? _selectedStoreId;
-
-  // 1. ADIM: Katmanları kur ve tıklama dinleyicisini yeşil dairelere bağla
-  Future<void> _onStyleLoaded() async {
-    if (_map == null) return;
-
-    _circleManager = await _map!.annotations.createCircleAnnotationManager();
-    _logoManager = await _map!.annotations.createPointAnnotationManager();
-
-    _circleManager!.addOnCircleAnnotationClickListener(
-      _StoreCircleClickListener(
-        storeMap: _storeByCircleId,
-        onStoreSelected: (store) {
-          setState(() => _selectedStoreId = store.id);
-          widget.onStoreSelected(store);
-          _drawMarkers();
-        },
-      ),
-    );
-
-    _drawMarkers();
-  }
-
-  // 2. ADIM: Çizim - Daireler her zaman çizilir, logolar indikçe gelir
-  Future<void> _drawMarkers() async {
-    if (_map == null || _circleManager == null) return;
-
-    await _circleManager!.deleteAll();
-    await _logoManager?.deleteAll();
-    _storeByCircleId.clear();
-
-    // Mavi Konum Noktası
-    await _circleManager!.create(CircleAnnotationOptions(
-      geometry: Point(coordinates: Position(widget.address.lng, widget.address.lat)),
-      circleRadius: 10,
-      circleColor: Colors.blue.value,
-      circleStrokeWidth: 2,
-      circleStrokeColor: Colors.white.value,
-    ));
-
-    for (final store in widget.stores) {
-      if (store.latitude == null || store.longitude == null) continue;
-
-      final isSelected = store.id == _selectedStoreId;
-      final brandId = store.brand?.id;
-
-      // Yeşil Daire (Tıklanabilir Alan)
-      final circle = await _circleManager!.create(CircleAnnotationOptions(
-        geometry: Point(coordinates: Position(store.longitude!, store.latitude!)),
-        circleRadius: isSelected ? 12 : 9,
-        circleColor: isSelected ? Colors.green.shade900.value : Colors.green.value,
-        circleStrokeWidth: 2,
-        circleStrokeColor: Colors.white.value,
-      ));
-
-      _storeByCircleId[circle.id] = store;
-
-      // Eğer logo indiyse üzerine bas
-      if (brandId != null && _loadedBrandLogos.contains(brandId)) {
-        await _logoManager?.create(PointAnnotationOptions(
-          geometry: Point(coordinates: Position(store.longitude!, store.latitude!)),
-          iconImage: brandId,
-          iconSize: isSelected ? 0.8 : 0.6,
-        ));
-      } else if (brandId != null) {
-        // Logo inmemişse sıraya al
-        _downloadLogo(brandId, store.brand!.logoUrl);
-      }
-    }
-  }
-
-  // 3. ADIM: İndirme ve Register - Donmayı önlemek için optimizasyon
-  Future<void> _downloadLogo(String id, String url) async {
-    if (url.isEmpty || url.contains('localhost') || _loadedBrandLogos.contains(id)) return;
-
-    try {
-      final response = await http.get(Uri.parse(url), headers: {
-        'Authorization': 'Bearer 51|fXtTkmpiHAh4p0HYrnHMG17iZGnJu6nX3SFF2UZz63dadf7f',
-      });
-
-      if (response.statusCode == 200 && _map != null) {
-        // Loglardaki 'invalid size' hatasını önlemek için 3.0 scale ile ekliyoruz
-        await _map!.style.addStyleImage(
-            id,
-            3.0,
-            MbxImage(width: 100, height: 100, data: response.bodyBytes),
-            false, [], [], null
-        );
-
-        if (mounted) {
-          _loadedBrandLogos.add(id);
-          // 500 dükkan için optimizasyon: Her indirmede değil, müsait olunca çiz
-          WidgetsBinding.instance.addPostFrameCallback((_) => _drawMarkers());
-        }
-      }
-    } catch (e) {
-      debugPrint("Logo hatası: $id - $e");
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MapWidget(
-      styleUri: MapboxStyles.MAPBOX_STREETS,
-      onMapCreated: (map) => _map = map,
-      onStyleLoadedListener: (_) => _onStyleLoaded(),
-      onTapListener: (_) => widget.onMapTap(),
-      cameraOptions: CameraOptions(
-        center: Point(coordinates: Position(widget.address.lng, widget.address.lat)),
-        zoom: 14.0,
-      ),
-    );
-  }
-}
-
-class _StoreCircleClickListener implements OnCircleAnnotationClickListener {
-  final Map<String, StoreSummary> storeMap;
-  final void Function(StoreSummary store) onStoreSelected;
-  _StoreCircleClickListener({required this.storeMap, required this.onStoreSelected});
-  @override
-  bool onCircleAnnotationClick(CircleAnnotation annotation) {
-    final store = storeMap[annotation.id];
-    if (store != null) {
-      onStoreSelected(store);
-      return true;
-    }
-    return false;
-  }
-}
-
-///Github verisyonu gibi, mavi  ve yeşil pinler var
-/*
-import 'dart:typed_data';
-
-import 'package:flutter/material.dart';
-import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
-import 'package:http/http.dart' as http;
 
 import '../../../location/domain/address_state.dart';
 import '../../../stores/data/model/store_summary.dart';
@@ -191,10 +25,9 @@ class StoreMarkerLayer extends StatefulWidget {
 class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
   MapboxMap? _map;
   CircleAnnotationManager? _circleManager;
-  PointAnnotationManager? _logoManager;
 
+  // Mağaza verilerini ID ile eşleştirmek için tutuyoruz
   final Map<String, StoreSummary> _storeByCircleId = {};
-  final Set<String> _loadedBrandLogos = {};
   String? _selectedStoreId;
 
   Future<void> _onMapCreated(MapboxMap map) async {
@@ -204,8 +37,8 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
   Future<void> _onStyleLoaded() async {
     if (_map == null) return;
 
+    // Sadece CircleManager (Daireler için) yeterli, LogoManager'ı sildik.
     _circleManager = await _map!.annotations.createCircleAnnotationManager();
-    _logoManager = await _map!.annotations.createPointAnnotationManager();
 
     _circleManager!.addOnCircleAnnotationClickListener(
       _StoreCircleClickListener(
@@ -213,13 +46,13 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
         onStoreSelected: (store) async {
           setState(() => _selectedStoreId = store.id);
           await _moveCameraToStore(store);
-          _drawMarkers();
+          _drawMarkers(); // Seçili olanın boyutunu değiştirmek için tekrar çiz
           widget.onStoreSelected(store);
         },
       ),
     );
 
-    // 🔴 1. DOKUNUŞ: Harita açıldığında (Restart sonrası) kamerayı hedefe kilitle
+    // İlk açılışta kamera ayarı
     _map!.setCamera(CameraOptions(
       center: Point(coordinates: Position(widget.address.lng, widget.address.lat)),
       zoom: 14.0,
@@ -231,8 +64,8 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
   Future<void> _drawMarkers() async {
     if (_map == null || _circleManager == null) return;
 
+    // Eski markerları temizle
     await _circleManager!.deleteAll();
-    await _logoManager?.deleteAll();
     _storeByCircleId.clear();
 
     // 🔵 KULLANICI KONUMU
@@ -246,60 +79,28 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
       ),
     );
 
-    // 🟢 DÜKKANLAR
+    // 🟢 SADECE YEŞİL DÜKKAN PİNLERİ
     for (final store in widget.stores) {
       if (store.latitude == null || store.longitude == null) continue;
 
       final isSelected = store.id == _selectedStoreId;
-      final brandId = store.brand?.id;
 
       final circle = await _circleManager!.create(
         CircleAnnotationOptions(
           geometry: Point(coordinates: Position(store.longitude!, store.latitude!)),
-          circleRadius: isSelected ? 12 : 9,
+          circleRadius: isSelected ? 12 : 9, // Seçili olan biraz daha büyük
           circleColor: isSelected ? Colors.green.shade900.value : Colors.green.value,
           circleStrokeWidth: 2,
           circleStrokeColor: Colors.white.value,
         ),
       );
 
+      // Tıklanan dairenin hangi dükkan olduğunu bilmek için ID'yi sakla
       _storeByCircleId[circle.id] = store;
-
-      if (brandId != null && _loadedBrandLogos.contains(brandId)) {
-        await _logoManager?.create(
-          PointAnnotationOptions(
-            geometry: Point(coordinates: Position(store.longitude!, store.latitude!)),
-            iconImage: brandId,
-            iconSize: 0.6,
-          ),
-        );
-      } else if (brandId != null) {
-        _downloadAndRegisterImage(brandId, store.brand!.logoUrl);
-      }
     }
   }
 
-  Future<void> _downloadAndRegisterImage(String id, String url) async {
-    if (url.isEmpty || url.contains('localhost')) return;
-    try {
-      final response = await http.get(Uri.parse(url), headers: {
-        'Authorization': 'Bearer 51|fXtTkmpiHAh4p0HYrnHMG17iZGnJu6nX3SFF2UZz63dadf7f',
-      });
-
-      if (response.statusCode == 200) {
-        final Uint8List bytes = response.bodyBytes;
-        if (_map == null) return;
-        await _map!.style.addStyleImage(id, 3.0, MbxImage(width: 100, height: 100, data: bytes), false, [], [], null);
-        if (mounted) {
-          _loadedBrandLogos.add(id);
-          WidgetsBinding.instance.addPostFrameCallback((_) => _drawMarkers());
-        }
-      }
-    } catch (e) {
-      debugPrint("❌ Logo hatası: $e");
-    }
-  }
-
+  // Kamera hareketi
   Future<void> _moveCameraToStore(StoreSummary store) async {
     await _map?.flyTo(
       CameraOptions(center: Point(coordinates: Position(store.longitude!, store.latitude!)), zoom: 16.0),
@@ -310,13 +111,16 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
   @override
   void didUpdateWidget(covariant StoreMarkerLayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 🔴 2. DOKUNUŞ: Restart sonrası adres değişirse kamerayı oraya zorla uçur
+
+    // Adres değişirse kamerayı güncelle
     if (widget.address.lat != oldWidget.address.lat || widget.address.lng != oldWidget.address.lng) {
       _map?.setCamera(CameraOptions(
         center: Point(coordinates: Position(widget.address.lng, widget.address.lat)),
         zoom: 14.0,
       ));
     }
+
+    // Mağazalar veya adres değişirse markerları yeniden çiz
     if (widget.stores != oldWidget.stores || widget.address != oldWidget.address) {
       _drawMarkers();
     }
@@ -329,7 +133,6 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
       onMapCreated: _onMapCreated,
       onStyleLoadedListener: (_) => _onStyleLoaded(),
       onTapListener: (_) => widget.onMapTap(),
-      // 🔴 3. DOKUNUŞ: Harita henüz çizilirken Amerika'ya bakmasın
       cameraOptions: CameraOptions(
         center: Point(coordinates: Position(widget.address.lng, widget.address.lat)),
         zoom: 14.0,
@@ -338,10 +141,12 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
   }
 }
 
+// Tıklama Dinleyicisi
 class _StoreCircleClickListener implements OnCircleAnnotationClickListener {
   final Map<String, StoreSummary> storeMap;
   final void Function(StoreSummary store) onStoreSelected;
   _StoreCircleClickListener({required this.storeMap, required this.onStoreSelected});
+
   @override
   bool onCircleAnnotationClick(CircleAnnotation annotation) {
     final store = storeMap[annotation.id];
@@ -352,10 +157,6 @@ class _StoreCircleClickListener implements OnCircleAnnotationClickListener {
     return false;
   }
 }
-
- */
-
-
 
 /*
 import 'dart:ui' as ui;

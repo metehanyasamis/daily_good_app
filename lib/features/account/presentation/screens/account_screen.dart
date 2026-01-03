@@ -322,13 +322,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     leading: const Icon(Icons.gavel_outlined),
                     title: const Text("Yasal Bilgiler"),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      debugPrint("🔍 [AccountScreen] Yasal Bilgiler'e tıklandı.");
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LegalDocumentsScreen()),
-                      );
-                    },
+                    onTap: () => context.pushNamed('legal_docs'),
                   ),
                   ListTile(
                     leading: const Icon(Icons.mail_outline),

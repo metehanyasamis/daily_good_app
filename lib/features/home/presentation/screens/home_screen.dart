@@ -8,11 +8,13 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../../core/widgets/floating_order_button.dart';
 
+import '../../../account/domain/providers/user_notifier.dart';
 import '../../../category/domain/category_notifier.dart';
 import '../../../explore/presentation/widgets/explore_filter_sheet.dart';
 import '../../../location/domain/address_notifier.dart';
 
 import '../../../notification/domain/providers/notification_provider.dart';
+import '../../../orders/domain/providers/order_provider.dart';
 import '../data/models/home_state.dart';
 import '../domain/providers/home_state_provider.dart';
 
@@ -41,28 +43,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
 
-    Future.microtask(() {
-      debugPrint("🏠 [HOME] initState");
+    Future.microtask(() async {
+      debugPrint("🏠 [HOME] Veriler Tazeleniyor...");
 
-      // 1️⃣ Category load (auth gerekmiyor)
+      // 🎯 loadUser'ı bekle (await koyarsak veri gelene kadar banner beklemede kalır)
+      await ref.read(userNotifierProvider.notifier).loadUser();
+
+      // Diğerlerini de sırayla veya beraber yükle
       ref.read(categoryProvider.notifier).load();
 
-      // 2️⃣ Address kontrol
+      // 🎯 Siparişleri de tazele!
+      ref.invalidate(orderHistoryProvider);
+
       final address = ref.read(addressProvider);
-      debugPrint("📍 [HOME] address.isSelected = ${address.isSelected}");
-
-      if (!address.isSelected) {
-        debugPrint("⛔ [HOME] Konum seçilmedi → home load yok");
-        return;
+      if (address.isSelected) {
+        ref.read(homeStateProvider.notifier).loadHome(
+          latitude: address.lat,
+          longitude: address.lng,
+        );
       }
-
-      // 3️⃣ HOME TEK ÇAĞRI
-      ref.read(homeStateProvider.notifier).loadHome(
-        latitude: address.lat,
-        longitude: address.lng,
-      );
-
-      _updateNotificationToken();
     });
   }
 
@@ -115,6 +114,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       "🏠 [HOME BUILD] sections="
           "${homeState.sectionProducts.map((k,v)=>MapEntry(k.name,v.length))}",
     );
+
+    final bool isHome = GoRouterState.of(context).uri.toString() == '/home' ||
+        GoRouterState.of(context).uri.toString() == '/';
+
 
     // 🔥 KONUM DEĞİŞTİĞİNDE VERİLERİ YENİLE
     ref.listen(addressProvider, (previous, next) {
@@ -236,9 +239,21 @@ class HomeContent extends ConsumerWidget {
     final yarin =
         homeState.sectionProducts[HomeSection.yarin] ?? const [];
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: kBottomNavigationBarHeight + 24),
-      children: [
+    return RefreshIndicator(
+      onRefresh: () async {
+        final address = ref.read(addressProvider);
+        if (address.isSelected) {
+          await ref.read(homeStateProvider.notifier).loadHome(
+            latitude: address.lat,
+            longitude: address.lng,
+            forceRefresh: true, // ✨ Bu sayede 30sn kuralına takılmaz
+          );
+        }
+      },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(), // Liste boş olsa da çekmeyi sağlar
+          padding: const EdgeInsets.only(bottom: kBottomNavigationBarHeight + 24),
+          children: [
         const HomeEmailWarningBanner(),
 
         if (hemenYaninda.isNotEmpty) ...[
@@ -268,9 +283,8 @@ class HomeContent extends ConsumerWidget {
 
         const SizedBox(height: 32),
       ],
+    ),
     );
-
-
   }
 
   Widget _buildSectionHeader(BuildContext context, String title, ExploreFilterOption filter) {

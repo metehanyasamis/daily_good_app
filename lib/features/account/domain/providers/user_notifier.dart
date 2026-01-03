@@ -57,29 +57,70 @@ class UserNotifier extends StateNotifier<UserState> {
     debugPrint("🧹 [USER] clearUser");
   }
 
+
   // Kullanıcı bilgilerini backend'den tazele
+
+/*
   Future<void> loadUser({bool forceRefresh = true}) async {
     try {
-      state = const UserState.loading();
+      // Eğer veri zaten varsa (örneğin Home'a geri dönüldüyse)
+      // kullanıcıyı kaybetmemek için state'i sıfırlamıyoruz.
+      if (state.user == null) {
+        state = const UserState.loading();
+      }
 
-      // 1. Doğrulama bilgilerini al (/auth/me)
-      final meUser = await repository.fetchMe();
+      // 🎯 KRİTİK: İki isteği de aynı anda başlat ve ikisi de bitene kadar bekle.
+      // results[0] -> fetchMe, results[1] -> fetchUser
+      final results = await Future.wait([
+        repository.fetchMe(),
+        repository.fetchUser(),
+      ]);
 
-      // 2. İstatistikleri al (/customer/profile)
-      final profileUser = await repository.fetchUser();
+      final meUser = results[0];
+      final profileUser = results[1];
 
-      // 3. İkisini harmanla: Me'deki tam verilere, profile'daki istatistikleri ekle
+      // İki veri de elimizde olduğuna göre artık tek bir state güncellemesi yapabiliriz.
+      // Bu sayede "önce yeşil sonra turuncu" olma durumu yaşanmaz.
       final finalUser = meUser.copyWith(
+        isEmailVerified: profileUser.isEmailVerified, // Doğru bilgi profile'dan
+        isPhoneVerified: meUser.isPhoneVerified,
         statistics: profileUser.statistics,
       );
 
       state = UserState.ready(finalUser);
-      debugPrint("🔄 [USER] loadUser (Me + Profile Merged) → OK");
+      debugPrint("🔄 [USER] loadUser - Tek seferde ve doğru birleşti.");
     } catch (e) {
       state = UserState.error(e.toString());
       debugPrint("❌ [USER] loadUser ERROR → $e");
     }
   }
+
+ */
+
+  Future<void> loadUser({bool forceRefresh = true}) async {
+    try {
+      if (state.user == null) state = const UserState.loading();
+
+      final results = await Future.wait([
+        repository.fetchMe(),
+        repository.fetchUser(),
+      ]);
+
+      final meUser = results[0];
+      final profileUser = results[1];
+
+      final finalUser = meUser.copyWith(
+        isEmailVerified: profileUser.isEmailVerified, // 🎯 Sadece dürüst olana güven
+        isPhoneVerified: meUser.isPhoneVerified,
+        statistics: profileUser.statistics,
+      );
+
+      state = UserState.ready(finalUser);
+    } catch (e) {
+      state = UserState.error(e.toString());
+    }
+  }
+
 
   // ------------------------------------------------------------------
   // TEK VE ANA GÜNCELLEME METODU (Düzeltilmiş Versiyon)
@@ -168,29 +209,44 @@ class UserNotifier extends StateNotifier<UserState> {
     debugPrint("🚀 [EMAIL_VERIFY] İşlem Başladı. Email: $email, Kod: $otp");
 
     try {
-      // 1. Adım: Kodu gönder ve backend'e "onayla" de
+      // 1. ADIM: Kodu backend'e gönder.
+      // Eğer backend hata verirse direkt catch bloğuna düşer, aşağıdaki isEmailVerified: true çalışmaz.
+      // Bu bizim en büyük güvenlik filtremiz.
       debugPrint("📡 [EMAIL_VERIFY] verifyEmailOtpCode isteği atılıyor...");
       await repository.verifyEmailOtpCode(email, otp);
-      debugPrint("✅ [EMAIL_VERIFY] Kod backend tarafından onaylandı.");
+      debugPrint("✅ [EMAIL_VERIFY] Backend 'Kod Doğru' onayı verdi.");
 
-      // 2. Adım: Güncel veriyi çek (fetchMe ile tam kimlik verisini alıyoruz)
-      debugPrint("🔄 [EMAIL_VERIFY] Güncel kullanıcı verisi /me üzerinden çekiliyor...");
+      // 2. ADIM: Backend'e veritabanını güncellemesi için çok kısa bir nefes payı ver (Opsiyonel)
+      // Bu, /me isteğinin daha güncel gelme şansını artırır.
+      await Future.delayed(const Duration(seconds: 1));
+
+      // 3. ADIM: Güncel veriyi çek
+      debugPrint("🔄 [EMAIL_VERIFY] Güncel kullanıcı verisi çekiliyor...");
       final updatedUser = await repository.fetchMe();
 
-      // 3. Adım: Gelen veriyi kontrol et (Senin modelindeki değişkenler)
-      // UserModel'inde emailVerifiedAt yok, direkt isEmailVerified'ı logluyoruz:
-      debugPrint("🔍 [EMAIL_VERIFY] Model isEmailVerified sonucu: ${updatedUser.isEmailVerified}");
+      // 4. ADIM: State'i güncelle
+      // Backend başarılı dediği için 'isEmailVerified'ı burada true set ediyoruz.
+      // Böylece backend hantal kalsa bile banner anında kaybolur.
+      state = UserState.ready(updatedUser.copyWith(
+        statistics: state.user?.statistics, // Profil istatistiklerini kaybetme
+        isEmailVerified: true,              // Backend onay verdiği için güvenle true yapıyoruz
+      ));
 
-      // 4. Adım: State'i yeni kullanıcı verisiyle güncelle
-      state = UserState.ready(updatedUser);
-      debugPrint("🏁 [EMAIL_VERIFY] State güncellendi, işlem başarılı.");
+      // 5. ADIM: Tüm sistemi (Hibrit yapıyı) arka planda eşitle
+      // Bu, /profile tarafını da tazeleyerek her yerin senkron olmasını sağlar.
+      loadUser();
 
+      debugPrint("🏁 [EMAIL_VERIFY] İşlem başarıyla tamamlandı.");
       return true;
+
     } catch (e) {
-      debugPrint("❌ [EMAIL_VERIFY] HATA OLUŞTU: $e");
+      // Eğer backend hata döndürürse (yanlış otp vb.) buraya gelir.
+      // Arayüz asla 'Doğrulandı'ya dönmez.
+      debugPrint("❌ [EMAIL_VERIFY] HATA: $e");
       return false;
     }
   }
+
 
   // Diğer işlemler
   Future<void> updatePhone(String phone) async {

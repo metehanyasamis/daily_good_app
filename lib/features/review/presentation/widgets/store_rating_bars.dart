@@ -22,6 +22,7 @@ class StoreRatingBars extends StatelessWidget {
     this.showHeader = true,
   });
 
+
   @override
   Widget build(BuildContext context) {
     final ratingMap = {
@@ -31,37 +32,43 @@ class StoreRatingBars extends StatelessWidget {
       "Ürün Çeşitliliği": ratings.productVariety,
     };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (showHeader) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // 🏷️ SOL TARAF: Başlık ve İkon (Birbirine yakın)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    "İşletme Değerlendirme",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(width: 4), // Artık bu boşluk ne dersen o olur
-                  GestureDetector(
-                    onTap: () => showRatingInfoDialog(context),
-                    child: const Icon(
-                        Icons.info_outline,
-                        size: 18,
-                        color: Colors.grey
+    // 🔥 TÜM KOLONU INKWELL İLE SARMALIYORUZ
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      highlightColor: Colors.transparent, // İstersen tıklama efektini özelleştirebilirsin
+      splashColor: AppColors.primaryDarkGreen.withOpacity(0.05),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showHeader) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // 🏷️ SOL TARAF: Başlık ve İkon
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "İşletme Değerlendirme",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      // ℹ️ Bilgi diyaloğu hala çalışır, InkWell ile çakışmaz
+                      onTap: () => showRatingInfoDialog(context),
+                      child: const Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: Colors.grey
+                      ),
+                    ),
+                  ],
+                ),
 
-              // ⭐ SAĞ TARAF: Puan ve (varsa) Ok
-              InkWell(
-                onTap: onTap,
-                child: Row(
+                // ⭐ SAĞ TARAF: Puan ve Ok
+                // Buradaki InkWell'i sildik çünkü dışarıya aldık
+                Row(
                   children: [
                     const Icon(Icons.star, color: AppColors.primaryDarkGreen, size: 18),
                     const SizedBox(width: 2),
@@ -73,16 +80,17 @@ class StoreRatingBars extends StatelessWidget {
                       const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
                   ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+          // 📊 Barlar
+          ...ratingMap.entries.map((entry) => _buildProgressBar(entry.key, entry.value)),
         ],
-        // 📊 Barlar
-        ...ratingMap.entries.map((entry) => _buildProgressBar(entry.key, entry.value)),
-      ],
+      ),
     );
   }
+
 
   Widget _buildProgressBar(String label, double value) {
     return Padding(

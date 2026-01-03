@@ -108,15 +108,20 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         ),
       
         // 🔥 ESKİ VE DOĞRU CTA BURAYA
-        bottomNavigationBar: SafeArea(
-          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: CustomButton(
-            text: _isProcessing ? 'İşlem yapılıyor...' : 'Ödemeyi Tamamla',
-            price: totalAmount,
-            showPrice: true,
-            onPressed: _isProcessing
-                ? () {}
-                : () => _onPayPressed(context, cartItems, totalAmount),
+        bottomNavigationBar: Container(
+          child: SafeArea(
+            child: Padding(
+              // Sadece yatayda 16, altta 8-12 arası ekstra bir boşluk yeterli olacaktır
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: CustomButton(
+                text: _isProcessing ? 'İşlem yapılıyor...' : 'Ödemeyi Tamamla',
+                price: totalAmount,
+                showPrice: true,
+                onPressed: _isProcessing
+                    ? () {}
+                    : () => _onPayPressed(context, cartItems, totalAmount),
+              ),
+            ),
           ),
         ),
       

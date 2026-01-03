@@ -11,82 +11,30 @@ class AuthRepository {
   // ✅ Dio'yu dışarıdan (provider'dan) alıyoruz
   AuthRepository(this._dio);
 
+
   Future<bool> sendOtp(String phone, {required String purpose}) async {
     try {
       final response = await _dio.post('/customer/auth/send-otp', data: {
         'phone': phone,
         'purpose': purpose,
       });
+
+      // 💡 KRİTİK NOKTA: Backend 200 dönse bile success false ise hata fırlat
+      if (response.data['success'] == false) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          type: DioExceptionType.badResponse,
+        );
+      }
+
       return response.data['success'] == true;
-    } on DioException catch (e) {
-      rethrow;
     } catch (e) {
+      // Hatayı Notifier yakalasın diye olduğu gibi yukarı atıyoruz
       rethrow;
     }
   }
 
-  /*
-  Future<UserModel?> verifyOtp(String phone, String code) async {
-    try {
-      final res = await _dio.post("/customer/auth/verify-otp", data: {
-        "phone": phone,
-        "code": code,
-      });
-
-      if (res.data["success"] == true) {
-        final dynamic body = res.data["data"] ?? res.data;
-
-        debugPrint("🔍 [OTP_RAW_DATA]: $body");
-
-        final String? token = body["token"];
-        final Map<String, dynamic>? userJson = body["customer"] ?? body["user"];
-
-        if (userJson != null) {
-          debugPrint("📱 [PHONE_STATUS_IN_JSON]: ${userJson['phone_verified_at']}");
-          UserModel user = UserModel.fromJson(userJson).copyWith(token: token);
-          if (token != null) {
-            await PrefsService.saveToken(token);
-            _dio.options.headers["Authorization"] = "Bearer $token";
-          }
-          return user;
-        } else {
-          return UserModel(id: "", phone: body["phone"] ?? phone, token: null);
-        }
-      }
-      return null;
-    } catch (e) {
-      debugPrint("💥 verifyOtp Hata: $e");
-      return null;
-    }
-  }
-
-  Future<UserModel?> login(String phone, String code) async {
-    try {
-      final res = await _dio.post("/customer/auth/login", data: {
-        "phone": phone,
-        "code": code,
-      });
-
-      final data = res.data["data"];
-      final token = data["token"];
-      final customerJson = data["customer"];
-
-      UserModel user = UserModel.fromJson(customerJson).copyWith(token: token);
-
-      if (token != null && token.isNotEmpty) {
-        await PrefsService.saveToken(token);
-        _dio.options.headers["Authorization"] = "Bearer $token";
-      }
-      return user;
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 404) return null;
-      rethrow;
-    }
-  }
-
-   */
-
-  // features/auth/data/repositories/auth_repository.dart
 
   Future<UserModel?> verifyOtp(String phone, String code) async {
     try {
@@ -96,73 +44,47 @@ class AuthRepository {
         "code": code,
       });
 
-      if (res.data["success"] == true) {
-        final dynamic rawData = res.data["data"];
-        debugPrint("📥 [REPO-RAW]: $rawData");
-
-        // Dökümana göre token ve customer data'nın içinde
-        final String? token = rawData["token"];
-        final Map<String, dynamic>? customerJson = rawData["customer"];
-
-        if (customerJson != null) {
-          debugPrint("✅ [REPO] Kullanıcı detayları bulundu: ${customerJson['first_name']}");
-
-          // UserModel.fromJson artık customer datasını alıyor
-          UserModel user = UserModel.fromJson(customerJson).copyWith(token: token);
-
-          if (token != null && token.isNotEmpty) {
-            await PrefsService.saveToken(token);
-            _dio.options.headers["Authorization"] = "Bearer $token";
-            debugPrint("🔑 [REPO] Token kaydedildi.");
-          }
-          return user;
-        } else {
-          // 🚨 KRİTİK: Eğer customer yoksa sadece telefonla boş model dönüyoruz
-          debugPrint("⚠️ [REPO] Customer objesi gelmedi, sadece telefon var.");
-          return UserModel(id: "", phone: rawData["phone"] ?? phone, token: token);
-        }
+      // 💡 ÖNEMLİ: Backend 200 dönse bile success false ise manuel hata fırlat
+      if (res.data["success"] == false) {
+        throw DioException(
+          requestOptions: res.requestOptions,
+          response: res,
+          type: DioExceptionType.badResponse,
+        );
       }
-      return null;
-    } catch (e) {
-      debugPrint("💥 [REPO] verifyOtp Hata: $e");
-      return null;
-    }
-  }
 
-  /*
-  Future<UserModel?> login(String phone, String code) async {
-    try {
-      debugPrint("📡 [REPO] login isteği atılıyor...");
-      final res = await _dio.post("/customer/auth/login", data: {
-        "phone": phone,
-        "code": code,
-      });
+      final dynamic rawData = res.data["data"];
+      debugPrint("📥 [REPO-RAW]: $rawData");
 
-      // Backend dökümanına göre: { success: true, data: { token: "...", customer: { ... } } }
-      final data = res.data["data"];
-      final token = data["token"];
-      final customerJson = data["customer"];
+      final String? token = rawData["token"];
+      final Map<String, dynamic>? customerJson = rawData["customer"];
 
-      debugPrint("📥 [REPO-LOGIN] Customer: $customerJson");
+      // Token varsa kaydet ve header'a ekle
+      if (token != null && token.isNotEmpty) {
+        await PrefsService.saveToken(token);
+        _dio.options.headers["Authorization"] = "Bearer $token";
+        debugPrint("🔑 [REPO] Token kaydedildi.");
+      }
 
       if (customerJson != null) {
-        UserModel user = UserModel.fromJson(customerJson).copyWith(token: token);
-
-        if (token != null && token.isNotEmpty) {
-          await PrefsService.saveToken(token);
-          _dio.options.headers["Authorization"] = "Bearer $token";
-        }
-        return user;
+        debugPrint("✅ [REPO] Kullanıcı detayları bulundu.");
+        return UserModel.fromJson(customerJson).copyWith(token: token);
+      } else {
+        debugPrint("⚠️ [REPO] Customer objesi yok, temel model dönülüyor.");
+        return UserModel(id: "", phone: rawData["phone"] ?? phone, token: token);
       }
-      return null;
+
     } on DioException catch (e) {
-      debugPrint("❌ [REPO-LOGIN] Dio Hatası: ${e.response?.statusCode}");
-      if (e.response?.statusCode == 404) return null;
+      // 🎯 HATA BURADA: Hatayı yakalayıp return null DEMİYORUZ, rethrow yapıyoruz.
+      // Böylece AuthNotifier bu hatayı yakalayıp içindeki mesajı okuyabilir.
+      debugPrint("❌ [REPO-OTP-ERROR] Dio Hatası: ${e.response?.statusCode}");
+      rethrow;
+    } catch (e) {
+      debugPrint("💥 [REPO-OTP-FATAL] Beklenmedik Hata: $e");
       rethrow;
     }
   }
 
-   */
 
 
   Future<UserModel?> login(String phone, String code) async {
@@ -173,15 +95,18 @@ class AuthRepository {
         "code": code,
       });
 
-      // 1. KONTROL: Response veya response.data null mı?
-      if (res.data == null || res.data["data"] == null) {
-        debugPrint("⚠️ [REPO-LOGIN] Sunucudan boş veya hatalı veri geldi.");
-        return null;
+      // 1. KONTROL: Backend success: false döndüyse hata fırlat
+      if (res.data["success"] == false) {
+        throw DioException(
+          requestOptions: res.requestOptions,
+          response: res,
+          type: DioExceptionType.badResponse,
+        );
       }
 
       final data = res.data["data"];
+      if (data == null) return null;
 
-      // 2. KONTROL: Token ve customerJson var mı?
       final token = data["token"];
       final customerJson = data["customer"];
 
@@ -197,18 +122,12 @@ class AuthRepository {
       }
       return null;
     } on DioException catch (e) {
-      // 3. KONTROL: 404 veya diğer hata kodlarını burada yakala
+      // 🎯 Hata mesajını Notifier yakalasın diye yukarı fırlatıyoruz
       debugPrint("❌ [REPO-LOGIN] Dio Hatası: ${e.response?.statusCode}");
-      debugPrint("💬 [REPO-LOGIN] Hata Mesajı: ${e.response?.data?['message']}");
-
-      if (e.response?.statusCode == 404) {
-        // Kullanıcı bulunamadı veya yanlış endpoint
-        return null;
-      }
       rethrow;
     } catch (e) {
       debugPrint("💥 [REPO-LOGIN] Beklenmedik Hata: $e");
-      return null;
+      rethrow;
     }
   }
 
@@ -235,20 +154,7 @@ class AuthRepository {
     }
   }
 
-  /*
-  Future<UserModel?> me() async {
-    try {
-      final token = await PrefsService.readToken();
-      if (token == null) return null;
-      _dio.options.headers["Authorization"] = "Bearer $token";
-      final res = await _dio.get("/customer/auth/me");
-      return UserModel.fromJson(res.data["data"]);
-    } catch (_) {
-      return null;
-    }
-  }
 
-   */
   Future<UserModel> registerUser(UserModel user) async {
     try {
       final data = {

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/image_utils.dart';
+import '../../../../core/widgets/contract_html_content.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 
@@ -137,36 +138,38 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
         bottomNavigationBar: items.isEmpty
             ? null
-            : Padding(
-          padding: const EdgeInsets.all(16),
-          child: CustomButton(
-            text: "Sepeti Onayla",
-            price: total,
-            showPrice: true,
-            onPressed: () {
-              if (!_isAgreed) {
-                // 🔔 Kullanıcıya uyarıyı burada çakıyoruz
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Devam etmek için sözleşmeleri onaylamalısınız."),
-                    backgroundColor: Colors.redAccent,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                return; // Fonksiyondan çık, ödeme sayfasına gitme
-              }
+            : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: CustomButton(
+              text: "Sepeti Onayla",
+              price: total,
+              showPrice: true,
+              onPressed: () {
+                if (!_isAgreed) {
+                  // 🔔 Kullanıcıya uyarıyı burada çakıyoruz
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Devam etmek için sözleşmeleri onaylamalısınız."),
+                      backgroundColor: Colors.redAccent,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  return; // Fonksiyondan çık, ödeme sayfasına gitme
+                }
 
-              // Tik varsa ödemeye devam et
-              context.push(
-                '/payment',
-                extra: {
-                  'total': total,
-                  'note': _noteController.text,
+                // Tik varsa ödemeye devam et
+                context.push(
+                  '/payment',
+                  extra: {
+                    'total': total,
+                    'note': _noteController.text,
+                  },
+                );
                 },
-              );
-              },
-          ),
-        ),
+                        ),
+                      ),
+            ),
       ),
     );
   }
@@ -247,38 +250,46 @@ class _ContractCheckbox extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                ],
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
               ),
-            ),
-            const Divider(height: 1),
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                // İleride 'flutter_widget_from_html' eklerseniz burayı HtmlWidget ile değiştirin
-                child: Text(
-                  htmlContent.replaceAll(RegExp(r'<[^>]*>'), ''), // Basit HTML temizleme
-                  style: const TextStyle(fontSize: 14, height: 1.5),
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const Divider(height: 1),
+              // Dinamik İçerik
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController, // Sheet ile senkronize kaydırma
+                  padding: const EdgeInsets.all(20),
+                  child: ContractHtmlContent(htmlContent: htmlContent),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

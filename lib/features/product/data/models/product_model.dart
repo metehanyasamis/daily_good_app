@@ -123,10 +123,60 @@ class ProductModel {
   }
 
   String get deliveryTimeLabel {
-    if (startHour == "00:00" || endHour == "00:00") {
-      return "Teslimat saati belirtilmedi";
+    // 1. Güvenlik Kontrolü: Saatler yoksa direkt çık
+    if (startHour == null || endHour == null) return "Teslimat saati belirtilmedi";
+
+    // Saatleri temizle (12:59:00 -> 12:59)
+    final sH = startHour!.length > 5 ? startHour!.substring(0, 5) : startHour;
+    final eH = endHour!.length > 5 ? endHour!.substring(0, 5) : endHour;
+
+    // 2. Tarih Kontrolü
+    if (startDate == null) {
+      return "Bugün teslim al: $sH - $eH";
     }
-    return "Bugün teslim al: $startHour - $endHour";
+
+    try {
+      final now = DateTime.now();
+      // Saat, dakika, saniyeyi sıfırlayarak sadece "gün" karşılaştırması yapıyoruz
+      final today = DateTime(now.year, now.month, now.day);
+      final deliveryDateRaw = DateTime.parse(startDate!);
+      final deliveryDate = DateTime(deliveryDateRaw.year, deliveryDateRaw.month, deliveryDateRaw.day);
+
+      // Gün farkını net hesapla
+      final diffInDays = deliveryDate.difference(today).inDays;
+
+      String dayLabel;
+      if (diffInDays == 0) {
+        dayLabel = "Bugün";
+      } else if (diffInDays == 1) {
+        dayLabel = "Yarın";
+      } else if (diffInDays > 1 && diffInDays < 7) {
+        // Eğer 1 haftadan azsa (Örn: Çarşamba) - Opsiyonel, istemezsen direkt tarihe geç
+        dayLabel = _getDayName(deliveryDate.weekday);
+      } else {
+        // 1 haftadan uzaksa direkt tarih
+        dayLabel = "${deliveryDate.day.toString().padLeft(2, '0')}.${deliveryDate.month.toString().padLeft(2, '0')}";
+      }
+
+      return "$dayLabel teslim al: $sH - $eH";
+    } catch (e) {
+      // Parse hatası olursa fallback
+      return "Bugün teslim al: $sH - $eH";
+    }
+  }
+
+// Yardımcı metod (Modelin içine veya utils'e atabilirsin)
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1: return "Pazartesi";
+      case 2: return "Salı";
+      case 3: return "Çarşamba";
+      case 4: return "Perşembe";
+      case 5: return "Cuma";
+      case 6: return "Cumartesi";
+      case 7: return "Pazar";
+      default: return "";
+    }
   }
 }
 

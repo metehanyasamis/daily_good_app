@@ -311,12 +311,14 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
           CustomToggleButton(
             label: "Harita",
             icon: Icons.map_outlined,
-            onPressed: () {
+            /*onPressed: () {
               setState(() {
                 hataVarmisGibiYap = true; // Ekranın yeniden çizilmesini tetikler ve build'deki throw çalışır
               });
             },
-            //onPressed: () => context.push('/explore-map'),
+
+             */
+            onPressed: () => context.push('/explore-map'),
           ),
         ],
       ),

@@ -102,16 +102,6 @@ class MiniStoreCard extends StatelessWidget {
 
                     const SizedBox(height: 3),
 
-                    // SUBTEXT (eski hissi koruyoruz)
-                    Text(
-                      'Bugün teslim al',
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                        height: 1.1,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
                   ],
                 ),
               ),

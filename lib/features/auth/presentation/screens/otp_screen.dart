@@ -68,15 +68,11 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
 
     final auth = ref.read(authNotifierProvider.notifier);
 
-    // 🔥 ÖNEMLİ: Yeniden gönderirken de amacı belirtmeliyiz
-    final String currentPurpose = widget.isLogin ? "login" : "register";
-
     // Notifier'daki sendOtp artık purpose beklediği için bunu ekliyoruz
     await ref.read(authNotifierProvider.notifier).sendOtp(
       phone: widget.phone,
       purpose: widget.isLogin ? 'login' : 'register',
     );
-
 
     setState(() {
       _seconds = 120;
@@ -88,9 +84,8 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
     _startTimer();
   }
 
-
-// ---------------------------------------------------------------------------
-  // SUBMIT (Güncellenmiş Versiyon)
+  // ---------------------------------------------------------------------------
+  // SUBMIT
   // ---------------------------------------------------------------------------
   Future<void> _submit() async {
     debugPrint("🔘 [UI-OTP] Doğrula butonuna basıldı. Amaç: ${widget.isLogin ? 'Giriş' : 'Kayıt'}");
@@ -103,13 +98,10 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
       final auth = ref.read(authNotifierProvider.notifier);
       final userNotif = ref.read(userNotifierProvider.notifier);
 
-      // 🔥 İŞTE ÇÖZÜM BURASI:
-      // widget.isLogin değerini isLogin parametresine gönderiyoruz.
-      // widget.isLogin false ise (register ise), verifyOtpModel gidip repo.verifyOtp'yi çalıştıracak.
       final userModel = await auth.verifyOtpModel(
         widget.phone,
         code,
-        isLogin: widget.isLogin, // 👈 Bunu mutlaka ekle!
+        isLogin: widget.isLogin,
       );
 
       if (userModel != null) {
@@ -118,13 +110,14 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
 
         if (!mounted) return;
 
-        // Yönlendirme mantığı:
         if (widget.isLogin) {
           debugPrint("🚢 [UI-OTP] Giriş başarılı, ana sayfaya...");
           context.go("/home");
         } else {
-          debugPrint("🚢 [UI-OTP] Kayıt başarılı, profil detayına...");
-          context.go("/profileDetail");
+          debugPrint("🚢 [UI-OTP] Kayıt başarılı, profil detayına (isFromRegister: true) ile gidiliyor...");
+
+          // 🔥 TEK DEĞİŞİKLİK BURASI: extra ekledik
+          context.go("/profileDetail", extra: true);
         }
       } else {
         debugPrint("🚨 [UI-OTP] İşlem başarısız (User null), hata gösteriliyor.");
@@ -136,12 +129,10 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
     }
   }
 
-
   // ---------------------------------------------------------------------------
   // ERROR
   // ---------------------------------------------------------------------------
   void _handleError() {
-    // 💡 1. DÜZELTME: İlk setState çağrısından önce kontrol ekle.
     if (!mounted) return;
 
     setState(() {
@@ -150,9 +141,7 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
     });
 
     Future.delayed(const Duration(milliseconds: 1200), () {
-      // 💡 2. DÜZELTME: Delayed çağrı içindeki setState'den önce kontrol ekle.
       if (!mounted) return;
-
       setState(() => _error = false);
     });
 
@@ -205,7 +194,6 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
               ),
               const SizedBox(height: 24),
 
-              // -------------------- OTP INPUT --------------------
               Pinput(
                 length: 6,
                 controller: _pin,
@@ -231,7 +219,6 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
 
               const SizedBox(height: 24),
 
-              // -------------------- TIMER --------------------
               _seconds > 0
                   ? Text(
                 "${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')} içinde tekrar gönderebilirsin",
@@ -250,7 +237,6 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
 
               const SizedBox(height: 24),
 
-              // -------------------- BUTTON --------------------
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -282,7 +268,6 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 8),
             ],
           ),
