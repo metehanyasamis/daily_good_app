@@ -164,6 +164,4 @@ class PrefsService {
       isSelected: selected,
     );
   }
-
-
 }

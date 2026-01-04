@@ -20,7 +20,7 @@ class StoreDetailsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final products = storeDetail.products ?? [];
+    final products = storeDetail.products;
     final ratings = storeDetail.averageRatings;
 
     return Padding(
@@ -120,7 +120,7 @@ class StoreDetailsContent extends StatelessWidget {
               errorBuilder: (_, __, ___) => Image.asset('assets/images/sample_food3.jpg'),
             ),
           ),
-          title: Text(product.name ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(product.name , style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text("Teslimat: ${product.startHour} - ${product.endHour}", style: const TextStyle(fontSize: 12)),
           trailing: _priceRow(product),
         ),
@@ -158,7 +158,7 @@ class StoreDetailsContent extends StatelessWidget {
         children: [
           _infoRow(Icons.timer_outlined, "${storeDetail.struggleYears}+ yıldır israfla mücadelede"),
           const SizedBox(height: 16),
-          _infoRow(Icons.shopping_basket_outlined, "${storeDetail.totalReviews ?? 0}+ yemek kurtarıldı"),
+          _infoRow(Icons.shopping_basket_outlined, "${storeDetail.totalReviews }+ yemek kurtarıldı"),
           const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Divider(height: 1, color: Color(0xFFF1F1F1))),
           if (ratings != null)
             StoreRatingBars(

@@ -139,12 +139,15 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                 if (!isVerified)
                   TextButton(
                     onPressed: () async {
+                      print("1. Butona basıldı. Email: ${user.email}"); // Buton çalışıyor mu?
                       try {
                         // 1. Önce e-posta kodunu gönderiyoruz
+                        print("2. sendEmailVerification çağrılıyor...");
                         await ref.read(userNotifierProvider.notifier).sendEmailVerification(user.email!);
-
+                        print("3. Kod başarıyla gönderildi. mounted: $mounted");
                         // 2. Kod başarıyla gittiyse Modal'ı açıyoruz
                         if (mounted) {
+                          print("4. Modal açılıyor...");
                           showModalBottomSheet(
                             context: context,
                             isScrollControlled: true, // Klavye açılınca ekran yukarı kaysın diye
@@ -153,6 +156,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                           );
                         }
                       } catch (e) {
+                        print("🚨 Hata oluştu: $e");
                         _showError("Kod gönderilemedi: $e");
                       }
                     },

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../location/domain/address_notifier.dart';
 import '../../product/data/models/product_model.dart';
-import '../../product/data/repository/product_repository.dart';
-import '../../product/domain/products_notifier.dart';
 import '../../stores/data/model/store_summary.dart';
 import '../../stores/data/repository/store_repository.dart';
 import '../data/repository/favorite_repository.dart';

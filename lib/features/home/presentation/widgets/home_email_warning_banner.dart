@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../account/domain/providers/user_notifier.dart';
-import '../../../account/domain/states/user_state.dart';
 import '../../../account/presentation/widgets/email_otp_dialog.dart';
 
 class HomeEmailWarningBanner extends ConsumerWidget {

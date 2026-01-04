@@ -13,7 +13,6 @@ import '../../../saving/providers/saving_provider.dart';
 import '../../domain/providers/user_notifier.dart';
 import '../../domain/states/user_state.dart';
 import '../widgets/email_otp_dialog.dart';
-import 'legal_documents_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});

@@ -151,7 +151,7 @@ class StoreReviewScreen extends ConsumerWidget {
                   _buildStars(review.averageRating),
                   const SizedBox(width: 10),
                   Text(
-                    review.userName ?? "Anonim Kullanıcı",
+                    review.userName,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ],

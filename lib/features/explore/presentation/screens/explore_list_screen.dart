@@ -155,7 +155,7 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
       case ExploreFilterOption.sonSans:
       // Modelinde 'isLastChance' yoksa, backend genelde stok miktarını gönderir.
       // Logda 'stock' alanı varsa onu kullanıyoruz:
-        temp = temp.where((p) => (p.stock ?? 0) > 0 && (p.stock ?? 0) < 10).toList();
+        temp = temp.where((p) => (p.stock) > 0 && (p.stock) < 10).toList();
         break;
 
       case ExploreFilterOption.hemenYaninda:

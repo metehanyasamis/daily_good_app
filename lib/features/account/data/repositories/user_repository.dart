@@ -124,22 +124,59 @@ class UserRepositoryImpl implements UserRepository {
     }
   }
 
-  @override
+
+@override
   Future<void> sendEmailVerification(String email) async {
+    print("--------------------------------------------------");
+    print("📡 [REPO-AUTH] Mevcut E-postaya OTP İsteği: $email");
+    print("🔗 URL: /customer/auth/send-email-otp");
+
     final response = await api.post("/customer/auth/send-email-otp", body: {"email": email});
-    if (response.statusCode != 200) throw Exception("Kod gönderilemedi");
+
+    print("📥 [REPO-AUTH] Yanıt Kodu: ${response.statusCode}");
+    print("📥 [REPO-AUTH] Yanıt Body: ${response.body}");
+
+    if (response.statusCode != 200) {
+      print("❌ [REPO-AUTH] HATA: OTP gönderilemedi.");
+      throw Exception("Kod gönderilemedi");
+    }
+    print("✅ [REPO-AUTH] OTP Başarıyla Gönderildi.");
+    print("--------------------------------------------------");
   }
+
+
 
   @override
   Future<UserModel> verifyEmailOtpCode(String email, String code) async {
+    print("--------------------------------------------------");
+    print("📡 [REPO-AUTH] OTP Doğrulama İsteği: $email - Kod: $code");
+    print("🔗 URL: /customer/auth/verify-email-otp");
+
     final response = await api.post("/customer/auth/verify-email-otp", body: {"email": email, "code": code});
-    if (response.statusCode != 200) throw Exception("OTP doğrulanamadı");
+
+    print("📥 [REPO-AUTH] Yanıt Kodu: ${response.statusCode}");
+    print("📥 [REPO-AUTH] Yanıt Body: ${response.body}");
+
+    if (response.statusCode != 200) {
+      print("❌ [REPO-AUTH] HATA: OTP doğrulanamadı.");
+      throw Exception("OTP doğrulanamadı");
+    }
 
     final decoded = jsonDecode(response.body);
-    // Eğer backend data dönmezse güncel halini fetchUser ile alıyoruz
-    if (decoded["data"] == null) return await fetchUser();
-    return UserModel.fromJson(decoded["data"]);
+
+    if (decoded["data"] == null) {
+      print("⚠️ [REPO-AUTH] Data null geldi, fetchUser() ile güncel profil çekiliyor...");
+      return await fetchUser();
+    }
+
+    final user = UserModel.fromJson(decoded["data"]);
+    print("🎯 [REPO-AUTH] Doğrulama Başarılı. Verified At: ${user.isEmailVerified}");
+    print("--------------------------------------------------");
+
+    return user;
   }
+
+
 
   @override
   Future<UserModel> updatePhoneNumber(String phone) async {

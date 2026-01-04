@@ -93,8 +93,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 child: store.latitude != 0.0 && store.longitude != 0.0
                     ? StoreMapCard(
                   storeId: store.id,
-                  latitude: store.latitude!,
-                  longitude: store.longitude!,
+                  latitude: store.latitude,
+                  longitude: store.longitude,
                   address: store.address,
                 )
                     : const SizedBox.shrink(), // Koordinat yoksa haritayı hiç çizme, patlamasın

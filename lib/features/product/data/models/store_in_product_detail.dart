@@ -1,4 +1,5 @@
 import 'package:daily_good/features/product/data/models/product_model.dart';
+
 import '../../../stores/data/model/store_summary.dart';
 
 class StoreInProductDetail {
@@ -40,7 +41,7 @@ class StoreInProductDetail {
       phone: json['phone']?.toString() ?? "",
       latitude: toDouble(json['latitude']),
       longitude: toDouble(json['longitude']),
-      bannerImage: normalizeImageUrl(json['banner_image_url'] ?? json['banner_image'] ?? ""),
+      bannerImage: ProductModel.normalizeImageUrl(json['banner_image_url'] ?? json['banner_image'] ?? ""),
 
       // 🔥 3. BURASI: Hem puanı hem mesafeyi API'den gelen farklı isimlere karşı korumalı alıyoruz
       overallRating: toDouble(json['overall_rating'] ?? json['rating'] ?? json['store_rating']),

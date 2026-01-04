@@ -73,11 +73,11 @@ class FavoriteProductResponseModel {
       // 🔥 KRİTİK DÜZELTME 2: Ürün modelinin kendi puanını da güncelliyoruz
       rating: realRating,
 
-      startHour: product.startHour ?? "",
-      endHour: product.endHour ?? "",
+      startHour: product.startHour,
+      endHour: product.endHour,
       startDate: product.startDate ?? "",
       endDate: product.endDate ?? "",
-      createdAt: DateTime.tryParse(product.createdAt) ?? DateTime.now(),
+      createdAt: product.createdAt,
     );
   }
 }
