@@ -6,18 +6,22 @@ import '../../presentation/widgets/explore_filter_sheet.dart';
 class ExploreState {
   final ExploreFilterOption sort;
   final String? categoryId; // 🔥 enum değil
+  final ExploreFilterOption? feedFilter;
 
   const ExploreState({
     this.sort = ExploreFilterOption.recommended,
+    this.feedFilter,
     this.categoryId,
   });
 
   ExploreState copyWith({
     ExploreFilterOption? sort,
+    ExploreFilterOption? feedFilter,
     String? categoryId,
   }) {
     return ExploreState(
       sort: sort ?? this.sort,
+      feedFilter: feedFilter ?? this.feedFilter,
       categoryId: categoryId ?? this.categoryId,
     );
   }
@@ -33,6 +37,10 @@ class ExploreStateNotifier extends StateNotifier<ExploreState> {
 
   void setCategoryId(String? id) {
     state = state.copyWith(categoryId: id);
+  }
+
+  void setFeedFilter(ExploreFilterOption? value) {
+    state = state.copyWith(feedFilter: value);
   }
 
 }

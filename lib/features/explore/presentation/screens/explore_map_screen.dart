@@ -111,7 +111,7 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
       builder: (_) => HalfStoreSheet(
         store: store,
         // 🔥 DOĞRU ÇAĞRI: fetchProductsFlat tüm grupları birleştirip Liste döner
-        productsFuture: productRepo.fetchProductsFlat(
+        productsFuture: productRepo.fetchProductsList(
           storeId: store.id,
           perPage: 20,
         ),

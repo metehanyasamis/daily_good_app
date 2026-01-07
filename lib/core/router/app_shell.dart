@@ -15,8 +15,11 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     // Sistemin alt bar yüksekliğini alıyoruz
     final double bottomGap = MediaQuery.of(context).viewPadding.bottom;
+    final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    debugPrint("⌨️ [APP_SHELL] keyboardOpen=$keyboardOpen location=$location");
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       extendBody: true,
       body: Stack(
         children: [
@@ -25,19 +28,28 @@ class AppShell extends StatelessWidget {
           Positioned(
             left: 16,
             right: 16,
-            // 🛡️ ÇÖZÜM: Eğer bottomGap (sistem barı) 0'dan büyükse onu kullan,
-            // değilse güvenli bir padding (20) ekle ki yapışmasın.
             bottom: (bottomGap > 0 ? bottomGap : 20) + 8,
-            child: CustomBottomNavBar(
-              currentIndex: _calculateSelectedIndex(location),
-              onTabSelected: (index) {
-                switch (index) {
-                  case 0: context.go('/home'); break;
-                  case 1: context.go('/explore'); break;
-                  case 2: context.go('/favorites'); break;
-                  case 3: context.go('/account'); break;
-                }
-              },
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 180),
+              offset: keyboardOpen ? const Offset(0, 1.2) : Offset.zero, // ✅ aşağı kaydır
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: keyboardOpen ? 0 : 1, // ✅ görünmez yap
+                child: IgnorePointer(
+                  ignoring: keyboardOpen, // ✅ tıklanamasın
+                  child: CustomBottomNavBar(
+                    currentIndex: _calculateSelectedIndex(location),
+                    onTabSelected: (index) {
+                      switch (index) {
+                        case 0: context.go('/home'); break;
+                        case 1: context.go('/explore'); break;
+                        case 2: context.go('/favorites'); break;
+                        case 3: context.go('/account'); break;
+                      }
+                    },
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -52,3 +64,4 @@ class AppShell extends StatelessWidget {
     return 0;
   }
 }
+

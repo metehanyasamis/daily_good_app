@@ -1,5 +1,6 @@
 // lib/features/product/domain/products_notifier.dart
-import 'package:flutter/material.dart';
+
+/*import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repository/product_repository.dart';
 import 'products_state.dart';
@@ -94,9 +95,15 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
   }) async {
     state = state.copyWith(isLoadingList: true, clearError: true);
 
+    debugPrint('🧾 [NOTIFIER_FETCH] BEFORE CALL');
+    debugPrint('   categoryId=$categoryId');
+    debugPrint('   lat=$latitude lng=$longitude');
+    debugPrint('   search=$search');
+    debugPrint('   flags: hemen=$hemenYaninda sonSans=$sonSans yeni=$yeni bugun=$bugun yarin=$yarin');
+    debugPrint('   sort=$sortBy $sortOrder');
+
     try {
-      // Use the flat helper to get a List<ProductModel> (handles grouped response)
-      final parsedProducts = await repo.fetchProductsFlat(
+      final parsedProducts = await repo.fetchProductsList(
         categoryId: categoryId,
         latitude: latitude,
         longitude: longitude,
@@ -112,15 +119,10 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
         yarin: yarin,
       );
 
-      debugPrint('PRODUCTS NOTIFIER: parsedProducts length = ${parsedProducts.length}');
+      debugPrint('📦 PRODUCTS COUNT = ${parsedProducts.length}');
       if (parsedProducts.isNotEmpty) {
-        // try to print some identifying fields safely
-        final first = parsedProducts.first;
-        try {
-          debugPrint('PRODUCTS NOTIFIER: sample product -> id=${(first as dynamic).id}, name=${(first as dynamic).name}');
-        } catch (_) {
-          debugPrint('PRODUCTS NOTIFIER: sample product -> ${first.toString()}');
-        }
+        final p = parsedProducts.first;
+        debugPrint('📦 FIRST → id=${p.id} name=${p.name} stock=${p.stock}');
       }
 
       state = state.copyWith(
@@ -129,13 +131,220 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
         initialized: markInitialized ? true : state.initialized,
       );
 
-      debugPrint('PRODUCTS NOTIFIER: state.products length AFTER set -> ${state.products.length}');
+      debugPrint('✅ STATE UPDATED | products=${state.products.length}');
+      debugPrint('==============================================');
     } catch (e, st) {
-      debugPrint('PRODUCTS NOTIFIER: fetch error -> $e\n$st');
+      debugPrint('❌ FETCH ERROR → $e');
+      debugPrint(st.toString());
       state = state.copyWith(
         isLoadingList: false,
         error: e.toString(),
       );
+    }
+  }
+
+
+  // detail...
+  Future<void> fetchDetail(String productId) async {
+    state = state.copyWith(isLoadingDetail: true, clearError: true);
+
+    try {
+      final product = await repo.getProductDetail(productId);
+      state = state.copyWith(
+        selectedProduct: product,
+        isLoadingDetail: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoadingDetail: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  void clearDetail() {
+    state = state.copyWith(clearSelectedProduct: true);
+  }
+}
+
+ */
+
+// lib/features/product/domain/products_notifier.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/repository/product_repository.dart';
+import 'products_state.dart';
+
+final productsProvider =
+StateNotifierProvider<ProductsNotifier, ProductsState>((ref) {
+  return ProductsNotifier(ref.read(productRepositoryProvider));
+});
+
+class ProductsNotifier extends StateNotifier<ProductsState> {
+  final ProductRepository repo;
+  ProductsNotifier(this.repo) : super(const ProductsState());
+
+  int _reqId = 0; // ✅ en son istek kazanır
+
+  Future<void> loadOnce({
+    String? categoryId,
+    double? latitude,
+    double? longitude,
+    String? search,
+    bool? hemenYaninda,
+    bool? sonSans,
+    bool? yeni,
+    bool? bugun,
+    bool? yarin,
+    String sortBy = 'created_at',
+    String sortOrder = 'desc',
+  }) async {
+    if (state.initialized || state.isLoadingList) {
+      debugPrint('⛔ loadOnce SKIP (initialized=${state.initialized}, loading=${state.isLoadingList})');
+      return;
+    }
+
+    await _fetchList(
+      categoryId: categoryId,
+      latitude: latitude,
+      longitude: longitude,
+      search: search,
+      hemenYaninda: hemenYaninda,
+      sonSans: sonSans,
+      yeni: yeni,
+      bugun: bugun,
+      yarin: yarin,
+      markInitialized: true, // ✅ sadece loadOnce set eder
+      sortBy: sortBy,
+      sortOrder: sortOrder,
+      reason: 'loadOnce',
+    );
+  }
+
+  Future<void> refresh({
+    String? categoryId,
+    double? latitude,
+    double? longitude,
+    String? search,
+    bool? hemenYaninda,
+    bool? sonSans,
+    bool? yeni,
+    bool? bugun,
+    bool? yarin,
+    String sortBy = 'created_at',
+    String sortOrder = 'desc',
+    int perPage = 15,
+  }) async {
+    debugPrint('📡 BACKEND REFRESH → categoryId=$categoryId lat=$latitude lng=$longitude sortBy=$sortBy sortOrder=$sortOrder');
+
+    await _fetchList(
+      categoryId: categoryId,
+      latitude: latitude,
+      longitude: longitude,
+      search: search,
+      hemenYaninda: hemenYaninda,
+      sonSans: sonSans,
+      yeni: yeni,
+      bugun: bugun,
+      yarin: yarin,
+      markInitialized: false, // ✅ refresh initialized’ı değiştirmesin
+      sortBy: sortBy,
+      sortOrder: sortOrder,
+      perPage: perPage,
+      reason: 'refresh',
+    );
+  }
+
+  Future<void> _fetchList({
+    String? categoryId,
+    double? latitude,
+    double? longitude,
+    String? search,
+    bool? hemenYaninda,
+    bool? sonSans,
+    bool? yeni,
+    bool? bugun,
+    bool? yarin,
+    bool markInitialized = false,
+    String sortBy = 'created_at',
+    String sortOrder = 'desc',
+    required String reason,
+    int perPage = 15,
+  }) async {
+    final int myReq = ++_reqId;
+
+    state = state.copyWith(isLoadingList: true, clearError: true);
+
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🧾 [NOTIFIER_FETCH#$myReq] START reason=$reason');
+    debugPrint('   categoryId=$categoryId');
+    debugPrint('   lat=$latitude lng=$longitude');
+    debugPrint('   search=$search');
+    debugPrint('   flags: hemen=$hemenYaninda sonSans=$sonSans yeni=$yeni bugun=$bugun yarin=$yarin');
+    debugPrint('   sort=$sortBy $sortOrder');
+
+    final bool isSearching = search != null && search.trim().isNotEmpty;
+
+// ✅ TEST: arama varken per_page büyüt
+    final int effectivePerPage = isSearching ? 200 : 15;
+
+    debugPrint('🔎 [SEARCH_TEST#$myReq] isSearching=$isSearching per_page=$effectivePerPage search="$search"');
+
+
+    try {
+      final parsedProducts = await repo.fetchProductsList(
+        categoryId: categoryId,
+        latitude: latitude,
+        longitude: longitude,
+        search: search,
+        perPage: perPage,//15,
+        page: 1,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+        hemenYaninda: hemenYaninda,
+        sonSans: sonSans,
+        yeni: yeni,
+        bugun: bugun,
+        yarin: yarin,
+      );
+
+      // ✅ eğer bu istek artık "eski" kaldıysa state yazma
+      if (myReq != _reqId) {
+        debugPrint('⏭️ [NOTIFIER_FETCH#$myReq] IGNORE (newer request exists: $_reqId)');
+        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return;
+      }
+
+      debugPrint('📦 [NOTIFIER_FETCH#$myReq] PRODUCTS COUNT = ${parsedProducts.length}');
+      if (parsedProducts.isNotEmpty) {
+        final p = parsedProducts.first;
+        debugPrint('📦 [NOTIFIER_FETCH#$myReq] FIRST → id=${p.id} name=${p.name} stock=${p.stock}');
+      }
+
+      state = state.copyWith(
+        products: parsedProducts,
+        isLoadingList: false,
+        initialized: markInitialized ? true : state.initialized,
+      );
+
+      debugPrint('✅ [NOTIFIER_FETCH#$myReq] STATE UPDATED | products=${state.products.length} initialized=${state.initialized}');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } catch (e, st) {
+      if (myReq != _reqId) {
+        debugPrint('⏭️ [NOTIFIER_FETCH#$myReq] ERROR IGNORED (newer request exists: $_reqId) err=$e');
+        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return;
+      }
+
+      debugPrint('❌ [NOTIFIER_FETCH#$myReq] FETCH ERROR → $e');
+      debugPrint(st.toString());
+
+      state = state.copyWith(
+        isLoadingList: false,
+        error: e.toString(),
+      );
+
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     }
   }
 

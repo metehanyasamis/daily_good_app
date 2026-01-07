@@ -134,19 +134,27 @@ class HalfStoreSheet extends StatelessWidget {
                         );
                       }
 
-                      return ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: products.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final product = products[index];
-                          return _MiniProductRow(
-                            product: product,
-                            onTap: () => context.push('/product-detail/${product.id}'),
-                          );
-                        },
+                      return Column(
+                        children: [
+                          ListView.separated(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: products.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final product = products[index];
+                              return _MiniProductRow(
+                                product: product,
+                                onTap: () => context.push('/product-detail/${product.id}'),
+                              );
+                            },
+                          ),
+                          // 🔥 ÇÖZÜM BURADA:
+                          // Alt barın yüksekliği genelde 80-100 px civarıdır.
+                          // Buraya ekleyeceğin boşluk listenin en altını yukarı iter.
+                          const SizedBox(height: 100),
+                        ],
                       );
                     },
                   ),

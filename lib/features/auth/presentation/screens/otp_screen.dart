@@ -153,6 +153,9 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
   // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final keyboardOpen = bottomInset > 0;
+
     final baseTheme = PinTheme(
       height: 56,
       width: 56,
@@ -171,104 +174,112 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
-      child: Container(
-        padding: const EdgeInsets.all(28),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
-        ),
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(bottom: bottomInset), // ✅ klavye kadar yukarı iter
         child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Doğrulama Kodu",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                "Telefonunuza gönderilen 6 haneli kodu giriniz.",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
-              ),
-              const SizedBox(height: 24),
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.all(28),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+            ),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Doğrulama Kodu",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "Telefonunuza gönderilen 6 haneli kodu giriniz.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 24),
 
-              Pinput(
-                length: 6,
-                controller: _pin,
-                focusNode: _focusNode,
-                defaultPinTheme: baseTheme,
-                focusedPinTheme: baseTheme.copyWith(
-                  decoration: baseTheme.decoration!.copyWith(
-                    border: Border.all(
-                      color: _error ? Colors.red : AppColors.primaryDarkGreen,
-                      width: 3,
+                  Pinput(
+                    length: 6,
+                    controller: _pin,
+                    focusNode: _focusNode,
+                    defaultPinTheme: baseTheme,
+                    focusedPinTheme: baseTheme.copyWith(
+                      decoration: baseTheme.decoration!.copyWith(
+                        border: Border.all(
+                          color: _error ? Colors.red : AppColors.primaryDarkGreen,
+                          width: 3,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                errorPinTheme: baseTheme.copyWith(
-                  decoration: baseTheme.decoration!.copyWith(
-                    border: Border.all(color: Colors.red, width: 3),
-                  ),
-                ),
-                forceErrorState: _error,
-                autofocus: true,
-                onCompleted: (_) => _submit(),
-              ),
-
-              const SizedBox(height: 24),
-
-              _seconds > 0
-                  ? Text(
-                "${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')} içinde tekrar gönderebilirsin",
-                style: const TextStyle(color: Colors.black54),
-              )
-                  : TextButton(
-                onPressed: _resend,
-                child: const Text(
-                  "Kodu tekrar gönder",
-                  style: TextStyle(
-                    color: AppColors.primaryDarkGreen,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _loading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                    _error ? Colors.red : AppColors.primaryDarkGreen,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
+                    errorPinTheme: baseTheme.copyWith(
+                      decoration: baseTheme.decoration!.copyWith(
+                        border: Border.all(color: Colors.red, width: 3),
+                      ),
                     ),
+                    forceErrorState: _error,
+                    autofocus: true,
+                    onCompleted: (_) => _submit(),
                   ),
-                  child: _loading
-                      ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2.5,
-                    ),
+
+                  const SizedBox(height: 24),
+
+                  _seconds > 0
+                      ? Text(
+                    "${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')} içinde tekrar gönderebilirsin",
+                    style: const TextStyle(color: Colors.black54),
                   )
-                      : Text(
-                    _error ? "Hatalı Kod" : "Doğrula",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      : TextButton(
+                    onPressed: _resend,
+                    child: const Text(
+                      "Kodu tekrar gönder",
+                      style: TextStyle(
+                        color: AppColors.primaryDarkGreen,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
+
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                        _error ? Colors.red : AppColors.primaryDarkGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                      ),
+                      child: _loading
+                          ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                          : Text(
+                        _error ? "Hatalı Kod" : "Doğrula",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
               ),
-              const SizedBox(height: 8),
-            ],
+            ),
           ),
         ),
       ),

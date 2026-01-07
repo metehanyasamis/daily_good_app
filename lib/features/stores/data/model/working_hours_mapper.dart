@@ -18,24 +18,3 @@ extension WorkingHoursMapper on WorkingHoursModel {
   }
 }
 
-
-String _dayLabel(String key) {
-  switch (key) {
-    case 'monday':
-      return 'Pazartesi';
-    case 'tuesday':
-      return 'Salı';
-    case 'wednesday':
-      return 'Çarşamba';
-    case 'thursday':
-      return 'Perşembe';
-    case 'friday':
-      return 'Cuma';
-    case 'saturday':
-      return 'Cumartesi';
-    case 'sunday':
-      return 'Pazar';
-    default:
-      return key;
-  }
-}

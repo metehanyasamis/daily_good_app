@@ -199,12 +199,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => OrderSuccessScreen(orderId: state.uri.queryParameters['id']),
       ),
 
-      /*
-      GoRoute(
-        path: '/order-tracking/:id',
-        builder: (_, state) => OrderTrackingScreen(orderId: state.pathParameters['id']!),
-      ),
-       */
+
       GoRoute(
         path: '/order-tracking',
         builder: (_, __) => const OrderTrackingScreen(),

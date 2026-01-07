@@ -108,99 +108,113 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authNotifierProvider).isLoading;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.primaryLightGreen,
-      body: Stack(
-        children: [
-          // Arka Plan Logo
-          Positioned(
-            top: 80, left: 0, right: 0,
-            child: Center(
-              child: Image.asset('assets/logos/whiteLogo.png', height: 250),
-            ),
-          ),
-
-          // Beyaz Panel
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.40,
-            left: 0, right: 0, bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Stack(
+          children: [
+            // Arka Plan Logo
+            Positioned(
+              top: 80, left: 0, right: 0,
+              child: Center(
+                child: Image.asset('assets/logos/whiteLogo.png', height: 250),
               ),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildTabs(),
-                    const SizedBox(height: 28),
-                    _buildPhoneField(),
+            ),
 
-                    // Sadece Kayıt Ol sekmesinde 3'lü checkbox görünür
-                    if (!isLoginTab) ...[
-                      const SizedBox(height: 20),
-                      LoginLegalCheckbox(
-                        uyelikValue: isUyelikAccepted,
-                        kvkkValue: isKvkkAccepted,
-                        gizlilikValue: isGizlilikAccepted,
-                        onUyelikChanged: (v) => setState(() => isUyelikAccepted = v ?? false),
-                        onKvkkChanged: (v) => setState(() => isKvkkAccepted = v ?? false),
-                        onGizlilikChanged: (v) => setState(() => isGizlilikAccepted = v ?? false),
-                      ),
-                    ],
+            // Beyaz Panel
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              top: MediaQuery.of(context).size.height * 0.40 - (bottomInset > 0 ? 120 : 0),
+              left: 0, right: 0, bottom: 0,
+              child: Container(
+                padding: EdgeInsets.only(
+                  left: 28,
+                  right: 28,
+                  top: 32,
+                  // ✅ içerik klavye altında kalmasın
+                  bottom: 32 + bottomInset,
+                ),
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+                ),
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  child: Column(
+                    children: [
+                      _buildTabs(),
+                      const SizedBox(height: 28),
+                      _buildPhoneField(),
 
-                    const SizedBox(height: 24),
-                    _buildSubmitButton(isLoading),
-                    const SizedBox(height: 24),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Divider(
-                            thickness: 1,
-                            color: Colors.grey.shade300,
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            "veya",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Divider(
-                            thickness: 1,
-                            color: Colors.grey.shade300,
-                          ),
+                      // Sadece Kayıt Ol sekmesinde 3'lü checkbox görünür
+                      if (!isLoginTab) ...[
+                        const SizedBox(height: 20),
+                        LoginLegalCheckbox(
+                          uyelikValue: isUyelikAccepted,
+                          kvkkValue: isKvkkAccepted,
+                          gizlilikValue: isGizlilikAccepted,
+                          onUyelikChanged: (v) => setState(() => isUyelikAccepted = v ?? false),
+                          onKvkkChanged: (v) => setState(() => isKvkkAccepted = v ?? false),
+                          onGizlilikChanged: (v) => setState(() => isGizlilikAccepted = v ?? false),
                         ),
                       ],
-                    ),
 
-                    const SizedBox(height: 24), // Çizgi ile Apple butonu arası b
-                    SocialButton(
-                      assetIcon: 'assets/logos/apple.png',
-                      text: "Apple ile devam et",
-                      onTap: () {},
-                    ),
-                    const SizedBox(height: 2),
-                    SocialButton(
-                      assetIcon: 'assets/logos/google.png',
-                      text: "Google ile devam et",
-                      onTap: () {},
-                    ),
-                    const SizedBox(height: 32),
-                  ],
+                      const SizedBox(height: 24),
+                      _buildSubmitButton(isLoading),
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              thickness: 1,
+                              color: Colors.grey.shade300,
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              "veya",
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              thickness: 1,
+                              color: Colors.grey.shade300,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24), // Çizgi ile Apple butonu arası b
+                      SocialButton(
+                        assetIcon: 'assets/logos/apple.png',
+                        text: "Apple ile devam et",
+                        onTap: () {},
+                      ),
+                      const SizedBox(height: 2),
+                      SocialButton(
+                        assetIcon: 'assets/logos/google.png',
+                        text: "Google ile devam et",
+                        onTap: () {},
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          )
-        ],
+            )
+          ],
+        ),
       ),
     );
   }

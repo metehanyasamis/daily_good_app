@@ -6,7 +6,7 @@ import 'category_filter_option.dart';
 class CategoryFilterSheet extends StatefulWidget {
   final String? selectedId;
   final List<dynamic>? backendCategories; // Backend listesi gelirse buraya
-  final ValueChanged<Map<String, String>> onApply; // ID ve İsim döner
+  final ValueChanged<Map<String, String?>> onApply;
 
   const CategoryFilterSheet({
     super.key,
@@ -32,6 +32,7 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.of(context).padding.bottom; // Sistemsel alt boşluk
 
+    /*
     // Liste Hazırlama (Aynı kalıyor)
     final List<Map<String, String>> items = widget.backendCategories != null
         ? widget.backendCategories!.map((cat) {
@@ -47,6 +48,32 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
         'name': categoryLabel(opt),
       };
     }).toList();
+
+     */
+
+    final List<Map<String, String>> itemsRaw =
+    widget.backendCategories != null
+        ? widget.backendCategories!.map((cat) {
+      final d = cat as dynamic;
+      return {
+        'id': d.id.toString(),
+        'name': (d.name ?? d.title ?? d.id).toString(),
+      };
+    }).toList()
+        : CategoryFilterOption.values.map((opt) {
+      return {
+        'id': opt.name,
+        'name': categoryLabel(opt),
+      };
+    }).toList();
+
+    final List<Map<String, String>> items = [
+      {
+        'id': '',      // 🔥 boş string = Tümü
+        'name': 'Tümü',
+      },
+      ...itemsRaw,
+    ];
 
     return Container(
       decoration: const BoxDecoration(
@@ -87,7 +114,7 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(item['name']!,
+                            Text(item['name'] ?? '',
                               style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
@@ -117,11 +144,12 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
                   text: "Filtreleri Uygula",
                   onPressed: () {
                     final selectedItem = items.firstWhere(
-                          (e) => e['id'] == _tempSelectedId,
+                          (e) => e['id'] == (_tempSelectedId ?? ''),
                       orElse: () => items.first,
                     );
                     widget.onApply(selectedItem);
                   },
+
                   showPrice: false,
                 ),
             ),

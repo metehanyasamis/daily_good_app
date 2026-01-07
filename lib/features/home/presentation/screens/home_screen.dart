@@ -10,6 +10,7 @@ import '../../../../core/widgets/floating_order_button.dart';
 
 import '../../../account/domain/providers/user_notifier.dart';
 import '../../../category/domain/category_notifier.dart';
+import '../../../explore/domain/providers/explore_state_provider.dart';
 import '../../../explore/presentation/widgets/explore_filter_sheet.dart';
 import '../../../location/domain/address_notifier.dart';
 
@@ -173,20 +174,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   delegate: HomeCategoryBar(
                     categories: categories,
                     selectedIndex: homeState.selectedCategoryIndex,
-                    onSelected: (index) {
-                      ref
-                          .read(homeStateProvider.notifier)
-                          .setCategory(index);
+                      onSelected: (index) {
+                        // 1) home state güncelle (istersen kalsın)
+                        ref.read(homeStateProvider.notifier).setCategory(index);
 
-                      context.push(
-                        '/explore',
-                        extra: {
-                          'categoryId': categories[index].id,
-                          'fromHome': true,
-                        },
-                      );
-                    },
+                        final id = categories[index].id;
+
+                        debugPrint("🏠➡️ [HOME_CAT→EXPLORE] index=$index id=$id");
+
+                        // 2) Explore’a git + extra ile categoryId gönder
+                        context.push(
+                          '/explore',
+                          extra: {
+                            'fromHome': true,
+                            'categoryId': id, // ✅ int gönder, explore'da toString yaparsın
+                            // 'filter': ExploreFilterOption.hemenYaninda, // istersen boş bırak
+                          },
+                        );
+                      }
                   ),
+
                 ),
 
               if (homeState.hasActiveOrder)
@@ -257,27 +264,27 @@ class HomeContent extends ConsumerWidget {
         const HomeEmailWarningBanner(),
 
         if (hemenYaninda.isNotEmpty) ...[
-          _buildSectionHeader(context, "Hemen Yanında", ExploreFilterOption.hemenYaninda),
+          _buildSectionHeader(context, ref,"Hemen Yanında", ExploreFilterOption.hemenYaninda),
           HomeProductList(products: hemenYaninda),
         ],
 
         if (sonSans.isNotEmpty) ...[
-          _buildSectionHeader(context, "Son Şans", ExploreFilterOption.sonSans),
+          _buildSectionHeader(context, ref,"Son Şans", ExploreFilterOption.sonSans),
           HomeProductList(products: sonSans),
         ],
 
         if (yeni.isNotEmpty) ...[
-          _buildSectionHeader(context, "Yeni", ExploreFilterOption.yeni),
+          _buildSectionHeader(context, ref, "Yeni", ExploreFilterOption.yeni),
           HomeProductList(products: yeni),
         ],
 
         if (bugun.isNotEmpty) ...[
-          _buildSectionHeader(context, "Bugün", ExploreFilterOption.bugun),
+          _buildSectionHeader(context, ref,"Bugün", ExploreFilterOption.bugun),
           HomeProductList(products: bugun),
         ],
 
         if (yarin.isNotEmpty) ...[
-          _buildSectionHeader(context, "Yarın", ExploreFilterOption.yarin),
+          _buildSectionHeader(context, ref,"Yarın", ExploreFilterOption.yarin),
           HomeProductList(products: yarin),
         ],
 
@@ -287,16 +294,43 @@ class HomeContent extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, ExploreFilterOption filter) {
+
+  Widget _buildSectionHeader(
+      BuildContext context,
+      WidgetRef ref,
+      String title,
+      ExploreFilterOption filter,
+      ) {
     return InkWell(
-      onTap: () => context.push(
-        '/explore',
-        extra: {
-          'filter': filter,
-          'fromHome': true,
-        },
-      ),
-      child: HomeSectionTitle(title: title), // Mevcut widget'ın
+      onTap: () {
+        // ✅ Feed filtresi her zaman gitsin
+        ref.read(exploreStateProvider.notifier).setFeedFilter(filter);
+
+        final homeState = ref.read(homeStateProvider);
+        final categories = ref.read(categoryProvider).categories;
+
+        final selectedCategoryId = categories.isNotEmpty
+            ? categories[homeState.selectedCategoryIndex].id
+            : null;
+
+        // ✅ Home section header’dan giderken categoryId göndermiyoruz
+        // (tüm kategorilerden bugun/sonSans/hemenYaninda göstermek için)
+        ref.read(exploreStateProvider.notifier).setCategoryId(selectedCategoryId.toString());
+
+
+        debugPrint("🏠➡️ [HOME→EXPLORE] sectionTap filter=$filter categoryId=null");
+
+        context.push(
+          '/explore',
+          extra: {
+            'filter': filter,
+            'fromHome': true,
+            'categoryId': selectedCategoryId,
+          },
+        );
+      },
+      child: HomeSectionTitle(title: title),
     );
   }
+
 }

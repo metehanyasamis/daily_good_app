@@ -176,7 +176,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
             style: TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: AppColors.textSecondary,
               letterSpacing: 0.5,
             ),
           ),
