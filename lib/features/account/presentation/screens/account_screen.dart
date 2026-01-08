@@ -160,9 +160,11 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   // -------------------------------------------------------------
-  @override
+/*  @override
   Widget build(BuildContext context) {
     final userState = ref.watch(userNotifierProvider);
+
+
     final saving = ref.watch(savingProvider);
     final user = userState.user;
 
@@ -337,6 +339,198 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                   ListTile(
                     leading:
                     const Icon(Icons.delete_forever, color: Colors.red),
+                    title: const Text(
+                      "Hesabımı Kapat",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onTap: _deleteAccount,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+ */
+
+  @override
+  Widget build(BuildContext context) {
+    final userState = ref.watch(userNotifierProvider);
+    final saving = ref.watch(savingProvider);
+    final user = userState.user;
+
+
+    /*
+    // 1) HATA KONTROLÜ (İnternet yok, sunucu kapalı vs.)
+    if (user == null && userState.status == UserStatus.error) {
+      // WidgetsBinding kullanarak build işlemi biter bitmez hata ekranını
+      // rootNavigator üzerinden tüm uygulamanın üstüne açıyoruz.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          useRootNavigator: true, // 👈 İŞTE SİHİR BURADA: AppShell'i devre dışı bırakır
+          barrierDismissible: false, // Kullanıcı tıklayarak kapatamasın
+          builder: (context) => const GlobalErrorScreen(),
+        );
+      });
+
+      // Diyalog açılana kadar boş bir ekran gösteriyoruz (zaten saniyelik bir durum)
+      return const Scaffold(backgroundColor: Colors.white);
+    }
+
+
+     */
+
+    // 2) İLK YÜKLEME KONTROLÜ
+    // Eğer ne user var ne hata, sistem hala ilk veriyi çekmeye çalışıyordur.
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // 🔥 TELEFON DOĞRULAMA DURUMU LOGLARI (Mevcut mantığın aynen korundu)
+    debugPrint("🚨 [TELEFON_TEYİT] Numara: ${user.phone}");
+    debugPrint("🚨 [TELEFON_TEYİT] isPhoneVerified Değeri: ${user.isPhoneVerified}");
+    if (!user.isPhoneVerified) {
+      debugPrint("⚠️ DİKKAT: OTP ile girildi ama backend 'phone_verified_at' bilgisini boş gönderiyor.");
+    }
+
+    // 3) ANA EKRAN (User artık kesinlikle null değil)
+    return Scaffold(
+
+      appBar: AppBar(
+        backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
+        foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
+        systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebekeleri beyaz yapar
+        iconTheme: AppTheme.greenAppBarTheme.iconTheme,
+        titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
+        centerTitle: AppTheme.greenAppBarTheme.centerTitle,
+
+        title: const Text('Hesabım'), // Stil artık yukarıdaki titleTextStyle'dan geliyor
+
+        // Account Screen'e özel olan bottom kısmını olduğu gibi koruyoruz
+        bottom: userState.status == UserStatus.loading
+            ? const PreferredSize(
+          preferredSize: Size.fromHeight(2),
+          child: LinearProgressIndicator(
+            minHeight: 2,
+            backgroundColor: Colors.transparent, // Arka plan şeffaf kalsın
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white), // Bar beyaz olsun
+          ),
+        )
+            : null,
+      ),
+
+      body: RefreshIndicator(
+        onRefresh: () async => ref.read(userNotifierProvider.notifier).loadUser(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+
+              const CircleAvatar(
+                radius: 34,
+                backgroundColor: Color(0xFFE6F4EA),
+                child: Icon(Icons.person, size: 40, color: AppColors.primaryDarkGreen),
+              ),
+
+              const SizedBox(height: 12),
+              Text(
+                "${user.firstName ?? ''} ${user.lastName ?? ''}".trim().isEmpty
+                    ? "Profil Bilgileri Eksik"
+                    : "${user.firstName ?? ''} ${user.lastName ?? ''}",
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 20),
+
+              // -------------------------------------------------- PROFILE CARD
+              _buildCard(
+                title: "Profil",
+                onEdit: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileDetailsScreen(),
+                    ),
+                  );
+                },
+                children: [
+                  InfoRowWidget(
+                    icon: Icons.person,
+                    label: "Ad Soyad",
+                    value: "${user.firstName ?? ''} ${user.lastName ?? ''}".trim().isEmpty
+                        ? "-"
+                        : "${user.firstName ?? ''} ${user.lastName ?? ''}",
+                  ),
+                  const SizedBox(height: 8),
+                  InfoRowWidget(
+                    icon: Icons.mail_outline,
+                    label: "E-posta",
+                    value: user.email ?? "-",
+                    isVerified: user.isEmailVerified,
+                    onVerify: (user.email != null && !user.isEmailVerified)
+                        ? () {
+                      debugPrint("🚨 [UI_TIKLAMA] E-posta doğrulama butonuna basıldı!");
+                      _verifyEmail(user.email!);
+                    }
+                        : null,
+                  ),
+                  const SizedBox(height: 8),
+                  InfoRowWidget(
+                    icon: Icons.phone,
+                    label: "Telefon",
+                    value: user.phone,
+                    isVerified: user.isPhoneVerified,
+                    onVerify: null,
+                  ),
+                  const SizedBox(height: 8),
+                  InfoRowWidget(
+                    icon: Icons.cake,
+                    label: "Doğum Tarihi",
+                    value: (user.birthDate != null && user.birthDate!.isNotEmpty)
+                        ? _formatBirthDate(user.birthDate!)
+                        : "-",
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // -------------------------------------------------- SAVING card
+              _buildSavingCard(),
+
+              const SizedBox(height: 12),
+
+              // -------------------------------------------------- SETTINGS
+              _buildCard(
+                title: "Hesap Ayarları",
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.gavel_outlined),
+                    title: const Text("Yasal Bilgiler"),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.pushNamed('legal_docs'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.mail_outline),
+                    title: const Text("Bize Ulaşın"),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/contact'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.logout),
+                    title: const Text("Oturumu Kapat"),
+                    onTap: _logout,
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.delete_forever, color: Colors.red),
                     title: const Text(
                       "Hesabımı Kapat",
                       style: TextStyle(color: Colors.red),

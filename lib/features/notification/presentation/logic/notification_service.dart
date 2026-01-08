@@ -8,7 +8,23 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
   FlutterLocalNotificationsPlugin();
 
+  /*
   /// Başlatma
+  static Future<void> init() async {
+    tz.initializeTimeZones();
+
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosInit = DarwinInitializationSettings();
+
+
+    const initSettings =
+    InitializationSettings(android: androidInit, iOS: iosInit);
+
+    await _notifications.initialize(initSettings);
+  }
+
+   */
+
   static Future<void> init() async {
     tz.initializeTimeZones();
 
@@ -19,7 +35,21 @@ class NotificationService {
     InitializationSettings(android: androidInit, iOS: iosInit);
 
     await _notifications.initialize(initSettings);
+
+    // ✅ ANDROID CHANNEL OLUŞTUR (KRİTİK)
+    const androidChannel = AndroidNotificationChannel(
+      'daily_good_channel', // Firebase ile BİREBİR
+      'Daily Good Notifications',
+      description: 'Uygulama genel bildirimleri',
+      importance: Importance.max,
+    );
+
+    await _notifications
+        .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(androidChannel);
   }
+
 
   /// Basit bildirim gönder
   static Future<void> show({

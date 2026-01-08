@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart'; // 📦 Yeni eklendi
@@ -189,16 +190,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.dark),
-        child: Center(
-          child: FadeTransition(
-            opacity: _fade,
-            child: Image.asset(
-              "assets/logos/whiteLogo.png",
-              height: size.height * 0.32,
+
+    // 🚀 UYGULAMA İLK AÇILDIĞINDA İKONLARI BEYAZ YAPAR
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // Android için beyaz
+        statusBarBrightness: Brightness.dark,      // iOS için beyaz
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent, // Gradyanın görünmesi için
+        body: Container(
+          decoration: const BoxDecoration(gradient: AppGradients.dark),
+          child: Center(
+            child: FadeTransition(
+              opacity: _fade,
+              child: Image.asset(
+                "assets/logos/whiteLogo.png",
+                height: size.height * 0.32,
+              ),
             ),
           ),
         ),

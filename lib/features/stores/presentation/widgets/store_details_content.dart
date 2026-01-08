@@ -152,19 +152,45 @@ class StoreDetailsContent extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5))]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          )
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _infoRow(Icons.timer_outlined, "${storeDetail.struggleYears}+ yıldır israfla mücadelede"),
+          // 1. Satır: Kuruluş tarihinden gelen yıl hesabı
+          _infoRow(
+            Icons.timer_outlined,
+            "${storeDetail.struggleYears} yıldır israfla mücadelede",
+          ),
+
           const SizedBox(height: 16),
-          _infoRow(Icons.shopping_basket_outlined, "${storeDetail.totalReviews }+ yemek kurtarıldı"),
-          const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Divider(height: 1, color: Color(0xFFF1F1F1))),
+
+          // 2. Satır: total_order parametresinden gelen yemek sayısı
+          _infoRow(
+            Icons.shopping_basket_outlined,
+            "${storeDetail.totalOrder} yemek kurtarıldı",
+          ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Divider(height: 1, color: Color(0xFFF1F1F1)),
+          ),
+
+          // Alt Kısım: Rating Bar'lar (Yorum sayısını burada kendi yerinde kullanıyoruz)
           if (ratings != null)
             StoreRatingBars(
               storeId: storeDetail.id,
               overallRating: storeDetail.overallRating,
-              totalReviews: storeDetail.totalReviews,
+              totalReviews: storeDetail.totalReviews, // Değerlendirme sayısı burada kalmalı
               ratings: ratings,
               onTap: () {
                 context.pushNamed(

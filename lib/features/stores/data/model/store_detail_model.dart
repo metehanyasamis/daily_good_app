@@ -28,6 +28,7 @@ class StoreDetailModel {
   final StoreBrandModel? brand;
   final WorkingHoursModel? workingHours;
   final String? createdAt;
+  final int totalOrder;
   final double overallRating;
   final int totalReviews;
   final AverageRatingsModel? averageRatings;
@@ -47,6 +48,7 @@ class StoreDetailModel {
     required this.brand,
     required this.workingHours,
     required this.createdAt,
+    required this.totalOrder,
     required this.overallRating,
     required this.totalReviews,
     required this.averageRatings,
@@ -61,11 +63,8 @@ class StoreDetailModel {
       final createdDate = DateTime.parse(createdAt!);
       final now = DateTime.now();
       int difference = now.year - createdDate.year;
-      final result = difference <= 0 ? 1 : difference;
-      debugPrint("🧬 [GETTER] Hesaplanan Yıl: $result (Kaynak: $createdAt)");
-      return result;
+      return difference < 1 ? 1 : difference;
     } catch (e) {
-      debugPrint("❌ [GETTER ERROR] Tarih parse hatası: $e");
       return 1;
     }
   }
@@ -114,6 +113,8 @@ class StoreDetailModel {
       -------------------------------------------
       """);
 
+      final int totalOrderCount = int.tryParse(json['total_order']?.toString() ?? '') ?? 0;
+
       return StoreDetailModel(
         id: json['id']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
@@ -127,6 +128,7 @@ class StoreDetailModel {
         brand: asMap(json['brand']) != null ? StoreBrandModel.fromJson(asMap(json['brand'])!) : null,
         workingHours: wh,
         createdAt: createdAtStr,
+        totalOrder: totalOrderCount,
         overallRating: rating,
         totalReviews: reviewsCount,
         averageRatings: asMap(json['average_ratings']) != null

@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../data/prefs_service.dart';
+import '../router/app_router.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
@@ -55,6 +58,14 @@ final dioProvider = Provider<Dio>((ref) {
         print("💬 MESAJ: ${e.message}");
         print("📦 DATA: ${e.response?.data}");
         print("──────────────────────────────");
+        // 🚀 MERKEZİ HATA YÖNETİMİ BURADA BAŞLIYOR
+        // İnternet yoksa (SocketException) veya sunucuya bağlanılamıyorsa (Timeout)
+        if (e.type == DioExceptionType.connectionError ||
+            e.type == DioExceptionType.connectionTimeout ||
+            e.error is SocketException) {
+
+          rootNavigatorKey.currentState?.context.go('/global-error');
+        }
         h.next(e);
       },
     ),
@@ -62,3 +73,4 @@ final dioProvider = Provider<Dio>((ref) {
 
   return dio;
 });
+

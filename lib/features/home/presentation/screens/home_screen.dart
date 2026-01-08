@@ -1,6 +1,7 @@
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -46,7 +47,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     Future.microtask(() async {
       debugPrint("🏠 [HOME] Veriler Tazeleniyor...");
-
+      
       // 🎯 loadUser'ı bekle (await koyarsak veri gelene kadar banner beklemede kalır)
       await ref.read(userNotifierProvider.notifier).loadUser();
 
@@ -131,82 +132,89 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(70),
-        child: CustomHomeAppBar(
-          address: addressState.title,
-          onLocationTap: () {
-            final address = ref.read(addressProvider);
-
-            if (!address.isSelected) {
-              // Ayrı sınıf yaptığımız widget'ı burada çağırıyoruz
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                builder: (context) => const HomeLocationRequestSheet(),
-              );
-            } else {
-              context.push('/location-picker');
-            }
-          },
-            onNotificationsTap: () => context.push('/notifications'),
-        ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark, // Android: Siyah ikonlar
+        statusBarBrightness: Brightness.light,    // iOS: Siyah ikonlar
       ),
-      body: Stack(
-        children: [
-          NestedScrollView(
-            headerSliverBuilder: (context, _) => [
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: HomeBannerSlider(),
-                ),
-              ),
-
-              if (categories.isNotEmpty)
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: HomeCategoryBar(
-                    categories: categories,
-                    selectedIndex: homeState.selectedCategoryIndex,
-                      onSelected: (index) {
-                        // 1) home state güncelle (istersen kalsın)
-                        ref.read(homeStateProvider.notifier).setCategory(index);
-
-                        final id = categories[index].id;
-
-                        debugPrint("🏠➡️ [HOME_CAT→EXPLORE] index=$index id=$id");
-
-                        // 2) Explore’a git + extra ile categoryId gönder
-                        context.push(
-                          '/explore',
-                          extra: {
-                            'fromHome': true,
-                            'categoryId': id, // ✅ int gönder, explore'da toString yaparsın
-                            // 'filter': ExploreFilterOption.hemenYaninda, // istersen boş bırak
-                          },
-                        );
-                      }
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(70),
+          child: CustomHomeAppBar(
+            address: addressState.title,
+            onLocationTap: () {
+              final address = ref.read(addressProvider);
+      
+              if (!address.isSelected) {
+                // Ayrı sınıf yaptığımız widget'ı burada çağırıyoruz
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                   ),
-
-                ),
-
-              if (homeState.hasActiveOrder)
-                SliverToBoxAdapter(
-                  child: HomeActiveOrderBox(
-                    onTap: () => context.push('/order-tracking'),
-                  ),
-                ),
-            ],
-            body: const HomeContent(),
+                  builder: (context) => const HomeLocationRequestSheet(),
+                );
+              } else {
+                context.push('/location-picker');
+              }
+            },
+              onNotificationsTap: () => context.push('/notifications'),
           ),
-          const FloatingOrderButton(),
-        ],
+        ),
+        body: Stack(
+          children: [
+            NestedScrollView(
+              headerSliverBuilder: (context, _) => [
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: HomeBannerSlider(),
+                  ),
+                ),
+      
+                if (categories.isNotEmpty)
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: HomeCategoryBar(
+                      categories: categories,
+                      selectedIndex: homeState.selectedCategoryIndex,
+                        onSelected: (index) {
+                          // 1) home state güncelle (istersen kalsın)
+                          ref.read(homeStateProvider.notifier).setCategory(index);
+      
+                          final id = categories[index].id;
+      
+                          debugPrint("🏠➡️ [HOME_CAT→EXPLORE] index=$index id=$id");
+      
+                          // 2) Explore’a git + extra ile categoryId gönder
+                          context.push(
+                            '/explore',
+                            extra: {
+                              'fromHome': true,
+                              'categoryId': id, // ✅ int gönder, explore'da toString yaparsın
+                              // 'filter': ExploreFilterOption.hemenYaninda, // istersen boş bırak
+                            },
+                          );
+                        }
+                    ),
+      
+                  ),
+      
+                if (homeState.hasActiveOrder)
+                  SliverToBoxAdapter(
+                    child: HomeActiveOrderBox(
+                      onTap: () => context.push('/order-tracking'),
+                    ),
+                  ),
+              ],
+              body: const HomeContent(),
+            ),
+            const FloatingOrderButton(),
+          ],
+        ),
       ),
     );
   }

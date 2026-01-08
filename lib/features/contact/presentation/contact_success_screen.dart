@@ -12,11 +12,17 @@ class ContactSuccessScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.primaryDarkGreen,
-        foregroundColor: Colors.white,
-        centerTitle: true,
+        // 🚀 TÜM STİL PAKETİNİ TEMADAN ÇEK
+        backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
+        foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
+        systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebeke simgelerini beyaz yapar
+        titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
+        centerTitle: AppTheme.greenAppBarTheme.centerTitle,
+
         title: const Text("Bize Ulaşın"),
-        automaticallyImplyLeading: false, // ⛔ geri butonu yok
+
+        // ⛔ ÖZEL DURUM: Bu ekranda geri butonu istemediğin için bunu ekliyoruz
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         child: Column(

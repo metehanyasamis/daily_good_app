@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -58,83 +59,94 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
     const double sliderHeight = 84.0;
     const double thumbSize = 90.0;
 
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(gradient: AppGradients.dark),
-        child: FadeTransition(
-          opacity: _fadeIn,
-          child: SafeArea(
-            bottom: false, // Manuel kontrol edeceğiz
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Spacer(flex: 2), // Üstten esnek boşluk
-
-                  // 1. Görsel Alanı
-                  Center(
-                    child: Image.asset(
-                      'assets/images/intro_image.png',
-                      height: size.height * 0.28,
-                      fit: BoxFit.contain,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // Android: Beyaz ikonlar
+        statusBarBrightness: Brightness.dark, // iOS: Beyaz ikonlar
+      ),
+      child: Scaffold(
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(gradient: AppGradients.dark),
+          child: FadeTransition(
+            opacity: _fadeIn,
+            child: SafeArea(
+              bottom: false, // Manuel kontrol edeceğiz
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Spacer(flex: 2), // Üstten esnek boşluk
+                    // 1. Görsel Alanı
+                    Center(
+                      child: Image.asset(
+                        'assets/images/intro_image.png',
+                        height: size.height * 0.28,
+                        fit: BoxFit.contain,
+                      ),
                     ),
-                  ),
 
-                  const Spacer(flex: 1),
+                    const Spacer(flex: 1),
 
-                  // 2. Metin Alanı
-                  Text(
-                    'Hızlı,\nLezzetli,\nHesaplı! 🥣',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: Colors.white,
-                      height: 1.1,
-                      fontWeight: FontWeight.w900,
-                      fontSize: size.width * 0.12, // Responsive font
+                    // 2. Metin Alanı
+                    Text(
+                      'Hızlı,\nLezzetli,\nHesaplı! 🥣',
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(
+                            color: Colors.white,
+                            height: 1.1,
+                            fontWeight: FontWeight.w900,
+                            fontSize: size.width * 0.12, // Responsive font
+                          ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Kalan yiyecekleri ucuza al,\nhem tasarruf et hem dünyayı koru.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 18,
-                      height: 1.5,
+                    const SizedBox(height: 16),
+                    Text(
+                      'Kalan yiyecekleri ucuza al,\nhem tasarruf et hem dünyayı koru.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 18,
+                        height: 1.5,
+                      ),
                     ),
-                  ),
 
-                  const Spacer(flex: 2),
+                    const Spacer(flex: 2),
 
-                  // 3. Kaydırma Butonu (Slide to Unlock)
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final double maxDrag = constraints.maxWidth - thumbSize;
+                    // 3. Kaydırma Butonu (Slide to Unlock)
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double maxDrag = constraints.maxWidth - thumbSize;
 
-                      return Container(
-                        height: thumbSize,
-                        margin: EdgeInsets.only(
-                          bottom: systemBottomPadding > 0 ? systemBottomPadding + 10 : 40,
-                        ),
-                        child: Stack(
-                          alignment: Alignment.centerLeft,
-                          clipBehavior: Clip.none,
-                          children: [
-                            // Arka Plan Kanalı
-                            _buildSliderBackground(maxDrag),
+                        return Container(
+                          height: thumbSize,
+                          margin: EdgeInsets.only(
+                            bottom: systemBottomPadding > 0
+                                ? systemBottomPadding + 10
+                                : 40,
+                          ),
+                          child: Stack(
+                            alignment: Alignment.centerLeft,
+                            clipBehavior: Clip.none,
+                            children: [
+                              // Arka Plan Kanalı
+                              _buildSliderBackground(maxDrag),
 
-                            // İpucu Okları
-                            _buildArrowHints(maxDrag),
+                              // İpucu Okları
+                              _buildArrowHints(maxDrag),
 
-                            // Sürüklenebilir Buton (Handle)
-                            _buildDraggableThumb(maxDrag),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                              // Sürüklenebilir Buton (Handle)
+                              _buildDraggableThumb(maxDrag),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -146,7 +158,8 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
   Widget _buildSliderBackground(double maxDrag) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 100),
-      height: 74, // Thumb'dan biraz daha küçük
+      height: 74,
+      // Thumb'dan biraz daha küçük
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(50),
@@ -233,7 +246,11 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
             shape: BoxShape.circle,
             color: Colors.white,
             boxShadow: [
-              BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(2, 2))
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 8,
+                offset: Offset(2, 2),
+              ),
             ],
           ),
           child: Center(

@@ -15,3 +15,9 @@ final notificationListProvider = FutureProvider<List<NotificationModel>>((ref) a
   final repository = ref.watch(notificationRepositoryProvider);
   return repository.getNotifications();
 });
+
+// 1. Manuel gelen bildirimleri tutacak liste (Backend düzelene kadar)
+final localNotificationsProvider = StateProvider<List<NotificationModel>>((ref) => []);
+
+// 2. Okunmamış bildirim sayısı (Badge için)
+final notificationBadgeProvider = StateProvider<int>((ref) => 0);

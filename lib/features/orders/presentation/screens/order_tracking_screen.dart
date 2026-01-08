@@ -356,16 +356,19 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.primaryDarkGreen,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          "Sipariş Takibi",
-          style: theme.textTheme.titleLarge?.copyWith(color: Colors.white),
-        ),
-        centerTitle: true,
+        // 🚀 TÜM STİLİ TEMADAN PAKET OLARAK ÇEKİYORUZ
+        backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
+        foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
+        systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebeke/Pil ikonlarını beyaz yapar
+        iconTheme: AppTheme.greenAppBarTheme.iconTheme, // Geri butonunu beyaz yapar
+        titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
+        centerTitle: AppTheme.greenAppBarTheme.centerTitle,
+
+        title: const Text("Sipariş Takibi"),
+
         actions: [
           IconButton(
-            icon: const Icon(Icons.home_rounded, color: Colors.white),
+            icon: const Icon(Icons.home_rounded), // Renk artık iconTheme'den otomatik beyaz gelir
             onPressed: () => context.go('/home'),
           ),
         ],
@@ -470,7 +473,7 @@ class _UnifiedOrderCard extends StatelessWidget {
                       InkWell(
                         onTap: () => _openMaps(store.address),
                         child: const Text(
-                          "Navigasyon 📍",
+                          "Navigasyon için tıklayın 📍",
                           style: TextStyle(fontSize: 12, decoration: TextDecoration.underline, color: AppColors.primaryDarkGreen),
                         ),
                       ),

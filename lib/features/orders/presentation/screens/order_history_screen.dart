@@ -139,17 +139,15 @@ class OrderHistoryScreen extends ConsumerWidget {
   // ---------------- APPBAR ----------------
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      centerTitle: true,
-      backgroundColor: AppColors.primaryDarkGreen,
-      title: const Text(
-        'Geçmiş Siparişlerim',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 18,
-        ),
-      ),
-      iconTheme: const IconThemeData(color: Colors.white),
+    // 🚀 TÜM STİL PAKETİNİ TEMADAN ÇEKİYORUZ
+    backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
+    foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
+    systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebeke/Saat ikonlarını beyaz yapar
+    iconTheme: AppTheme.greenAppBarTheme.iconTheme, // Geri butonunu beyaz yapar
+    titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
+    centerTitle: AppTheme.greenAppBarTheme.centerTitle,
+
+    title: const Text('Geçmiş Siparişlerim'), // Stil artık yukarıdaki titleTextStyle'dan otomatik gelir
     );
   }
 

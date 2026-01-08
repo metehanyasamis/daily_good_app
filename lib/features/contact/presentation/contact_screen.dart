@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:daily_good/core/widgets/dismiss_keyboard.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -41,23 +42,23 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       orElse: () => <OrderListItem>[],
     );
 
-    /*
-    final orderItems = [
-      ...orders,
-      otherOrderKey,
-    ];
-
-     */
 
     return DismissKeyboard(
       child: Scaffold(
+
         appBar: AppBar(
-          backgroundColor: AppColors.primaryDarkGreen,
-          foregroundColor: Colors.white,
-          centerTitle: true,
+          // 🚀 TÜM STİLİ TEMADAN AL:
+          backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
+          foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
+          systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle,
+          iconTheme: AppTheme.greenAppBarTheme.iconTheme,
+          titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
+          centerTitle: AppTheme.greenAppBarTheme.centerTitle,
+
           title: const Text("Bize Ulaşın"),
           actions: [_homeExitButton()],
         ),
+
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -318,7 +319,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
 
   Widget _homeExitButton() {
     return IconButton(
-      icon: const Icon(Icons.home_outlined),
+      icon: const Icon(Icons.home_outlined, color: Colors.white),
       onPressed: () => context.go('/home'),
     );
   }
@@ -334,7 +335,7 @@ class _PickerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon),
+      leading: Icon(icon, color: Colors.white),
       title: Text(title),
       onTap: () => Navigator.pop(context, source),
     );

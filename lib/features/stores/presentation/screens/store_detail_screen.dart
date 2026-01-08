@@ -87,10 +87,11 @@ class StoreDetailScreen extends ConsumerWidget {
         required String? bannerUrl,
         required String? logoUrl,
       }) {
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
     // => yerine { açtık
     return SliverAppBar( // return ekledik
       pinned: true,
-      expandedHeight: 230,
+      expandedHeight: 180 + statusBarHeight,
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.white,
       elevation: 0,

@@ -47,17 +47,23 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          backgroundColor: AppColors.primaryDarkGreen,
-          title: const Text(
-            'Sepetim',
-            style: TextStyle(color: Colors.white),
-          ),
-          centerTitle: true,
+          // 🚀 TÜM STİL AYARLARINI MERKEZİ PAKETTEN ALIYORUZ
+          backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
+          foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
+          systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebeke/Saat ikonlarını bembeyaz yapar
+          iconTheme: AppTheme.greenAppBarTheme.iconTheme, // İkon renklerini beyaz yapar
+          titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
+          centerTitle: AppTheme.greenAppBarTheme.centerTitle,
+
+          title: const Text('Sepetim'),
+
+          // Özel Leading (Geri Butonu) - İkon rengini artık manuel vermene gerek yok, iconTheme'den alır
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
             onPressed: () => context.pop(),
           ),
+
+          // Özel Actions (Silme Butonu)
           actions: [
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.white),
@@ -394,7 +400,6 @@ class _CartCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.black54),
             ],
           ),
 

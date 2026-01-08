@@ -34,6 +34,7 @@ import '../../features/orders/presentation/screens/order_tracking_screen.dart';
 import '../../features/checkout/presentation/screens/payment_screen.dart';
 import '../../features/cart/presentation/screens/cart_screen.dart';
 
+import '../../core/widgets/global_error_screen.dart';
 import '../providers/app_state_provider.dart';
 import 'app_shell.dart';
 
@@ -65,10 +66,14 @@ CustomTransitionPage buildAnimatedPage({
   );
 }
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final routerNotifier = RouterNotifier(ref);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: routerNotifier,
     redirect: (context, state) {
@@ -254,6 +259,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/legal-documents',
         name: 'legal_docs',
         builder: (context, state) => const LegalDocumentsScreen(),
+      ),
+
+      GoRoute(
+        path: '/global-error',
+        builder: (context, state) => const GlobalErrorScreen(),
       ),
 
       ShellRoute(

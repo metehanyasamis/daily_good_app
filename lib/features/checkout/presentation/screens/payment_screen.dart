@@ -62,9 +62,15 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   if (cartItems.isEmpty && !_isPaymentSuccessful) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.primaryDarkGreen,
-        title: const Text('Ödeme', style: TextStyle(color: Colors.white)),
-        centerTitle: true,
+        // 🚀 MERKEZİ TEMADAN TÜM AYARLARI ÇEK
+        backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
+        foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
+        systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebeke ve saati beyaz yapar
+        iconTheme: AppTheme.greenAppBarTheme.iconTheme, // Geri butonu rengini beyaz yapar
+        titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle, // Başlık fontunu standartlaştırır
+        centerTitle: AppTheme.greenAppBarTheme.centerTitle,
+
+        title: const Text('Ödeme'),
       ),
       body: const Center(child: Text('Sepetiniz boş.')),
     );
@@ -84,13 +90,15 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     return DismissKeyboard(
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: AppColors.primaryDarkGreen,
-          title: const Text(
-            'Ödeme',
-            style: TextStyle(color: Colors.white),
-          ),
-          centerTitle: true,
-          iconTheme: const IconThemeData(color: Colors.white),
+          // 🚀 TÜM AYARLARI MERKEZİ TEMADAN PAKET OLARAK ÇEK
+          backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
+          foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
+          systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebeke, pil ve saati bembeyaz yapar
+          iconTheme: AppTheme.greenAppBarTheme.iconTheme, // Geri butonu rengini beyaz yapar
+          titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle, // Font boyutu ve kalınlığını standartlaştırır
+          centerTitle: AppTheme.greenAppBarTheme.centerTitle,
+
+          title: const Text('Ödeme'),
         ),
         backgroundColor: Colors.grey.shade100,
       

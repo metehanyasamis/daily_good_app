@@ -74,42 +74,44 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          CustomScrollView(
-            slivers: [
-              _ProductHeader(product: product),
-              _ProductInfoSection(product: product),
-              const SliverToBoxAdapter(child: SizedBox(height: 8)),
-
-              // 🎯 ÇÖZÜM: Veri varsa gönderiyoruz, yoksa null (default metin görünecek)
-              KnowMoreFull(
-                customInfo: settingsAsync.value?.importantInfo,
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 8)),
-              _StoreSection(product: product, freshStore: store.toStoreSummary()),              //_RatingSection(product: product),
-              SliverToBoxAdapter(
-                child: store.latitude != 0.0 && store.longitude != 0.0
-                    ? StoreMapCard(
-                  storeId: store.id,
-                  latitude: store.latitude,
-                  longitude: store.longitude,
-                  address: store.address,
-                )
-                    : const SizedBox.shrink(), // Koordinat yoksa haritayı hiç çizme, patlamasın
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 140)),
-            ],
-          ),
-          const FloatingCartButton(),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildBottomBar(product),
-          ),
-        ],
+      body: SafeArea(
+        child: Stack(
+          children: [
+            CustomScrollView(
+              slivers: [
+                _ProductHeader(product: product),
+                _ProductInfoSection(product: product),
+                const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        
+                // 🎯 ÇÖZÜM: Veri varsa gönderiyoruz, yoksa null (default metin görünecek)
+                KnowMoreFull(
+                  customInfo: settingsAsync.value?.importantInfo,
+                ),
+        
+                const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                _StoreSection(product: product, freshStore: store.toStoreSummary()),              //_RatingSection(product: product),
+                SliverToBoxAdapter(
+                  child: store.latitude != 0.0 && store.longitude != 0.0
+                      ? StoreMapCard(
+                    storeId: store.id,
+                    latitude: store.latitude,
+                    longitude: store.longitude,
+                    address: store.address,
+                  )
+                      : const SizedBox.shrink(), // Koordinat yoksa haritayı hiç çizme, patlamasın
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 140)),
+              ],
+            ),
+            const FloatingCartButton(),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildBottomBar(product),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -141,6 +143,8 @@ class _ProductHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+
     // İndirim hesaplama
     final discount = product.listPrice > 0
         ? ((product.listPrice - product.salePrice) / product.listPrice * 100).round()
@@ -148,7 +152,7 @@ class _ProductHeader extends StatelessWidget {
 
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 280,
+      expandedHeight: 230 + statusBarHeight,
       backgroundColor: Colors.white,
       leading: _CircularIconButton(
         icon: Icons.arrow_back_ios_new_rounded,
@@ -172,7 +176,7 @@ class _ProductHeader extends StatelessWidget {
 
             // 🟢 SOL DUVAR: STOK ADET ETİKETİ
             Positioned(
-              top: kToolbarHeight + 60,
+              top: kToolbarHeight + 10,
               left: 0,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -200,7 +204,7 @@ class _ProductHeader extends StatelessWidget {
             // 🔴 SAĞ DUVAR: İNDİRİM ORANI ETİKETİ
             if (discount > 0)
               Positioned(
-                top: kToolbarHeight + 60,
+                top: kToolbarHeight + 10,
                 right: 0,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
