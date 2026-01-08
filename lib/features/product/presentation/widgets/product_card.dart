@@ -3,6 +3,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/fav_button.dart';
 import '../../data/models/product_model.dart';
@@ -346,11 +347,15 @@ class NetworkImageOrPlaceholder extends StatelessWidget {
         width: width,
         height: height,
         color: Colors.grey.shade100,
-        child: const Center(
+        child: Center(
           child: SizedBox(
             width: 20,
             height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryLightGreen),
+            child: PlatformWidgets.loader(
+              strokeWidth: 2,
+              color: AppColors.primaryLightGreen,
+              radius: 10, // iOS için uygun boyut
+            ),
           ),
         ),
       ),

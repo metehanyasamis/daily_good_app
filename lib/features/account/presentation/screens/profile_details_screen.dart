@@ -1,8 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
+import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/user_model.dart';
 import '../../domain/providers/user_notifier.dart';
@@ -69,12 +72,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     try {
       await notifier.updateUser(userToSave);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Profil başarıyla güncellendi."),
-            backgroundColor: Colors.green,
-          ),
-        );
+        Toasts.success(context, "Profil başarıyla güncellendi."); // 🎯 Tertemiz
 
         if (widget.isFromRegister) {
           context.go('/onboarding');
@@ -173,9 +171,13 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
 
   // --- DİĞER YARDIMCILAR ---
   void _showError(String msg) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    if (!mounted) return;
+
+    // 🎯 Kullanıcıya hatayı hissettir
+    HapticFeedback.vibrate();
+
+    // 🚀 Merkezi Toast servisimiz
+    Toasts.error(context, msg);
   }
 
   void _showEmailChangeWorkflow(String currentEmail) async {
@@ -191,13 +193,11 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
         child: EmailChangeSheet(currentEmail: currentEmail),
       ),
     );
+
     if (result == "OK" && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("E-posta başarıyla güncellendi."),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // 🎯 Başarı hissi için hafif tık
+      HapticFeedback.lightImpact();
+      Toasts.success(context, "E-posta başarıyla güncellendi.");
     }
   }
 
@@ -246,7 +246,11 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     print("DEBUG: UI'daki user telefon durumu: ${user?.isPhoneVerified}");
 
     if (state.status == UserStatus.loading && !_initialized) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        body: Center(
+          child: PlatformWidgets.loader(),
+        ),
+      );
     }
 
     if (!_initialized && user != null) {
@@ -258,9 +262,9 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       canPop: !widget.isFromRegister,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Lütfen bilgilerinizi kaydedin.")),
-        );
+
+        HapticFeedback.selectionClick();
+        Toasts.show(context, "Lütfen bilgilerinizi kaydedin.", isError: true);
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -422,16 +426,17 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       child: isLoading
-          ? const Center(
-              child: SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2.5,
-                ),
-              ),
-            )
+          ? Center( // 🚀 'const' kaldırıldı
+        child: SizedBox(
+          height: 24,
+          width: 24,
+          child: PlatformWidgets.loader(
+            color: Colors.white,
+            strokeWidth: 2.5,
+            radius: 12, // 24 width için orantılı bir iOS çark boyutu
+          ),
+        ),
+      )
           : Text(
               isNewUser ? "Bilgilerimi Kaydet" : "Bilgilerimi Güncelle",
               style: const TextStyle(

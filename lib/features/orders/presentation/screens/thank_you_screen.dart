@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpod eklendi
 import 'package:go_router/go_router.dart';
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../orders/domain/providers/order_provider.dart'; // Provider yolu
@@ -17,7 +18,7 @@ class ThankYouScreen extends ConsumerWidget { // ConsumerWidget yapıldı
       backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
         child: summaryAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => Center(child: PlatformWidgets.loader()),
           error: (err, _) => const Center(child: Text("Veriler güncellenirken bir hata oluştu.")),
           data: (summary) {
             // Backend'den gelen gerçek veriler

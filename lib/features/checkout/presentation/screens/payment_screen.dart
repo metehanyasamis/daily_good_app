@@ -1,8 +1,11 @@
 import 'package:daily_good/core/widgets/dismiss_keyboard.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
+import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
@@ -79,9 +82,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   // Ödeme başarılıysa ve yönlendirme bekleniyorsa sadece yükleniyor göster
   // veya mevcut ekranın kalmasını sağla
   if (_isPaymentSuccessful) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.primaryDarkGreen,
-      body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      body: Center(
+        child: PlatformWidgets.loader(color: Colors.white), // 🚀 'const' kaldırıldı
+      ),
     );
   }
 
@@ -208,9 +213,10 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         setState(() {
           _isPaymentSuccessful = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ödeme başarısız: $e')),
-        );
+
+        HapticFeedback.heavyImpact();
+
+        Toasts.error(context, 'Ödeme başarısız: $e');
       }
     } finally {
       // 🛡️ Her durumda loading'i kapat

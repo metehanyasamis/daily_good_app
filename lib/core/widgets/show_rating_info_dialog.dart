@@ -102,26 +102,3 @@ Widget _buildCategoryChip(String label) {
     ),
   );
 }
-
-/*
-void showRatingInfoDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text("Puanlama Hakkında"),
-      content: const Text(
-        "Puan ortalaması, son 1 yıl içerisinde bu işletmeden sipariş vermiş kullanıcıların; "
-            "servis hızı, ürün miktarı, lezzet ve çeşitlilik kategorilerinde verdiği puanların "
-            "aritmetik ortalaması alınarak hesaplanmaktadır.",
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Anladım", style: TextStyle(color: AppColors.primaryDarkGreen)),
-        ),
-      ],
-    ),
-  );
-}
-
- */

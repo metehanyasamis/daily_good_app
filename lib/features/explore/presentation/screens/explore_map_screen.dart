@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../../core/widgets/custom_toggle_button.dart';
@@ -30,8 +31,10 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
     final storesAsync = ref.watch(exploreStoreProvider);
 
     if (!address.isSelected) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: PlatformWidgets.loader(),
+        ),
       );
     }
 
@@ -44,7 +47,7 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
         onNotificationsTap: () {},
       ),
       body: storesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(child: PlatformWidgets.loader()),
         error: (err, _) => Center(child: Text("Hata: $err")),
         data: (stores) {
 

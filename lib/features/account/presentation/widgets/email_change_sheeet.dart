@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pinput/pinput.dart';
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/providers/user_notifier.dart';
 import '../../domain/states/user_state.dart'; // UserState tipini tanıması için
@@ -227,7 +228,15 @@ class _EmailChangeSheetState extends ConsumerState<EmailChangeSheet> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
         ),
         child: _isLoading
-            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            ? SizedBox(
+          height: 20,
+          width: 20,
+          child: PlatformWidgets.loader(
+            color: Colors.white,
+            strokeWidth: 2,
+            radius: 10, // iOS tarafındaki çarkın boyutu için ideal
+          ),
+        )
             : Text(label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );

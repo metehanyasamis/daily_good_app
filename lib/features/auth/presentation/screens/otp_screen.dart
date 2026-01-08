@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../account/domain/providers/user_notifier.dart';
 import '../../domain/providers/auth_notifier.dart';
@@ -258,12 +259,13 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
                         ),
                       ),
                       child: _loading
-                          ? const SizedBox(
+                          ? SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(
+                        child: PlatformWidgets.loader(
                           color: Colors.white,
                           strokeWidth: 2.5,
+                          radius: 10,
                         ),
                       )
                           : Text(

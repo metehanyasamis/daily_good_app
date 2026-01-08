@@ -11,7 +11,6 @@ import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/intro_screen.dart';
 import '../../features/contact/presentation/contact_screen.dart';
-import '../../features/contact/presentation/contact_success_screen.dart';
 import '../../features/location/presentation/screens/location_picker_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -247,12 +246,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/contact',
         builder: (context, state) => const ContactScreen(), // Artık bu sayfa bulunabilir olacak
-      ),
-
-      // 🚀 EKSİK OLAN ROTA BURASI:
-      GoRoute(
-        path: '/contact-success',
-        builder: (context, state) => const ContactSuccessScreen(),
       ),
 
       GoRoute(

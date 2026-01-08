@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/fav_button.dart';
 import '../../../../core/widgets/floating_cart_button.dart';
@@ -23,7 +24,13 @@ class StoreDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(storeDetailProvider(storeId));
 
-    if (state.loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (state.loading) {
+      return Scaffold( // 🚀 'const' kaldırıldı
+        body: Center(
+          child: PlatformWidgets.loader(),
+        ),
+      );
+    }
     if (state.error != null) return Scaffold(body: Center(child: Text("Hata: ${state.error}")));
 
     final StoreDetailModel? store = state.detail;
@@ -126,8 +133,9 @@ class StoreDetailScreen extends ConsumerWidget {
                   if (progress == null) return child;
                   return Container(
                     color: Colors.grey.shade200,
-                    child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2)),
+                    child: Center( // 🚀 'const' kaldırıldı
+                      child: PlatformWidgets.loader(strokeWidth: 2), // 🎯 Adaptive yapıya geçildi
+                    ),
                   );
                 },
               )

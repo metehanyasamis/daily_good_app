@@ -2,9 +2,13 @@
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/dialogs.dart';
+import '../../../../core/platform/platform_widgets.dart';
+import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/image_utils.dart';
 import '../../../../core/widgets/contract_html_content.dart';
@@ -151,28 +155,29 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               text: "Sepeti Onayla",
               price: total,
               showPrice: true,
-              onPressed: () {
-                if (!_isAgreed) {
-                  // 🔔 Kullanıcıya uyarıyı burada çakıyoruz
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Devam etmek için sözleşmeleri onaylamalısınız."),
-                      backgroundColor: Colors.redAccent,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                  return; // Fonksiyondan çık, ödeme sayfasına gitme
-                }
+                  onPressed: () {
+                    if (!_isAgreed) {
+                      // 🎯 Hata titreşimi ile kullanıcıyı uyaralım
+                      HapticFeedback.vibrate();
 
-                // Tik varsa ödemeye devam et
-                context.push(
-                  '/payment',
-                  extra: {
-                    'total': total,
-                    'note': _noteController.text,
+                      // 🚀 Yeni nesil adaptive toast yapımız
+                      Toasts.error(context, "Devam etmek için sözleşmeleri onaylamalısınız.");
+
+                      return; // Fonksiyondan çık, ödeme sayfasına gitme
+                    }
+
+                    // 🎯 Onay tamamsa, geçişten önce hafif bir "başarı" tıkı verelim
+                    HapticFeedback.lightImpact();
+
+                    // Tik varsa ödemeye devam et
+                    context.push(
+                      '/payment',
+                      extra: {
+                        'total': total,
+                        'note': _noteController.text,
+                      },
+                    );
                   },
-                );
-                },
                         ),
                       ),
             ),
@@ -359,8 +364,16 @@ class _CartCard extends StatelessWidget {
                     height: 50,
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;
-                      return const Center(child: SizedBox(width:16, height:16, child: CircularProgressIndicator(strokeWidth:2)));
-                    },
+                      return Center( // 🚀 'const' kaldırıldı
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: PlatformWidgets.loader(
+                            strokeWidth: 2,
+                            radius: 7, // iOS için daha küçük, zarif bir görünüm
+                          ),
+                        ),
+                      );                    },
                     errorBuilder: (context, error, stackTrace) {
                       return const Icon(Icons.store, size: 28);
                     },
@@ -658,22 +671,15 @@ class _TotalBox extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // 🧹 Sepeti temizle onayı
 // ---------------------------------------------------------------------------
-Future<bool?> _showConfirmDialog(BuildContext context) {
-  return showDialog<bool>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text("Sepeti temizle"),
-      content: const Text("Sepetindeki tüm ürünleri silmek istiyor musun?"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text("Vazgeç"),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text("Sil"),
-        ),
-      ],
-    ),
+
+// 🧹 Sepeti temizle onayı
+Future<bool> _showConfirmDialog(BuildContext context) {
+  return PlatformDialogs.confirm(
+    context,
+    title: "Sepeti temizle",
+    message: "Sepetindeki tüm ürünleri silmek istiyor musun?",
+    confirmText: "Sil",
+    cancelText: "Vazgeç",
+    destructive: true, // 🎯 iOS'ta kırmızı yazı efekti için
   );
 }

@@ -1,10 +1,14 @@
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/haptics.dart';
+import '../../../../core/platform/platform_utils.dart';
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../../core/widgets/floating_order_button.dart';
@@ -227,82 +231,104 @@ class HomeContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final homeState = ref.watch(homeStateProvider);
 
-    final isLoading =
-    homeState.loadingSections.values.any((v) => v);
-
-    final hasAnyData =
-    homeState.sectionProducts.values.any((l) => l.isNotEmpty);
-
-    debugPrint(
-      "📄 [HOME CONTENT] "
-          "loading=${homeState.loadingSections} "
-          "sizes=${homeState.sectionProducts.map((k,v)=>MapEntry(k.name,v.length))}",
-    );
+    // Yükleme ve veri kontrolü
+    final isLoading = homeState.loadingSections.values.any((v) => v);
+    final hasAnyData = homeState.sectionProducts.values.any((l) => l.isNotEmpty);
 
     if (isLoading && !hasAnyData) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: PlatformWidgets.loader(),
+      );
     }
 
-    final hemenYaninda =
-        homeState.sectionProducts[HomeSection.hemenYaninda] ?? const [];
-    final sonSans =
-        homeState.sectionProducts[HomeSection.sonSans] ?? const [];
-    final yeni =
-        homeState.sectionProducts[HomeSection.yeni] ?? const [];
-    final bugun =
-        homeState.sectionProducts[HomeSection.bugun] ?? const [];
-    final yarin =
-        homeState.sectionProducts[HomeSection.yarin] ?? const [];
+    // Verileri lokal değişkenlere alıyoruz
+    final hemenYaninda = homeState.sectionProducts[HomeSection.hemenYaninda] ?? const [];
+    final sonSans = homeState.sectionProducts[HomeSection.sonSans] ?? const [];
+    final yeni = homeState.sectionProducts[HomeSection.yeni] ?? const [];
+    final bugun = homeState.sectionProducts[HomeSection.bugun] ?? const [];
+    final yarin = homeState.sectionProducts[HomeSection.yarin] ?? const [];
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        final address = ref.read(addressProvider);
-        if (address.isSelected) {
-          await ref.read(homeStateProvider.notifier).loadHome(
-            latitude: address.lat,
-            longitude: address.lng,
-            forceRefresh: true, // ✨ Bu sayede 30sn kuralına takılmaz
-          );
-        }
-      },
+    // 🚀 1. Ortak Yenileme Fonksiyonu
+    Future<void> onRefresh() async {
+      // Platforma özel dokunsal geri bildirim
+      await Haptics.light();
+
+      final address = ref.read(addressProvider);
+      if (address.isSelected) {
+        await ref.read(homeStateProvider.notifier).loadHome(
+          latitude: address.lat,
+          longitude: address.lng,
+          forceRefresh: true,
+        );
+      }
+    }
+
+    // 🚀 2. Ortak Liste İçeriği (Body)
+    // Her iki platform da bu içeriği kullanacak
+    Widget buildBody() {
+      return Column(
+        children: [
+          const HomeEmailWarningBanner(),
+          if (hemenYaninda.isNotEmpty) ...[
+            _buildSectionHeader(context, ref, "Hemen Yanında", ExploreFilterOption.hemenYaninda),
+            HomeProductList(products: hemenYaninda),
+          ],
+          if (sonSans.isNotEmpty) ...[
+            _buildSectionHeader(context, ref, "Son Şans", ExploreFilterOption.sonSans),
+            HomeProductList(products: sonSans),
+          ],
+          if (yeni.isNotEmpty) ...[
+            _buildSectionHeader(context, ref, "Yeni", ExploreFilterOption.yeni),
+            HomeProductList(products: yeni),
+          ],
+          if (bugun.isNotEmpty) ...[
+            _buildSectionHeader(context, ref, "Bugün", ExploreFilterOption.bugun),
+            HomeProductList(products: bugun),
+          ],
+          if (yarin.isNotEmpty) ...[
+            _buildSectionHeader(context, ref, "Yarın", ExploreFilterOption.yarin),
+            HomeProductList(products: yarin),
+          ],
+          const SizedBox(height: 32),
+        ],
+      );
+    }
+
+    // 🚀 3. Platforma Özel Gösterim (Adaptive UI)
+    // PlatformUtils kullanarak cihazı kontrol ediyoruz
+    if (PlatformUtils.isIOS) {
+      return CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // iOS Stili Yenileme (Native Çark)
+          CupertinoSliverRefreshControl(onRefresh: onRefresh),
+
+          SliverPadding(
+            padding: const EdgeInsets.only(bottom: kBottomNavigationBarHeight + 24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                buildBody(),
+              ]),
+            ),
+          ),
+        ],
+      );
+    } else {
+      // Android Stili Yenileme (Material Halka)
+      return RefreshIndicator(
+        onRefresh: onRefresh,
         child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(), // Liste boş olsa da çekmeyi sağlar
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(bottom: kBottomNavigationBarHeight + 24),
           children: [
-        const HomeEmailWarningBanner(),
-
-        if (hemenYaninda.isNotEmpty) ...[
-          _buildSectionHeader(context, ref,"Hemen Yanında", ExploreFilterOption.hemenYaninda),
-          HomeProductList(products: hemenYaninda),
-        ],
-
-        if (sonSans.isNotEmpty) ...[
-          _buildSectionHeader(context, ref,"Son Şans", ExploreFilterOption.sonSans),
-          HomeProductList(products: sonSans),
-        ],
-
-        if (yeni.isNotEmpty) ...[
-          _buildSectionHeader(context, ref, "Yeni", ExploreFilterOption.yeni),
-          HomeProductList(products: yeni),
-        ],
-
-        if (bugun.isNotEmpty) ...[
-          _buildSectionHeader(context, ref,"Bugün", ExploreFilterOption.bugun),
-          HomeProductList(products: bugun),
-        ],
-
-        if (yarin.isNotEmpty) ...[
-          _buildSectionHeader(context, ref,"Yarın", ExploreFilterOption.yarin),
-          HomeProductList(products: yarin),
-        ],
-
-        const SizedBox(height: 32),
-      ],
-    ),
-    );
+            buildBody(),
+          ],
+        ),
+      );
+    }
   }
 
-
+  // Section Header Metodu (Değişmedi)
   Widget _buildSectionHeader(
       BuildContext context,
       WidgetRef ref,
@@ -310,23 +336,16 @@ class HomeContent extends ConsumerWidget {
       ExploreFilterOption filter,
       ) {
     return InkWell(
-      onTap: () {
-        // ✅ Feed filtresi her zaman gitsin
+      onTap: () async {
+        await Haptics.light(); // Tıklama hissi [cite: 25]
         ref.read(exploreStateProvider.notifier).setFeedFilter(filter);
-
         final homeState = ref.read(homeStateProvider);
         final categories = ref.read(categoryProvider).categories;
-
         final selectedCategoryId = categories.isNotEmpty
             ? categories[homeState.selectedCategoryIndex].id
             : null;
 
-        // ✅ Home section header’dan giderken categoryId göndermiyoruz
-        // (tüm kategorilerden bugun/sonSans/hemenYaninda göstermek için)
         ref.read(exploreStateProvider.notifier).setCategoryId(selectedCategoryId.toString());
-
-
-        debugPrint("🏠➡️ [HOME→EXPLORE] sectionTap filter=$filter categoryId=null");
 
         context.push(
           '/explore',
@@ -340,5 +359,4 @@ class HomeContent extends ConsumerWidget {
       child: HomeSectionTitle(title: title),
     );
   }
-
 }

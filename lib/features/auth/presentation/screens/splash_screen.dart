@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart'; // 📦 Yeni eklendi
 
 import '../../../../core/data/prefs_service.dart';
+import '../../../../core/platform/dialogs.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../favorites/domain/favorites_notifier.dart';
@@ -101,91 +102,69 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _checkAppVersion() async {
     try {
-      // 🎯 Paket bilgisini cihazdan alıyoruz
-      final PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      final String currentVersion = packageInfo.version; // Örn: "1.0.0"
+      final packageInfo = await PackageInfo.fromPlatform();
+      final String currentVersion = packageInfo.version;
       final String platform = Platform.isAndroid ? "android" : "ios";
-
-      debugPrint("📱 Cihaz Versiyonu: $currentVersion | Platform: $platform");
 
       final versionData = await ref.read(versionRepositoryProvider).checkVersion(platform, currentVersion);
 
       if (!mounted) return;
 
-      // A) Bakım Modu
-      if (versionData.maintenanceMode) {
-        await _showVersionDialog(
-          title: "Bakım Çalışması 🛠️",
-          message: "Size daha iyi hizmet verebilmek için kısa bir süreliğine bakımdayız.",
-          canCancel: false,
-        );
+      // 🎯 URL açma işlemini kolaylaştırmak için yerel bir fonksiyon
+      Future<void> openUpdateUrl() async {
+        if (versionData.updateUrl != null) {
+          final uri = Uri.parse(versionData.updateUrl!);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        }
       }
 
-      // B) Zorunlu Güncelleme
+      // 1️⃣ BAKIM MODU (Kritik: Kapatılamaz, İptal butonu yok)
+      if (versionData.maintenanceMode) {
+        await PlatformDialogs.confirm(
+          context,
+          title: "Bakım Çalışması 🛠️",
+          message: "Size daha iyi hizmet verebilmek için kısa bir süreliğine bakımdayız.",
+          confirmText: "Anladım",
+          cancelText: "", // Butonu gizler
+          barrierDismissible: false,
+        );
+        return; // Bakımdaysak aşağıya devam etmesin
+      }
+
+      // 2️⃣ ZORUNLU GÜNCELLEME (Kritik: Kapatılamaz, URL'e zorlar)
       if (versionData.forceUpdate) {
-        await _showVersionDialog(
+        final confirmed = await PlatformDialogs.confirm(
+          context,
           title: "Güncelleme Gerekli 🚀",
           message: versionData.updateMessage ?? "Devam etmek için lütfen uygulamayı güncelleyin.",
-          canCancel: false,
-          url: versionData.updateUrl,
+          confirmText: "Güncelle",
+          cancelText: "",
+          barrierDismissible: false,
         );
+        if (confirmed) await openUpdateUrl();
+        return; // Zorunluysa aşağıya bakmasın
       }
-      // C) Opsiyonel Güncelleme
-      else if (versionData.updateAvailable) {
-        await _showVersionDialog(
+
+      // 3️⃣ OPSİYONEL GÜNCELLEME (Kapatılabilir, Kullanıcıya bırakılır)
+      if (versionData.updateAvailable) {
+        final wantUpdate = await PlatformDialogs.confirm(
+          context,
           title: "Yeni Versiyon Hazır!",
           message: versionData.updateMessage ?? "Yeni özelliklerimizi denemek ister misiniz?",
-          canCancel: true,
-          url: versionData.updateUrl,
+          confirmText: "Güncelle",
+          cancelText: "Daha Sonra",
+          barrierDismissible: true,
         );
+        if (wantUpdate) await openUpdateUrl();
       }
+
     } catch (e) {
-      debugPrint("❌ Versiyon kontrolü hatası: $e");
+      debugPrint("❌ [VERSION_CONTROL] Hatası: $e");
     }
   }
 
-  Future<void> _showVersionDialog({
-    required String title,
-    required String message,
-    required bool canCancel,
-    String? url,
-  }) async {
-    return showDialog(
-      context: context,
-      barrierDismissible: canCancel,
-      builder: (context) => PopScope(
-        canPop: canCancel, // Kullanıcı geri tuşuyla kapatamasın (canCancel false ise)
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          content: Text(message),
-          actions: [
-            if (canCancel)
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Daha Sonra", style: TextStyle(color: Colors.grey)),
-              ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryDarkGreen,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () async {
-                if (url != null) {
-                  final uri = Uri.parse(url);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                }
-              },
-              child: const Text("Güncelle"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

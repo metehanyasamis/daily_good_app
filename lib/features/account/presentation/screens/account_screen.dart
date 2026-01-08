@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/data/prefs_service.dart';
+import '../../../../core/platform/dialogs.dart';
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/info_row_widget.dart';
@@ -36,7 +38,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
 
 // -------------------------------------------------------------
-  Future<void> _logout() async {
+  /*Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
       useRootNavigator: true,
@@ -70,8 +72,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       }
     });
   }
-
-
   Future<void> _deleteAccount() async {
     // 1. Önce gerekli araçları context ölmeden kopyala
     final userNotifier = ref.read(userNotifierProvider.notifier);
@@ -103,7 +103,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       context: context,
       barrierDismissible: false,
       useRootNavigator: true,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => Center(child: PlatformWidgets.loader()),
     );
 
     try {
@@ -130,6 +130,73 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     }
   }
 
+   */
+
+// -------------------------------------------------------------
+  Future<void> _logout() async {
+    // 🎯 Senin PlatformDialogs sınıfını kullandık
+    final confirm = await PlatformDialogs.confirm(
+      context,
+      title: 'Oturumu Kapat',
+      message: 'Çıkış yapmak istediğinizden emin misiniz?',
+      confirmText: 'Evet, Çıkış Yap',
+      cancelText: 'Vazgeç',
+      destructive: true, // 🍎 iOS'ta kırmızı font yapar
+    );
+
+    if (confirm != true) return;
+
+    await ref.read(authNotifierProvider.notifier).logout();
+    await ref.read(appStateProvider.notifier).resetAfterLogout();
+
+    Future.microtask(() {
+      if (mounted) {
+        context.go('/splash');
+      }
+    });
+  }
+
+  Future<void> _deleteAccount() async {
+    final userNotifier = ref.read(userNotifierProvider.notifier);
+    final authNotifier = ref.read(authNotifierProvider.notifier);
+    final router = GoRouter.of(context);
+
+    // 🎯 Adaptive onay diyaloğu
+    final confirm = await PlatformDialogs.confirm(
+      context,
+      title: 'Hesabı Sil',
+      message: 'Tüm verileriniz silinecek. Emin misiniz?',
+      confirmText: 'Evet, Sil',
+      cancelText: 'Vazgeç',
+      destructive: true,
+    );
+
+    if (confirm != true) return;
+
+    // 🎯 Loading gösterimi - 'const' kaldırıldı çünkü loader dinamik
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => Center(child: PlatformWidgets.loader()),
+    );
+
+    try {
+      await userNotifier.deleteUserAccount();
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Loading kapat
+        router.go('/login');
+
+        Future.delayed(const Duration(milliseconds: 100), () async {
+          await authNotifier.logout();
+          await PrefsService.clearAll();
+        });
+      }
+    } catch (e) {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
 
   // -------------------------------------------------------------
 // AccountScreen içindeki mevcut metodu bununla değiştir:
@@ -160,202 +227,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   // -------------------------------------------------------------
-/*  @override
-  Widget build(BuildContext context) {
-    final userState = ref.watch(userNotifierProvider);
-
-
-    final saving = ref.watch(savingProvider);
-    final user = userState.user;
-
-    // 🔥 TELEFON DOĞRULAMA DURUMUNU BURADA RÖNTGENLİYORUZ
-    if (user != null) {
-      debugPrint("🚨 [TELEFON_TEYİT] Numara: ${user.phone}");
-      debugPrint("🚨 [TELEFON_TEYİT] isPhoneVerified Değeri: ${user.isPhoneVerified}");
-
-      // Eğer false geliyorsa, Ali'ye atmak için ekran görüntüsü alacağın yer burası:
-      if (!user.isPhoneVerified) {
-        debugPrint("⚠️ DİKKAT: OTP ile girildi ama backend 'phone_verified_at' bilgisini boş gönderiyor.");
-      }
-    }
-
-    // 1) İLK YÜKLEME KONTROLÜ
-    // Eğer elimizde hiç user yoksa ve hala yükleniyorsa o zaman tam ekran loading göster.
-    if (user == null && userState.status == UserStatus.loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    // 2) HATA KONTROLÜ
-    // Eğer user hala null ise ve hata varsa hata ekranı göster.
-    if (user == null && userState.status == UserStatus.error) {
-      return Scaffold(
-        body: Center(
-          child: Text(
-            "Hata oluştu:\n${userState.errorMessage ?? 'Bilinmeyen hata'}",
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, color: Colors.red),
-          ),
-        ),
-      );
-    }
-
-    // 3) GÜVENLİK KONTROLÜ
-    // Eğer ne hata var ne user, yine loading.
-    if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    // BURADAN SONRASI: user artık kesinlikle null değil.
-    // Profil güncellense bile (loading olsa bile) eski veri ekranda kalmaya devam eder,
-    // böylece 'puf' diye uçma veya geri gelince patlama olmaz.
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Hesabım'),
-        centerTitle: true,
-        backgroundColor: AppColors.primaryDarkGreen,
-        foregroundColor: Colors.white,
-        // Güncelleme sırasında minik bir gösterge istersen buraya ekleyebilirsin
-        bottom: userState.status == UserStatus.loading
-            ? const PreferredSize(
-            preferredSize: Size.fromHeight(2),
-            child: LinearProgressIndicator(minHeight: 2))
-            : null,
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.read(userNotifierProvider.notifier).loadUser(),
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-
-              const CircleAvatar(
-                radius: 34,
-                backgroundColor: Color(0xFFE6F4EA),
-                child: Icon(Icons.person, size: 40, color: AppColors.primaryDarkGreen),
-              ),
-
-              const SizedBox(height: 12),
-              Text(
-                "${user.firstName ?? ''} ${user.lastName ?? ''}".trim().isEmpty
-                    ? "Profil Bilgileri Eksik"
-                    : "${user.firstName ?? ''} ${user.lastName ?? ''}",
-                style:
-                const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-
-              const SizedBox(height: 20),
-
-              // -------------------------------------------------- PROFILE CARD
-              _buildCard(
-                title: "Profil",
-                onEdit: () {
-                  Navigator.of(context, rootNavigator: true).push( // 🔥 rootNavigator eklendi
-                    MaterialPageRoute(
-                      builder: (context) => const ProfileDetailsScreen(),
-                    ),
-                  );
-                },
-                children: [
-                  InfoRowWidget(
-                    icon: Icons.person,
-                    label: "Ad Soyad",
-                    value:
-                    "${user.firstName ?? ''} ${user.lastName ?? ''}".trim().isEmpty
-                        ? "-"
-                        : "${user.firstName ?? ''} ${user.lastName ?? ''}",
-                  ),
-                  const SizedBox(height: 8),
-                  InfoRowWidget(
-                    icon: Icons.mail_outline,
-                    label: "E-posta",
-                    value: user.email ?? "-",
-                    isVerified: user.isEmailVerified,
-                    onVerify: (user.email != null && !user.isEmailVerified)
-                        ? () {
-                      print("🚨 [UI_TIKLAMA] E-posta doğrulama butonuna basıldı!"); // <--- BU LOGU EKLE
-                      _verifyEmail(user.email!);
-                    }
-                        : null,
-                  ),
-                  const SizedBox(height: 8),
-                  InfoRowWidget(
-                    icon: Icons.phone,
-                    label: "Telefon",
-                    value: user.phone,
-                    // 🎯 KRİTİK MANTIK: Eğer phone_verified_at doluysa (true ise) DOĞRULANMIŞTIR.
-                    // Modelimizde bunu zaten check ettik.
-                    isVerified: user.isPhoneVerified,
-
-                    // Madem zaten doğrulanmadan içeri giremez,
-                    // onVerify'ı null yaparsak o "Şimdi Doğrula" butonu ASLA çıkmaz.
-                    onVerify: null,
-                  ),
-                  const SizedBox(height: 8),
-                  InfoRowWidget(
-                    icon: Icons.cake,
-                    label: "Doğum Tarihi",
-                    value: (user.birthDate != null && user.birthDate!.isNotEmpty)
-                        ? _formatBirthDate(user.birthDate!)
-                        : "-",
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              // -------------------------------------------------- SAVING card
-              _buildSavingCard(),
-
-              const SizedBox(height: 12),
-
-              // -------------------------------------------------- SETTINGS
-              _buildCard(
-                title: "Hesap Ayarları",
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.gavel_outlined),
-                    title: const Text("Yasal Bilgiler"),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.pushNamed('legal_docs'),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.mail_outline),
-                    title: const Text("Bize Ulaşın"),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/contact'),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.logout),
-                    title: const Text("Oturumu Kapat"),
-                    onTap: _logout,
-                  ),
-                  ListTile(
-                    leading:
-                    const Icon(Icons.delete_forever, color: Colors.red),
-                    title: const Text(
-                      "Hesabımı Kapat",
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    onTap: _deleteAccount,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-
- */
 
   @override
   Widget build(BuildContext context) {
@@ -364,32 +235,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final user = userState.user;
 
 
-    /*
-    // 1) HATA KONTROLÜ (İnternet yok, sunucu kapalı vs.)
-    if (user == null && userState.status == UserStatus.error) {
-      // WidgetsBinding kullanarak build işlemi biter bitmez hata ekranını
-      // rootNavigator üzerinden tüm uygulamanın üstüne açıyoruz.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showDialog(
-          context: context,
-          useRootNavigator: true, // 👈 İŞTE SİHİR BURADA: AppShell'i devre dışı bırakır
-          barrierDismissible: false, // Kullanıcı tıklayarak kapatamasın
-          builder: (context) => const GlobalErrorScreen(),
-        );
-      });
-
-      // Diyalog açılana kadar boş bir ekran gösteriyoruz (zaten saniyelik bir durum)
-      return const Scaffold(backgroundColor: Colors.white);
-    }
-
-
-     */
-
     // 2) İLK YÜKLEME KONTROLÜ
     // Eğer ne user var ne hata, sistem hala ilk veriyi çekmeye çalışıyordur.
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: PlatformWidgets.loader(),
+        ),
       );
     }
 

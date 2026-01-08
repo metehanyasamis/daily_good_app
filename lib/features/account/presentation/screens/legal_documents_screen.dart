@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart'; // ✅ BU IMPORT ŞART
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../settings/domain/providers/legal_settings_provider.dart';
 
 
@@ -50,7 +51,9 @@ class LegalDocumentsScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(
+          child: PlatformWidgets.loader(),
+        ),
         error: (e, _) => Center(child: Text("Hata: $e")),
       ),
     );
@@ -152,7 +155,9 @@ class LegalDocumentsScreen extends ConsumerWidget {
                           valueListenable: isLoading,
                           builder: (context, loading, _) {
                             return loading
-                                ? const Center(child: CircularProgressIndicator())
+                                ? Center(
+                              child: PlatformWidgets.loader(),
+                            )
                                 : const SizedBox.shrink();
                           },
                         ),

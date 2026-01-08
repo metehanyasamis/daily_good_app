@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../stores/data/model/store_summary.dart';
 
 class MiniStoreCard extends StatelessWidget {
@@ -55,8 +56,17 @@ class MiniStoreCard extends StatelessWidget {
                     const Icon(Icons.store, size: 18, color: Colors.grey),
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;
-                      return const Center(child: SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2)));
-                    },
+                      return Center( // 🚀 'const' kaldırıldı
+                        child: SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: PlatformWidgets.loader(
+                            strokeWidth: 1.5,
+                            radius: 5,
+                          ),
+                        ),
+                      );
+                      },
                   )
                       : const Icon(Icons.store, size: 18, color: Colors.grey),
                 ),

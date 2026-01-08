@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/platform/platform_widgets.dart';
 import '../../domain/providers/store_list_provider.dart';
 import '../widgets/store_card.dart';
 
@@ -16,7 +17,9 @@ class StoreListScreen extends ConsumerWidget {
         centerTitle: true,
       ),
       body: state.loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+        child: PlatformWidgets.loader(),
+      )
           : state.error != null
           ? Center(child: Text("Hata: ${state.error}"))
           : ListView.builder(

@@ -1,9 +1,11 @@
 // lib/features/review/presentation/widgets/rating_form_card.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // 🚀 Haptic için eklendi
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/widgets/custom_button.dart';
+import '../../../../../core/platform/toasts.dart'; // 🚀 Yeni eklendi
 import '../../providers/review_provider.dart';
 
 class RatingFormCard extends ConsumerStatefulWidget {
@@ -17,7 +19,7 @@ class RatingFormCard extends ConsumerStatefulWidget {
     required this.storeId,
     this.existingReviewId,
     this.orderId,
-    required this.initialRatings, // Varsayılan veya mevcut oyları almak için
+    required this.initialRatings,
   });
 
   @override
@@ -25,16 +27,13 @@ class RatingFormCard extends ConsumerStatefulWidget {
 }
 
 class _RatingFormCardState extends ConsumerState<RatingFormCard> {
-  // 💡 State'i initialRatings ile başlatıyoruz
   late Map<String, int> _ratings;
   final TextEditingController _commentController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Gelen initialRatings'i kopyalıyoruz ki, state değişimi dışarıyı etkilemesin
     _ratings = Map.from(widget.initialRatings);
-    // Yorumun da mevcut veriden gelmesi gerekebilir, şimdilik boş bırakıyoruz.
   }
 
   @override
@@ -70,18 +69,16 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
           ),
           const SizedBox(height: 10),
 
-          // ⭐ Rating satırları
           ..._ratings.keys.map((c) => _ratingRow(c)).toList(),
 
           const SizedBox(height: 12),
 
-          // 💬 Yorum alanı
           TextField(
             controller: _commentController,
             maxLines: 3,
             decoration: InputDecoration(
-              hintText: 'Görüşlerin bizim için çok değerli 💚\n(isteğe bağlı)',
-              hintStyle: const TextStyle(color: Colors.black45),
+              hintText: 'Görüşlerin bizim için çok değerli 💚\n(İsteğe bağlı)',
+              hintStyle: const TextStyle(color: Colors.black45, fontSize: 14),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Colors.grey),
@@ -103,14 +100,13 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
     );
   }
 
-  // ⭐ YENİ METOT: Asenkron işi senkron onPressed içinden çağırır.
   Future<void> _handleSubmit(BuildContext context, ReviewController controller) async {
     debugPrint("button pressed: _handleSubmit triggered");
 
     if (_ratings.values.every((r) => r == 0)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen en az bir kategoriye puan verin.')),
-      );
+      // 🎯 Hatalı işlem uyarısı
+      HapticFeedback.vibrate();
+      Toasts.error(context, 'Lütfen en az bir kategoriye puan verin.');
       return;
     }
 
@@ -127,10 +123,11 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
     if (success) {
       debugPrint("🎉 UI Update: Success Dialog shown");
 
-      // 1. ADIM: Jenerik SnackBar yerine Popup gösterelim
+      // 🎯 Başarı hissi için kuvvetli tık
+      HapticFeedback.mediumImpact();
+
       _showSuccessDialog(context);
 
-      // 2. ADIM: Formu temizleyelim
       setState(() {
         _ratings = Map.from(widget.initialRatings);
         _commentController.clear();
@@ -139,25 +136,18 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
     } else {
       debugPrint("❗ UI Update: Dynamic error message shown");
 
-      // 🔥 DEĞİŞİKLİK BURADA:
-      // Sabit metin yerine Controller içindeki gerçek hata mesajını çekiyoruz
       final errorState = ref.read(reviewControllerProvider);
       final errorMessage = errorState.maybeWhen(
-        error: (error, _) => error.toString(),
+        error: (error, _) => error.toString().replaceAll("Exception: ", ""),
         orElse: () => 'İşlem sırasında bir hata oluştu.',
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage), // Artık "Zaten mevcut" yazacak!
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      // 🎯 Hata titreşimi
+      HapticFeedback.vibrate();
+      Toasts.error(context, errorMessage);
     }
   }
 
-// Teşekkür Pop-up'ı metodu
   void _showSuccessDialog(BuildContext context) {
     showGeneralDialog(
       context: context,
@@ -173,7 +163,7 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Material( // Text stilleri için gerekli
+            child: Material(
               color: Colors.white,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -196,7 +186,10 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.pop(context);
+                      },
                       child: const Text("Kapat", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ),
@@ -208,7 +201,6 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
       },
       transitionBuilder: (context, anim1, anim2, child) {
         return ScaleTransition(
-          // backOut yerine easeOutBack kullanıyoruz
           scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
           child: child,
         );
@@ -229,7 +221,6 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
               style: const TextStyle(fontSize: 14),
             ),
           ),
-
           Expanded(
             child: Wrap(
               spacing: 15,
@@ -237,6 +228,8 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
                 final isFilled = index < _ratings[label]!;
                 return GestureDetector(
                   onTap: () {
+                    // 🎯 Yıldızlara her basıldığında minik bir tık sesi/hissi
+                    HapticFeedback.selectionClick();
                     setState(() {
                       _ratings[label] = index + 1;
                     });

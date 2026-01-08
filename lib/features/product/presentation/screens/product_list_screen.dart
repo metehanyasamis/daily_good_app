@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/products_notifier.dart';
 import '../widgets/product_card.dart';
@@ -30,7 +31,9 @@ class ProductListScreen extends ConsumerWidget {
         backgroundColor: AppColors.primaryDarkGreen,
       ),
       body: state.isLoadingList
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+        child: PlatformWidgets.loader(),
+      )
           : state.products.isEmpty
           ? const Center(child: Text("Ürün bulunamadı."))
           : Padding(

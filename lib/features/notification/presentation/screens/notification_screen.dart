@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/providers/notification_provider.dart';
 
@@ -40,7 +41,7 @@ class NotificationScreen extends ConsumerWidget {
       ),
 
       body: notificationsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(child: PlatformWidgets.loader()),
         error: (err, _) => Center(child: Text("Hata: $err")),
         data: (backendNotifications) {
           final combinedList = [

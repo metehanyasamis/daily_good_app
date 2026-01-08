@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/fav_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
@@ -53,8 +54,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final settingsAsync = ref.watch(legalSettingsProvider);
 
     if (product == null || product.id != widget.productId) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: PlatformWidgets.loader(), // 🚀 Otomatik olarak iOS'ta farklı, Android'de farklı görünür
+        ),
       );
     }
 
@@ -66,7 +69,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final storeState = ref.watch(storeDetailProvider(storeId));
 
     // Durum Kontrolleri
-    if (storeState.loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (storeState.loading) {
+      return Scaffold(
+        body: Center(
+          child: PlatformWidgets.loader(),
+        ),
+      );
+    }
     if (storeState.error != null) return _ErrorScaffold(message: "Hata: ${storeState.error}");
 
     final store = storeState.detail;

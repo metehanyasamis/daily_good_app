@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/platform/platform_widgets.dart';
+import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/social_button.dart';
 import '../../../settings/domain/providers/legal_settings_provider.dart';
@@ -49,9 +51,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _error(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.redAccent),
-    );
+
+    HapticFeedback.vibrate();
+
+    Toasts.error(context, msg);
   }
 
   Future<void> _onSubmit() async {
@@ -299,11 +302,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               : AppColors.primaryDarkGreen,
         ),
         child: isLoading
-            ? const SizedBox(
-          width: 20, height: 20,
-          child: CircularProgressIndicator(
+            ? SizedBox( // 🚀 'const' kaldırıldı
+          width: 20,
+          height: 20,
+          child: PlatformWidgets.loader(
             strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            color: Colors.white,
+            radius: 10, // iOS (Cupertino) için ideal boyut
           ),
         )
             : Text(
@@ -403,9 +408,11 @@ class LoginLegalCheckbox extends ConsumerWidget {
                       if (url != null && url.isNotEmpty && url != "string") {
                         _launchURL(url);
                       } else {
-                        // API HATASI DURUMUNDA VERİLECEK UYARI
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Sözleşme dökümanı şu an hazırlanıyor, lütfen daha sonra tekrar deneyin.")),
+                        HapticFeedback.selectionClick();
+                        Toasts.show(
+                            context,
+                            "Sözleşme dökümanı şu an hazırlanıyor, lütfen daha sonra tekrar deneyin.",
+                            isError: true // Kırmızı yanması dikkati çeker ve işlemin o an yapılamadığını netleştirir
                         );
                       }
                     },

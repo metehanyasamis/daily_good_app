@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../review/presentation/widgets/rating_form_card.dart';
 import '../../data/models/order_details_response.dart';
@@ -24,20 +26,38 @@ class OrderDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F3F5),
       appBar: AppBar(
-        title: const Text("Sipariş Detayı", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: AppColors.primaryDarkGreen,
-        foregroundColor: Colors.white,
-        centerTitle: true,
+        // 🚀 TÜM STİLİ MERKEZİ TEMADAN AL:
+        backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
+        foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
+        systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle,
+        iconTheme: AppTheme.greenAppBarTheme.iconTheme,
+        titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
+        centerTitle: AppTheme.greenAppBarTheme.centerTitle,
         elevation: 0,
+
+        title: const Text("Sipariş Detayı"),
         actions: [
           TextButton(
-            onPressed: () => context.push('/contact'),
-            child: const Text("Yardım", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            onPressed: () {
+              // 🎯 Yardıma basıldığında hafif bir dokunuş hissi verelim
+              HapticFeedback.lightImpact();
+              context.push('/contact');
+            },
+            child: const Text(
+                "Yardım",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold
+                )
+            ),
           ),
         ],
       ),
+
       body: detailAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primaryDarkGreen)),
+        loading: () => Center(
+          child: PlatformWidgets.loader(color: AppColors.primaryDarkGreen),
+        ),
         error: (err, stack) => Center(child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Text("Hata oluştu: $err", textAlign: TextAlign.center),

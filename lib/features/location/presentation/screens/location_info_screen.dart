@@ -1,11 +1,14 @@
 // lib/features/location/presentation/screens/location_info_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/custom_button.dart';
+import '../../../../core/platform/toasts.dart'; // 🚀 Yeni eklendi
+import '../../../../core/platform/dialogs.dart'; // 🚀 Yeni eklendi
 import '../../domain/address_notifier.dart';
 
 class LocationInfoScreen extends ConsumerWidget {
@@ -15,9 +18,8 @@ class LocationInfoScreen extends ConsumerWidget {
     // 1️⃣ Location service açık mı?
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Konum servisi kapalı")),
-      );
+      HapticFeedback.vibrate();
+      Toasts.error(context, "Konum servisi kapalı, lütfen açın.");
       return;
     }
 
@@ -29,37 +31,51 @@ class LocationInfoScreen extends ConsumerWidget {
     }
 
     if (permission == LocationPermission.denied) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Konum izni reddedildi")),
-      );
+      HapticFeedback.vibrate();
+      Toasts.error(context, "Konum izni reddedildi");
       return;
     }
 
     if (permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Konum izni ayarlardan açılmalı"),
-        ),
+      HapticFeedback.heavyImpact();
+      // 🎯 Kalıcı red durumunda kullanıcıyı ayarlar diyaloğuna yönlendirelim
+      final openSettings = await PlatformDialogs.confirm(
+        context,
+        title: "Konum İzni Gerekli 📍",
+        message: "Size en yakın paketleri gösterebilmemiz için konum iznine ihtiyacımız var. Ayarlardan açmak ister misiniz?",
+        confirmText: "Ayarlara Git",
+        cancelText: "Vazgeç",
       );
+
+      if (openSettings) {
+        await Geolocator.openAppSettings();
+      }
       return;
     }
 
     // 3️⃣ Konumu al
-    final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
+    try {
+      HapticFeedback.selectionClick();
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
 
-    // 4️⃣ State’e yaz
-    ref.read(addressProvider.notifier).setAddress(
-      lat: position.latitude,
-      lng: position.longitude,
-      title: 'Mevcut Konum',
-    );
+      // 4️⃣ State’e yaz
+      ref.read(addressProvider.notifier).setAddress(
+        lat: position.latitude,
+        lng: position.longitude,
+        title: 'Mevcut Konum',
+      );
 
-    // 5️⃣ Map picker’a git (onay için)
-    context.push('/location-picker');
+      // 5️⃣ Map picker’a git (onay için)
+      if (context.mounted) {
+        context.push('/location-picker');
+      }
+    } catch (e) {
+      HapticFeedback.vibrate();
+      Toasts.error(context, "Konum alınırken bir hata oluştu.");
+    }
   }
-
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -69,13 +85,18 @@ class LocationInfoScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.map, size: 100, color: Colors.green),
+            const Icon(Icons.location_on_rounded, size: 70, color: Colors.green),
             const SizedBox(height: 24),
             const Text(
               'Sana uygun sürpriz paketleri keşfetmek için konumunu seç.',
               textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
             CustomButton(
               text: 'Mevcut Konumumu Kullan',
@@ -87,9 +108,16 @@ class LocationInfoScreen extends ConsumerWidget {
 
             TextButton(
               onPressed: () {
+                HapticFeedback.selectionClick();
                 context.push('/location-picker');
               },
-              child: const Text('Haritadan seçeceğim'),
+              child: const Text(
+                'Haritadan seçeceğim',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),

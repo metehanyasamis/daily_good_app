@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/navigation_link.dart';
 import '../../../product/data/models/product_model.dart';
@@ -112,9 +113,11 @@ class HalfStoreSheet extends StatelessWidget {
                     future: productsFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const SizedBox(
+                        return SizedBox(
                           height: 150,
-                          child: Center(child: CircularProgressIndicator()),
+                          child: Center(
+                            child: PlatformWidgets.loader(),
+                          ),
                         );
                       }
 

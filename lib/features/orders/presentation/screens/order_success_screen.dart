@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
 import '../../domain/providers/order_provider.dart';
@@ -116,18 +117,19 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                   // Yükleniyor İndikatörü
                   Opacity(
                     opacity: _fade.value,
-                    child: Column(
-                      children: const [
+                    child: Column( // 🚀 'const' kaldırıldı
+                      children: [ // 🚀 'const' kaldırıldı
                         SizedBox(
                           width: 36,
                           height: 36,
-                          child: CircularProgressIndicator.adaptive(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          child: PlatformWidgets.loader( // 🎯 Senin hazırladığın adaptive loader
+                            color: Colors.white,
                             strokeWidth: 3.2,
+                            radius: 18, // 36 width için uygun radius
                           ),
                         ),
-                        SizedBox(height: 12),
-                        Text(
+                        const SizedBox(height: 12), // Sadece bu alt widget tekrar const olabilir
+                        const Text(
                           "Hazırlanıyor...",
                           style: TextStyle(color: Colors.white70, fontSize: 13),
                         ),

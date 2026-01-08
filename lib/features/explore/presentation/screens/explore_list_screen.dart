@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../../core/widgets/custom_toggle_button.dart';
@@ -23,8 +24,6 @@ import '../../domain/providers/sort_options_provider.dart';
 import '../widgets/category_filter_option.dart';
 import '../widgets/explore_filter_sheet.dart';
 import '../widgets/category_filter_sheet.dart';
-
-bool hataVarmisGibiYap = false; // Bunu sınıfın en üstüne değişken olarak ekle
 
 enum SortDirection { ascending, descending }
 
@@ -59,83 +58,6 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
 
   bool _fromHomeFlag = false; // Yeni değişken
 
-  /*
-  @override
-  void initState() {
-    super.initState();
-    _isInitialLoading = true;
-
-    Future.microtask(() {
-      if (!mounted) return;
-
-      final dynamic extra = GoRouterState.of(context).extra;
-
-      if (extra is Map) {
-        // 1) önce UI değişkenlerini set et
-        setState(() {
-          if (extra['filter'] is ExploreFilterOption) {
-            selectedFilter = extra['filter'];
-          }
-
-          // Home'dan gelip gelmediğini buradan da teyit edelim
-          _fromHomeFlag = extra['fromHome'] ?? widget.fromHome;
-
-          final val = extra['categoryId'] ?? extra['category_id'] ?? extra['id'];
-          if (val != null) selectedCategoryId = val.toString();
-
-          debugPrint("🏠 [EXPLORE_INIT] Extra Data: $extra");
-          debugPrint("🏠 [EXPLORE_INIT] selectedFilter=$selectedFilter fromHome=$_fromHomeFlag categoryId=$selectedCategoryId");
-        });
-
-        // 2) Home’dan gelen filter bir "feed filtresi" ise exploreState.feedFilter'a yaz
-        final feedFilters = {
-          ExploreFilterOption.hemenYaninda,
-          ExploreFilterOption.sonSans,
-          ExploreFilterOption.yeni,
-          ExploreFilterOption.bugun,
-          ExploreFilterOption.yarin,
-        };
-
-        final hasCategoryInExtra = extra.containsKey('categoryId') || extra.containsKey('category_id') || extra.containsKey('id');
-
-        if (hasCategoryInExtra) {
-          ref.read(exploreStateProvider.notifier).setCategoryId(selectedCategoryId);
-          debugPrint("🏠 [EXPLORE_INIT] ✅ categoryId set: $selectedCategoryId");
-        } else {
-          ref.read(exploreStateProvider.notifier).setCategoryId(null);
-          selectedCategoryId = null;
-          debugPrint("🏠 [EXPLORE_INIT] 🧹 categoryId cleared (home feed click)");
-        }
-
-        if (feedFilters.contains(selectedFilter)) {
-          ref.read(exploreStateProvider.notifier).setFeedFilter(selectedFilter);
-          debugPrint("🏠 [EXPLORE_INIT] ✅ feedFilter set edildi: $selectedFilter");
-        } else {
-          // Home'dan "sort" gibi bir şey geldiyse feedFilter temizle
-          ref.read(exploreStateProvider.notifier).setFeedFilter(null);
-          debugPrint("🏠 [EXPLORE_INIT] ℹ️ feedFilter temizlendi (sort seçimi): $selectedFilter");
-        }
-
-        // İstersen categoryId'yi de global state'e yaz (opsiyonel ama tutarlı olur)
-        ref.read(exploreStateProvider.notifier).setCategoryId(selectedCategoryId);
-        debugPrint("🏠 [EXPLORE_INIT] ✅ exploreState.categoryId set: $selectedCategoryId");
-      } else {
-        debugPrint("🏠 [EXPLORE_INIT] extra yok / map değil: $extra");
-
-        // ✅ Bottom nav gibi düşün: eski home filter'larını temizle
-        ref.read(exploreStateProvider.notifier).setFeedFilter(null);
-
-        // İstersen kategori de temizle (opsiyonel)
-        // ref.read(exploreStateProvider.notifier).setCategoryId(null);
-
-        debugPrint("🏠 [EXPLORE_INIT] ✅ feedFilter reset (bottom nav girişi)");
-      }
-
-      _fetchData();
-    });
-  }
-
-   */
 
   @override
   void initState() {
@@ -484,10 +406,6 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     final address = ref.watch(addressProvider);
     final categoriesRaw = ref.watch(categoryProvider);
 
-// 💣 EĞER BUTONA BASILDIYSA EKRANI PATLAT
-    if (hataVarmisGibiYap) {
-      throw Exception("Phoenix Testi: Ekran Çizilemedi!");
-    }
 
     ref.listen<ProductsState>(productsProvider, (prev, next) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -522,16 +440,20 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 400),
             child: (_isInitialLoading) // 🔥 Sadece çekim bitene kadar loader göster
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(
+              child: PlatformWidgets.loader(),
+            )
                 : CustomScrollView(
               key: const ValueKey('content_scroll'),
               slivers: [
                 _buildHeader(categoriesRaw, address, currentCategoryLabel),
                 if (_isInitialLoading)
-                  const SliverToBoxAdapter(
+                  SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Center(child: CircularProgressIndicator()),
+                      child: Center(
+                        child: PlatformWidgets.loader(),
+                      ),
                     ),
                   ),
 
@@ -559,13 +481,6 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
           CustomToggleButton(
             label: "Harita",
             icon: Icons.map_outlined,
-            /*onPressed: () {
-              setState(() {
-                hataVarmisGibiYap = true; // Ekranın yeniden çizilmesini tetikler ve build'deki throw çalışır
-              });
-            },
-
-             */
             onPressed: () => context.push('/explore-map'),
           ),
         ],

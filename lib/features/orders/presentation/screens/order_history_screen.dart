@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/providers/order_provider.dart';
 import '../../data/models/order_list_item.dart';
@@ -19,7 +20,9 @@ class OrderHistoryScreen extends ConsumerWidget {
       // ---------------- LOADING ----------------
       loading: () => Scaffold(
         appBar: _buildAppBar(),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: PlatformWidgets.loader(),
+        )
       ),
 
       // ---------------- ERROR ----------------
