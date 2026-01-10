@@ -2,12 +2,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart' as geo;
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import '../../../../core/platform/platform_widgets.dart';
+import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/custom_button.dart'; // CustomButton import edildi
+import '../../../../core/widgets/custom_button.dart';
 import '../../domain/address_notifier.dart';
 
 class LocationPickerScreen extends ConsumerStatefulWidget {
@@ -18,11 +20,30 @@ class LocationPickerScreen extends ConsumerStatefulWidget {
       _LocationPickerScreenState();
 }
 
-class _LocationPickerScreenState
-    extends ConsumerState<LocationPickerScreen> {
+class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
   MapboxMap? _map;
   Timer? _debounce;
   bool _loading = false;
+
+  // Haritada gezindikçe güncellenen yerel state
+  double? _tempLat;
+  double? _tempLng;
+  String _tempTitle = "Konum yükleniyor...";
+
+  @override
+  void initState() {
+    super.initState();
+    // 1. Mevcut (eski) konumu yükle
+    final currentAddress = ref.read(addressProvider);
+    _tempLat = currentAddress.lat;
+    _tempLng = currentAddress.lng;
+    _tempTitle = currentAddress.title;
+
+    // 2. Açılışta otomatik canlı konum kontrolü (İzni darlamadan)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handleLocationRequest(askPermission: false);
+    });
+  }
 
   @override
   void dispose() {
@@ -30,8 +51,52 @@ class _LocationPickerScreenState
     super.dispose();
   }
 
+  /// 🎯 Hem açılışta hem de GPS butonuna basıldığında çalışan ana fonksiyon
+  Future<void> _handleLocationRequest({required bool askPermission}) async {
+    try {
+      geo.LocationPermission permission = await geo.Geolocator.checkPermission();
+
+      // Eğer butona basıldıysa ve izin yoksa iste
+      if (askPermission && permission == geo.LocationPermission.denied) {
+        permission = await geo.Geolocator.requestPermission();
+      }
+
+      if (permission == geo.LocationPermission.whileInUse ||
+          permission == geo.LocationPermission.always) {
+
+        setState(() => _loading = true);
+
+        geo.Position position = await geo.Geolocator.getCurrentPosition();
+
+        if (!mounted) return;
+
+        // Haritayı canlı konuma uçur
+        _map?.flyTo(
+          CameraOptions(
+            center: Point(
+              coordinates: Position(position.longitude, position.latitude),
+            ),
+            zoom: 15.0,
+          ),
+          MapAnimationOptions(duration: 1000),
+        );
+      }
+    } catch (e) {
+      debugPrint("📍 Konum Hatası: $e");
+      if (askPermission && mounted) {
+        Toasts.error(context, "Cihaz konumu alınamadı.");
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   void _onMapCreated(MapboxMap mapboxMap) {
     _map = mapboxMap;
+    // UI Süslemelerini kaldır
+    _map?.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
+    _map?.logo.updateSettings(LogoSettings(enabled: false));
+    _map?.attribution.updateSettings(AttributionSettings(enabled: false));
   }
 
   void _onCameraChanged(CameraChangedEventData event) {
@@ -39,30 +104,45 @@ class _LocationPickerScreenState
     _debounce = Timer(const Duration(milliseconds: 600), () async {
       if (_map == null || !mounted) return;
 
-      final cameraBounds = await _map!.getBounds();
-
-      final swPoint = cameraBounds.bounds.southwest;
-      final nePoint = cameraBounds.bounds.northeast;
-
-      ref.read(addressProvider.notifier).updateVisibleRegion(
-        swPoint.coordinates.lat.toDouble(),
-        swPoint.coordinates.lng.toDouble(),
-        nePoint.coordinates.lat.toDouble(),
-        nePoint.coordinates.lng.toDouble(),
-      );
-
       final cam = await _map!.getCameraState();
       final center = cam.center.coordinates;
-      ref.read(addressProvider.notifier).setFromMap(
-        lat: center.lat.toDouble(),
-        lng: center.lng.toDouble(),
-      );
+
+      final double newLat = center.lat.toDouble();
+      final double newLng = center.lng.toDouble();
+
+      setState(() {
+        _tempLat = newLat;
+        _tempLng = newLng;
+        _loading = true;
+      });
+
+      try {
+        // Reverse Geocoding: Koordinattan adres metni bulma
+        final String fullAddress = await ref.read(addressProvider.notifier).getAddressFromCoords(
+          lat: newLat,
+          lng: newLng,
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          _tempTitle = fullAddress;
+          _loading = false;
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _tempTitle = "Adres belirlenemedi";
+          _loading = false;
+        });
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final address = ref.watch(addressProvider);
+    // Sadece başlangıç merkezi için global address'i bir kez alıyoruz
+    final initialAddress = ref.read(addressProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -70,10 +150,7 @@ class _LocationPickerScreenState
         leading: const BackButton(),
         title: const Text(
           'Konum Seç',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
@@ -88,7 +165,7 @@ class _LocationPickerScreenState
               styleUri: MapboxStyles.MAPBOX_STREETS,
               cameraOptions: CameraOptions(
                 center: Point(
-                  coordinates: Position(address.lng, address.lat),
+                  coordinates: Position(initialAddress.lng, initialAddress.lat),
                 ),
                 zoom: 15,
               ),
@@ -97,16 +174,31 @@ class _LocationPickerScreenState
             ),
           ),
 
-          /// 📍 SABİT PIN
-          const Center(
-            child: Icon(
-              Icons.location_pin,
-              size: 54,
-              color: AppColors.primaryDarkGreen,
+          /// 📍 GPS BUTONU (Mevcut Konuma Git)
+          Positioned(
+            right: 16,
+            top: 16,
+            child: FloatingActionButton.small(
+              heroTag: "picker_gps_fab",
+              backgroundColor: Colors.white,
+              onPressed: () => _handleLocationRequest(askPermission: true),
+              child: const Icon(Icons.my_location, color: AppColors.primaryDarkGreen),
             ),
           ),
 
-          /// 🔻 ALT PANEL (eski tasarıma çok yakın)
+          /// 📍 SABİT MERKEZ PIN
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 35), // Pin ucunu merkeze hizalamak için
+              child: Icon(
+                Icons.location_pin,
+                size: 54,
+                color: AppColors.primaryDarkGreen,
+              ),
+            ),
+          ),
+
+          /// 🔻 ALT PANEL (Adres Gösterimi ve Onay)
           Positioned(
             left: 16,
             right: 16,
@@ -130,22 +222,21 @@ class _LocationPickerScreenState
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.location_on,
-                        color: AppColors.primaryDarkGreen,
-                      ),
+                      const Icon(Icons.location_on, color: AppColors.primaryDarkGreen),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          address.title,
+                          _tempTitle,
                           style: const TextStyle(
                             fontWeight: FontWeight.w500,
                             color: Colors.black87,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (_loading)
-                         SizedBox(
+                        SizedBox(
                           width: 16,
                           height: 16,
                           child: PlatformWidgets.loader(strokeWidth: 2, radius: 8),
@@ -153,10 +244,7 @@ class _LocationPickerScreenState
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
-                // 👇 SADECE BURAYI DEĞİŞTİRDİM: ElevatedButton yerine CustomButton
                 SizedBox(
                   width: double.infinity,
                   child: CustomButton(
@@ -166,16 +254,23 @@ class _LocationPickerScreenState
                         : () async {
                       setState(() => _loading = true);
 
+                      // Global state'i ve Backend'i sadece burada güncelliyoruz
                       final ok = await ref
                           .read(addressProvider.notifier)
-                          .confirmLocation();
+                          .updateConfirmedLocation(
+                        lat: _tempLat!,
+                        lng: _tempLng!,
+                        title: _tempTitle,
+                      );
 
                       if (!mounted) return;
-
                       setState(() => _loading = false);
 
                       if (ok) {
-                        context.go('/home'); // 🔥 NET
+                        Toasts.success(context, "Konum başarıyla güncellendi.");
+                        context.go('/home');
+                      } else {
+                        Toasts.error(context, "Konum güncellenirken bir hata oluştu.");
                       }
                     },
                   ),

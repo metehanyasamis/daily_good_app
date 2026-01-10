@@ -77,7 +77,7 @@ class OrderDetailScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
+                        padding: EdgeInsets.fromLTRB(16, 16, 16, 6),
                         child: Text("Sipariş İçeriği", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
 
@@ -146,16 +146,21 @@ class OrderDetailScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text("Siparişi Değerlendir", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
                       RatingFormCard(
                         storeId: fullOrder.store.id,
-                        orderId: fullOrder.id, // Hangi sipariş olduğunu da bildirdik
-                        existingReviewId: null,
-                        initialRatings: const {
-                          'Servis': 0,
-                          'Ürün Miktarı': 0,
-                          'Ürün Lezzeti': 0,
-                          'Ürün Çeşitliliği': 0
+                        orderId: fullOrder.id,
+                        productId: fullOrder.items.isNotEmpty ? fullOrder.items.first.product.id : null,
+
+                        // 🎯 Mevcut yorum bilgilerini modelden çekip gönderiyoruz
+                        existingReviewId: fullOrder.review?.id,
+                        initialComment: fullOrder.review?.comment,
+
+                        initialRatings: {
+                          'Servis': fullOrder.review?.serviceRating ?? 0,
+                          'Ürün Miktarı': fullOrder.review?.productQuantityRating ?? 0,
+                          'Ürün Lezzeti': fullOrder.review?.productTasteRating ?? 0,
+                          'Ürün Çeşitliliği': fullOrder.review?.productVarietyRating ?? 0,
                         },
                       ),
                     ],

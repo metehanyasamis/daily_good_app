@@ -159,7 +159,65 @@ class AddressNotifier extends StateNotifier<AddressState> {
     debugPrint("♻️ [ADDRESS] hydrated from AppState → $address");
   }
 
+  Future<String> getAddressFromCoords({
+    required double lat,
+    required double lng,
+  }) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final street = p.thoroughfare;
+        final number = p.subThoroughfare;
+        final subLocality = p.subLocality;
+        final locality = p.locality;
 
+        String addressLine = '';
+        if (street != null && street.isNotEmpty) {
+          addressLine = street;
+          if (number != null && number.isNotEmpty) {
+            addressLine += ' No:$number';
+          }
+        }
+
+        final cityLine = [
+          if (subLocality?.isNotEmpty == true) subLocality,
+          if (locality?.isNotEmpty == true) locality,
+        ].join(', ');
+
+        final fullAddress = [
+          if (addressLine.isNotEmpty) addressLine,
+          if (cityLine.isNotEmpty) cityLine,
+        ].join(', ');
+
+        return fullAddress.isNotEmpty ? fullAddress : 'Seçilen Konum';
+      }
+    } catch (e) {
+      debugPrint("❌ Geocoding hatası: $e");
+    }
+    return 'Seçilen Konum';
+  }
+
+  /// 🎯 Onay butonuna basıldığında hem state'i günceller hem de backend'e gönderir
+  Future<bool> updateConfirmedLocation({
+    required double lat,
+    required double lng,
+    required String title,
+  }) async {
+    // 1. Önce state'i güncelle (UI'da hemen yansıması için)
+    state = state.copyWith(
+      lat: lat,
+      lng: lng,
+      title: title,
+      isSelected: true,
+    );
+
+    // 2. Yerel diske (Prefs) kaydet
+    await PrefsService.saveAddress(title: title, lat: lat, lng: lng);
+
+    // 3. Backend'e gönder (Zaten confirmLocation metodu bunu yapıyordu, doğrudan onu da çağırabilirsin)
+    return await confirmLocation();
+  }
 
   // final LatLngBounds? visibleBounds;
 

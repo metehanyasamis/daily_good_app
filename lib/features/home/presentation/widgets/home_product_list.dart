@@ -35,7 +35,7 @@ class HomeProductList extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         cacheExtent: 1000,
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         itemCount: products.length,
         itemBuilder: (context, index) {
           final product = products[index];
@@ -43,7 +43,7 @@ class HomeProductList extends StatelessWidget {
           return Container(
             width: MediaQuery.of(context).size.width * 0.82,
             margin: EdgeInsets.only(
-              right: index == products.length - 1 ? 0 : 8,
+              right: index == products.length - 1 ? 0 : 1,
             ),
             child: ProductCard(
               product: product,

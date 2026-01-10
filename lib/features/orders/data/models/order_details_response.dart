@@ -6,6 +6,7 @@ class OrderDetailResponse {
   final String statusLabel;
   final double totalAmount;
   final DateTime? deliveryDate;
+  final OrderReview? review;
 
   final StoreInOrder store;
   final List<OrderProductItem> items;
@@ -22,6 +23,7 @@ class OrderDetailResponse {
     required this.statusLabel,
     required this.totalAmount,
     required this.deliveryDate,
+    required this.review,
     required this.store,
     required this.items,
     required this.payment,
@@ -40,6 +42,7 @@ class OrderDetailResponse {
       deliveryDate: json['delivery_date'] != null
           ? DateTime.tryParse(json['delivery_date'])
           : null,
+      review: json['review'] != null ? OrderReview.fromJson(json['review']) : null,
       store: StoreInOrder.fromJson(json['store'] ?? {}),
       items: (json['items'] as List? ?? [])
           .map((e) => OrderProductItem.fromJson(e))
@@ -149,6 +152,37 @@ class ProductInOrder {
     );
   }
 }
+
+class OrderReview {
+  final String id;
+  final String? comment;
+  final int serviceRating;
+  final int productQuantityRating;
+  final int productTasteRating;
+  final int productVarietyRating;
+
+  OrderReview({
+    required this.id,
+    this.comment,
+    required this.serviceRating,
+    required this.productQuantityRating,
+    required this.productTasteRating,
+    required this.productVarietyRating,
+  });
+
+  factory OrderReview.fromJson(Map<String, dynamic> json) {
+    return OrderReview(
+      id: json['id']?.toString() ?? '',
+      comment: json['comment'],
+      // API'den gelen snake_case isimleri Dart modeline (camelCase) eşliyoruz
+      serviceRating: json['service_rating'] ?? 0,
+      productQuantityRating: json['product_quantity_rating'] ?? 0,
+      productTasteRating: json['product_taste_rating'] ?? 0,
+      productVarietyRating: json['product_variety_rating'] ?? 0,
+    );
+  }
+}
+
 
 class PaymentInfo {
   final String paymentMethod;

@@ -267,6 +267,7 @@ class HomeContent extends ConsumerWidget {
     // Her iki platform da bu içeriği kullanacak
     Widget buildBody() {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const HomeEmailWarningBanner(),
           if (hemenYaninda.isNotEmpty) ...[

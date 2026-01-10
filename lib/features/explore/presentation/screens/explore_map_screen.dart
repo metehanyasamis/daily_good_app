@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -24,6 +25,7 @@ class ExploreMapScreen extends ConsumerStatefulWidget {
 
 class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
   StoreSummary? _selectedStore;
+  MapboxMap? _mapboxMap;
 
   @override
   Widget build(BuildContext context) {
@@ -67,10 +69,33 @@ class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
               StoreMarkerLayer(
                 address: address,
                 stores: stores,
+                onMapReady: (map) => _mapboxMap = map,
                 onMapTap: () => setState(() => _selectedStore = null),
                 onStoreSelected: (store) {
                   setState(() => _selectedStore = store);
                 },
+              ),
+
+              /// 📍 KONUMUMA GİT BUTONU (SAĞ TARAF)
+              Positioned(
+                right: 16,
+                top: 16, // AppBar'ın hemen altına
+                child: FloatingActionButton.small(
+                  heroTag: "my_location",
+                  backgroundColor: Colors.white,
+                  elevation: 4,
+                  shape: const CircleBorder(),
+                  onPressed: () {
+                    _mapboxMap?.flyTo(
+                      CameraOptions(
+                        center: Point(coordinates: Position(address.lng, address.lat)),
+                        zoom: 15.0,
+                      ),
+                      MapAnimationOptions(duration: 800),
+                    );
+                  },
+                  child: const Icon(Icons.my_location, color: AppColors.primaryDarkGreen),
+                ),
               ),
 
               /// 🟢 MINI STORE CARD

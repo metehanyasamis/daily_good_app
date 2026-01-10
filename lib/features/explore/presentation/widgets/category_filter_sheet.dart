@@ -32,24 +32,6 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.of(context).padding.bottom; // Sistemsel alt boşluk
 
-    /*
-    // Liste Hazırlama (Aynı kalıyor)
-    final List<Map<String, String>> items = widget.backendCategories != null
-        ? widget.backendCategories!.map((cat) {
-      final d = cat as dynamic;
-      return {
-        'id': d.id.toString(),
-        'name': (d.name ?? d.title ?? d.id).toString(),
-      };
-    }).toList()
-        : CategoryFilterOption.values.map((opt) {
-      return {
-        'id': opt.name,
-        'name': categoryLabel(opt),
-      };
-    }).toList();
-
-     */
 
     final List<Map<String, String>> itemsRaw =
     widget.backendCategories != null
@@ -69,7 +51,7 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
 
     final List<Map<String, String>> items = [
       {
-        'id': '',      // 🔥 boş string = Tümü
+        'id': '',
         'name': 'Tümü',
       },
       ...itemsRaw,
@@ -139,7 +121,7 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
             Padding(
               // Buradaki son değeri (80) senin Bottom Bar'ının yüksekliğine göre ayarlıyoruz.
               // 80 birim genelde yüzen barın üstünde kalması için yeterlidir.
-                padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 85),
+                padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 120),
                 child: CustomButton(
                   text: "Filtreleri Uygula",
                   onPressed: () {

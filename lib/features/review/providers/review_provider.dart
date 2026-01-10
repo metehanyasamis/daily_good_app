@@ -20,6 +20,7 @@ class ReviewController
 
   Future<bool> submitReview({
     required String storeId,
+    required String? productId,
     required String? existingReviewId,
     required Map<String, int> ratings,
     required String comment,
@@ -29,6 +30,7 @@ class ReviewController
     debugPrint("🚀 Review Submission Started");
     debugPrint("📍 Store ID: $storeId");
     debugPrint("📦 Order ID: $orderId");
+    debugPrint("🛒 Product ID: $productId");
     debugPrint("⭐ Ratings: $ratings");
     debugPrint("💬 Comment: $comment");
     debugPrint("🔄 Existing Review ID: $existingReviewId");
@@ -42,6 +44,7 @@ class ReviewController
         result = await _repo.createReview(
           storeId: storeId,
           orderId: orderId,
+          productId: productId,
           serviceRating: ratings["Servis"]!,
           productQuantityRating: ratings["Ürün Miktarı"]!,
           productTasteRating: ratings["Ürün Lezzeti"]!,
