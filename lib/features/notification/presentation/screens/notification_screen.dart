@@ -84,7 +84,7 @@ class _NotificationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isUnread
-              ? AppColors.primaryDarkGreen.withOpacity(0.4)
+              ? AppColors.primaryDarkGreen.withValues(alpha: 0.4)
               : Colors.grey.shade200,
         ),
       ),
@@ -96,7 +96,7 @@ class _NotificationCard extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: AppColors.primaryDarkGreen.withOpacity(0.1),
+              color: AppColors.primaryDarkGreen.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(

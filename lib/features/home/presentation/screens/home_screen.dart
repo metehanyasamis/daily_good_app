@@ -55,6 +55,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // 🎯 loadUser'ı bekle (await koyarsak veri gelene kadar banner beklemede kalır)
       await ref.read(userNotifierProvider.notifier).loadUser();
 
+      // 🎯 2. BİLDİRİM TOKEN'INI GÜNCELLE
+      _updateNotificationToken();
+
       // Diğerlerini de sırayla veya beraber yükle
       ref.read(categoryProvider.notifier).load();
 
@@ -120,9 +123,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       "🏠 [HOME BUILD] sections="
           "${homeState.sectionProducts.map((k,v)=>MapEntry(k.name,v.length))}",
     );
-
-    final bool isHome = GoRouterState.of(context).uri.toString() == '/home' ||
-        GoRouterState.of(context).uri.toString() == '/';
 
 
     // 🔥 KONUM DEĞİŞTİĞİNDE VERİLERİ YENİLE
@@ -329,7 +329,6 @@ class HomeContent extends ConsumerWidget {
     }
   }
 
-  // Section Header Metodu (Değişmedi)
   Widget _buildSectionHeader(
       BuildContext context,
       WidgetRef ref,
@@ -337,16 +336,19 @@ class HomeContent extends ConsumerWidget {
       ExploreFilterOption filter,
       ) {
     return InkWell(
-      onTap: () async {
-        await Haptics.light(); // Tıklama hissi [cite: 25]
+      onTap: () {
+        Haptics.light();
+
         ref.read(exploreStateProvider.notifier).setFeedFilter(filter);
+
         final homeState = ref.read(homeStateProvider);
         final categories = ref.read(categoryProvider).categories;
         final selectedCategoryId = categories.isNotEmpty
             ? categories[homeState.selectedCategoryIndex].id
             : null;
 
-        ref.read(exploreStateProvider.notifier).setCategoryId(selectedCategoryId.toString());
+        ref.read(exploreStateProvider.notifier)
+            .setCategoryId(selectedCategoryId?.toString());
 
         context.push(
           '/explore',
@@ -360,4 +362,5 @@ class HomeContent extends ConsumerWidget {
       child: HomeSectionTitle(title: title),
     );
   }
+
 }

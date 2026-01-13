@@ -53,7 +53,7 @@ CustomTransitionPage buildAnimatedPage({
     key: key,
     transitionDuration: const Duration(milliseconds: 350),
     child: child,
-    transitionsBuilder: (_, animation, __, child) {
+    transitionsBuilder: (_, animation, _, child) {
       return FadeTransition(
         opacity: CurvedAnimation(
           parent: animation,
@@ -159,8 +159,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/onboarding',
         pageBuilder: (_, state) => buildAnimatedPage(child: const OnboardingScreen(), key: state.pageKey),
       ),
-      GoRoute(path: '/location-info', builder: (_, __) => const LocationInfoScreen()),
-      GoRoute(path: '/location-picker', builder: (_, __) => const LocationPickerScreen()),
+      GoRoute(path: '/location-info', builder: (_, _) => const LocationInfoScreen()),
+      GoRoute(path: '/location-picker', builder: (_, _) => const LocationPickerScreen()),
       GoRoute(
         path: '/profileDetail',
         builder: (context, state) {
@@ -192,8 +192,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      GoRoute(path: '/payment', builder: (_, __) => const PaymentScreen()),
-      GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
+      GoRoute(path: '/payment', builder: (_, _) => const PaymentScreen()),
+      GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
       GoRoute(
         path: '/notifications',
         builder: (context, state) => NotificationScreen(),
@@ -206,12 +206,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/order-tracking',
-        builder: (_, __) => const OrderTrackingScreen(),
+        builder: (_, _) => const OrderTrackingScreen(),
       ),
 
       GoRoute(
         path: '/thank-you',
-        builder: (_, __) => const ThankYouScreen(),
+        builder: (_, _) => const ThankYouScreen(),
       ),
 
       GoRoute(
@@ -262,11 +262,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (_, state, child) => AppShell(location: state.uri.toString(), child: child),
         routes: [
-          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-          GoRoute(path: '/explore', builder: (_, __) => const ExploreListScreen()),
-          GoRoute(path: '/explore-map', builder: (_, __) => const ExploreMapScreen()),
-          GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
-          GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
+          GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+          GoRoute(path: '/explore', builder: (_, _) => const ExploreListScreen()),
+          GoRoute(path: '/explore-map', builder: (_, _) => const ExploreMapScreen()),
+          GoRoute(path: '/favorites', builder: (_, _) => const FavoritesScreen()),
+          GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
         ],
       ),
     ],
@@ -280,12 +280,12 @@ class RouterNotifier extends ChangeNotifier {
 
   RouterNotifier(this.ref) {
     // appState değiştiğinde router'ı refresh et
-    ref.listen(appStateProvider, (_, __) {
+    ref.listen(appStateProvider, (_, _) {
       notifyListeners();
     });
 
     // auth değiştiğinde de tetikle
-    ref.listen(userNotifierProvider, (_, __) {
+    ref.listen(userNotifierProvider, (_, _) {
       notifyListeners();
     });
   }

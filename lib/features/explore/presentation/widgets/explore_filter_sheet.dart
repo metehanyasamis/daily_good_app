@@ -73,7 +73,7 @@ class _ExploreFilterSheetState extends State<ExploreFilterSheet> {
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primaryDarkGreen.withOpacity(0.05) : Colors.grey.shade50,
+                      color: isSelected ? AppColors.primaryDarkGreen.withValues(alpha: 0.05) : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: isSelected ? AppColors.primaryDarkGreen : Colors.transparent, width: 1.5),
                     ),

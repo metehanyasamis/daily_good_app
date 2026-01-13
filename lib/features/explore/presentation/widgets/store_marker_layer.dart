@@ -58,20 +58,21 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
   Future<void> _onStyleLoaded() async {
     if (_map == null) return;
 
-    // Sadece CircleManager (Daireler için) yeterli, LogoManager'ı sildik.
+// Satır 64 civarı:
     _circleManager = await _map!.annotations.createCircleAnnotationManager();
 
-    _circleManager!.addOnCircleAnnotationClickListener(
-      _StoreCircleClickListener(
-        storeMap: _storeByCircleId,
-        onStoreSelected: (store) async {
-          setState(() => _selectedStoreId = store.id);
-          await _moveCameraToStore(store);
-          _drawMarkers(); // Seçili olanın boyutunu değiştirmek için tekrar çiz
-          widget.onStoreSelected(store);
-        },
-      ),
-    );
+    // ✅ Mapbox 2.17.0+ için doğru metod yolu budur:
+    _circleManager!.tapEvents(onTap: (annotation) {
+      final store = _storeByCircleId[annotation.id];
+      if (store != null) {
+        setState(() => _selectedStoreId = store.id);
+        _moveCameraToStore(store);
+        _drawMarkers();
+        widget.onStoreSelected(store);
+        return true;
+      }
+      return false;
+    });
 
     // İlk açılışta kamera ayarı
     _map!.setCamera(CameraOptions(
@@ -94,9 +95,9 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
       CircleAnnotationOptions(
         geometry: Point(coordinates: Position(widget.address.lng, widget.address.lat)),
         circleRadius: 10,
-        circleColor: Colors.blue.value,
+        circleColor: Colors.blue.toARGB32(),
         circleStrokeWidth: 2,
-        circleStrokeColor: Colors.white.value,
+        circleStrokeColor: Colors.white.toARGB32(),
       ),
     );
 
@@ -110,9 +111,9 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
         CircleAnnotationOptions(
           geometry: Point(coordinates: Position(store.longitude!, store.latitude!)),
           circleRadius: isSelected ? 12 : 9, // Seçili olan biraz daha büyük
-          circleColor: isSelected ? Colors.green.shade900.value : Colors.green.value,
+          circleColor: isSelected ? Colors.green.shade900.toARGB32() : Colors.green.toARGB32(),
           circleStrokeWidth: 2,
-          circleStrokeColor: Colors.white.value,
+          circleStrokeColor: Colors.white.toARGB32(),
         ),
       );
 
@@ -162,19 +163,3 @@ class _StoreMarkerLayerState extends State<StoreMarkerLayer> {
   }
 }
 
-// Tıklama Dinleyicisi
-class _StoreCircleClickListener implements OnCircleAnnotationClickListener {
-  final Map<String, StoreSummary> storeMap;
-  final void Function(StoreSummary store) onStoreSelected;
-  _StoreCircleClickListener({required this.storeMap, required this.onStoreSelected});
-
-  @override
-  bool onCircleAnnotationClick(CircleAnnotation annotation) {
-    final store = storeMap[annotation.id];
-    if (store != null) {
-      onStoreSelected(store);
-      return true;
-    }
-    return false;
-  }
-}

@@ -180,7 +180,7 @@ class _ProductHeader extends StatelessWidget {
             Image.network(
               product.imageUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200),
+              errorBuilder: (_, _, _) => Container(color: Colors.grey.shade200),
             ),
 
             // 🟢 SOL DUVAR: STOK ADET ETİKETİ
@@ -190,7 +190,7 @@ class _ProductHeader extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
+                  color: Colors.white.withValues(alpha: 0.95),
                   borderRadius: const BorderRadius.only(
                     topRight: Radius.circular(20),
                     bottomRight: Radius.circular(20),

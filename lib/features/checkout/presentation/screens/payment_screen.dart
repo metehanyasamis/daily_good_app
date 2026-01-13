@@ -121,19 +121,17 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         ),
       
         // 🔥 ESKİ VE DOĞRU CTA BURAYA
-        bottomNavigationBar: Container(
-          child: SafeArea(
-            child: Padding(
-              // Sadece yatayda 16, altta 8-12 arası ekstra bir boşluk yeterli olacaktır
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: CustomButton(
-                text: _isProcessing ? 'İşlem yapılıyor...' : 'Ödemeyi Tamamla',
-                price: totalAmount,
-                showPrice: true,
-                onPressed: _isProcessing
-                    ? () {}
-                    : () => _onPayPressed(context, cartItems, totalAmount),
-              ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            // Sadece yatayda 16, altta 8-12 arası ekstra bir boşluk yeterli olacaktır
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: CustomButton(
+              text: _isProcessing ? 'İşlem yapılıyor...' : 'Ödemeyi Tamamla',
+              price: totalAmount,
+              showPrice: true,
+              onPressed: _isProcessing
+                  ? () {}
+                  : () => _onPayPressed(cartItems, totalAmount),
             ),
           ),
         ),
@@ -150,76 +148,80 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     );
   }
 
+
+  Future<String?> _createOrderAsync(
+      List<CartItem> cartItems,
+      double totalAmount,
+      ) async {
+    final repo = ref.read(orderRepositoryProvider);
+
+    final rawCardNumber = _cardNumberController.text.replaceAll(' ', '');
+    final last4 = rawCardNumber.length >= 4
+        ? rawCardNumber.substring(rawCardNumber.length - 4)
+        : "****";
+
+    final storeId = cartItems.first.shopId;
+
+    final request = CreateOrderRequest(
+      storeId: storeId,
+      totalAmount: totalAmount,
+      paymentMethod: 'credit_card',
+      paymentData: {
+        "card_last4": last4,
+        "card_holder": _cardNameController.text.trim(),
+      },
+      items: cartItems.map((c) => CreateOrderItemRequest(
+        productId: c.productId,
+        quantity: c.quantity,
+        unitPrice: c.price,
+        totalPrice: c.price * c.quantity,
+        notes: (orderNote?.trim().isNotEmpty ?? false)
+            ? orderNote!.trim()
+            : null,
+      )).toList(),
+    );
+
+    final order = await repo.createOrder(request);
+    return order.id.toString();
+  }
+
+
   Future<void> _onPayPressed(
-      BuildContext context,
       List<CartItem> cartItems,
       double totalAmount,
       ) async {
     if (!_formKey.currentState!.validate()) return;
 
-    // 🔥 DEBUG LOG: Verinin transferini kontrol ediyoruz
-    debugPrint('📝 [ORDER_NOTE] Sepetten Gelen Not: $orderNote');
-    debugPrint('📦 [ORDER_ITEMS] Ürün Sayısı: ${cartItems.length}');
-    for (var item in cartItems) {
-      debugPrint('   - Ürün: ${item.name}, Not: $orderNote');
+    if (cartItems.isEmpty) {
+      Toasts.error(context, 'Sepetiniz boş olduğu için işleme devam edilemez.');
+      return;
     }
 
-    setState(() => _isProcessing = true);
+    setState(() {
+      _isProcessing = true;
+      _isPaymentSuccessful = true; // 🔥 ÖNCE UI kilitlenir
+    });
 
     try {
-      final repo = ref.read(orderRepositoryProvider);
-      final first = cartItems.first;
+      final orderId = await _createOrderAsync(cartItems, totalAmount);
+      if (!mounted || orderId == null) return;
 
-      final request = CreateOrderRequest(
-        storeId: first.shopId,
-        totalAmount: totalAmount,
-        paymentMethod: 'credit_card',
-        paymentData: {
-          "card_last4": _cardNumberController.text
-              .replaceAll(' ', '')
-              .substring(_cardNumberController.text.length - 4),
-        },
-        items: cartItems.map((c) {
-          return CreateOrderItemRequest(
-            productId: c.productId,
-            quantity: c.quantity,
-            unitPrice: c.price,
-            totalPrice: c.price * c.quantity,
-            notes: (orderNote != null && orderNote!.trim().isNotEmpty) ? orderNote : null,
-          );
-        }).toList(),
-      );
-
-      final order = await repo.createOrder(request);
-
-      // ✅ Başarı durumunda flag'i set et
-      if (mounted) {
-        setState(() {
-          _isPaymentSuccessful = true;
-        });
-      }
-
-      // Sepeti temizle
-      await ref.read(cartProvider.notifier).clearCart();
-
-      if (!mounted) return;
-
-      final orderId = order.id.toString();
+      // 🔥 Navigation ÖNCE
       context.go('/order-success?id=$orderId');
 
+      // 🔥 Sepeti SONRA temizle (UI artık bu screen’de değil)
+      Future.microtask(() {
+        ref.read(cartProvider.notifier).clearCart();
+      });
+
     } catch (e) {
-      // ❌ Hata durumunda flag'leri sıfırla
-      if (mounted) {
-        setState(() {
-          _isPaymentSuccessful = false;
-        });
+      if (!mounted) return;
 
-        HapticFeedback.heavyImpact();
+      setState(() => _isPaymentSuccessful = false);
+      HapticFeedback.heavyImpact();
 
-        Toasts.error(context, 'Ödeme başarısız: $e');
-      }
+      Toasts.error(context, 'Ödeme işlemi sırasında bir hata oluştu.');
     } finally {
-      // 🛡️ Her durumda loading'i kapat
       if (mounted) {
         setState(() => _isProcessing = false);
       }
@@ -227,43 +229,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   }
 
 
-  Widget _buildSummaryCard(double totalAmount) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Toplam Tutar',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Text(
-            '${totalAmount.toStringAsFixed(2)} ₺',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryDarkGreen,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
+
+
 
   Widget _buildCardPreview() {
     return Container(

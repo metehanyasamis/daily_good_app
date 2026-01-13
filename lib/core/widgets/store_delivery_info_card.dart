@@ -23,7 +23,7 @@ class StoreDeliveryInfoCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: AppColors.primaryDarkGreen.withOpacity(0.3),
+            color: AppColors.primaryDarkGreen.withValues(alpha: 0.3),
           ),
         ),
         child: InkWell(
@@ -140,20 +140,4 @@ class StoreDeliveryInfoCard extends StatelessWidget {
       ),
     );
   }
-}
-
-
-/// CARD STYLE
-Widget _card({required Widget child}) {
-  return Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: AppColors.primaryDarkGreen.withOpacity(0.3),
-      ),
-    ),
-    child: child,
-  );
 }

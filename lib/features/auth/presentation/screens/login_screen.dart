@@ -57,6 +57,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     Toasts.error(context, msg);
   }
 
+
+
   Future<void> _onSubmit() async {
     if (_isOtpOpen) return;
 
@@ -88,23 +90,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (currentState.status == AuthStatus.otpSent) {
       debugPrint("✅ [UI] Başarılı! BottomSheet açılıyor.");
+
+      if (!mounted) return;
       setState(() => _isOtpOpen = true);
 
-      await showModalBottomSheet(
+      // ❗ await YOK
+      showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => OtpBottomSheet(phone: phone, isLogin: isLoginTab),
-      );
-
-      if (mounted) setState(() => _isOtpOpen = false);
+        builder: (_) => OtpBottomSheet(
+          phone: phone,
+          isLogin: isLoginTab,
+        ),
+      ).whenComplete(() {
+        // BottomSheet kapandığında çalışır
+        if (!mounted) return;
+        setState(() => _isOtpOpen = false);
+      });
     }
     else if (currentState.status == AuthStatus.error) {
-      // 💡 BACKEND MESAJI BURADA GÖSTERİLİYOR
       debugPrint("❌ [UI] Hata Mesajı: ${currentState.errorMessage}");
       _error(currentState.errorMessage ?? "İşlem başarısız");
     }
-  }  // ---------------------------------------------------------------------------
+
+  }
+
+  // ---------------------------------------------------------------------------
   // UI ANA YAPI
   // ---------------------------------------------------------------------------
 
@@ -298,7 +310,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(40),
           color: isLoading
-              ? AppColors.primaryLightGreen.withOpacity(0.7)
+              ? AppColors.primaryLightGreen.withValues(alpha: 0.7)
               : AppColors.primaryDarkGreen,
         ),
         child: isLoading

@@ -214,7 +214,7 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
+                        color: Colors.black.withValues(alpha: 0.06),
                         blurRadius: 6,
                         offset: const Offset(0, 3),
                       ),
@@ -254,7 +254,6 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                         : () async {
                       setState(() => _loading = true);
 
-                      // Global state'i ve Backend'i sadece burada güncelliyoruz
                       final ok = await ref
                           .read(addressProvider.notifier)
                           .updateConfirmedLocation(
@@ -263,7 +262,8 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                         title: _tempTitle,
                       );
 
-                      if (!mounted) return;
+                      if (!context.mounted) return;
+
                       setState(() => _loading = false);
 
                       if (ok) {
@@ -273,8 +273,10 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                         Toasts.error(context, "Konum güncellenirken bir hata oluştu.");
                       }
                     },
+
                   ),
                 ),
+
               ],
             ),
           ),

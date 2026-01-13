@@ -221,30 +221,6 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     super.dispose();
   }
 
-  void _onSearchChanged() {
-    final q = _searchController.text.trim();
-
-    // 🔎 DEBUG
-    debugPrint('🔎 [SEARCH_INPUT] q="$q" len=${q.length}');
-
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
-      if (!mounted) return;
-
-      // 1) 3 harften az: backend araması yapma
-      if (q.isNotEmpty && q.length < 3) {
-        debugPrint('ℹ️ [SEARCH_DEBOUNCE] skip backend (len<3), only local applyFilters');
-        final all = ref.read(productsProvider).products;
-        _applyFilters(all);
-        return;
-      }
-
-      // 2) 3+ ise: backend’e git
-      debugPrint('🌐 [SEARCH_DEBOUNCE] backend search START q="$q"');
-      _fetchData(searchOverride: q.isEmpty ? null : q);
-    });
-  }
-
 
   void _applyFilters(List<ProductModel> allProducts) {
     // ------------------------------------------------------------
@@ -264,9 +240,9 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     // 1) Sadece UI'da gösterilebilir "geçerli" ürünleri al
     // ------------------------------------------------------------
     List<ProductModel> temp = allProducts.where((p) {
-      final bool hasValidId = p.id != null && p.id.isNotEmpty;
-      final bool hasValidName = p.name != null && p.name.isNotEmpty && p.name != "İsimsiz Ürün";
-      final bool hasValidStore = p.store != null && p.store.name != null && p.store.name.isNotEmpty;
+      final bool hasValidId = p.id.isNotEmpty;
+      final bool hasValidName = p.name.isNotEmpty && p.name != "İsimsiz Ürün";
+      final bool hasValidStore = p.store.name.isNotEmpty;
       return hasValidId && hasValidName && hasValidStore;
     }).toList();
 
@@ -742,7 +718,7 @@ class ExploreHeaderDelegate extends SliverPersistentHeaderDelegate {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -794,7 +770,7 @@ class ExploreHeaderDelegate extends SliverPersistentHeaderDelegate {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.primaryDarkGreen.withOpacity(0.2)),
+          border: Border.all(color: AppColors.primaryDarkGreen.withValues(alpha: 0.2)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

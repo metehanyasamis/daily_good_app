@@ -61,13 +61,6 @@ class CustomBottomNavBar extends StatelessWidget {
         : 115) // diğerleri
         : 60;
 
-    // 👇 offset’i de sağa sola göre ayarla
-    final double leftOffset = (index == 0)
-        ? 28 // home biraz içerde olsun
-        : (index == 3)
-        ? 24 // hesap sağda, daha az taşsın
-        : 30;
-
     return SizedBox(
       width: width,
       height: 48,

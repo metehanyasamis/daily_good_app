@@ -47,8 +47,6 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
     // 🔹 2.5 saniye sonra sipariş takibine yönlendir
     Timer(const Duration(seconds: 2, milliseconds: 500), () {
       if (mounted) {
-        // widget.orderId zaten String? olarak tanımlı olmalı
-        final targetId = widget.orderId ?? "last";
         ref.invalidate(activeOrdersProvider);
         context.go('/order-tracking');
       }

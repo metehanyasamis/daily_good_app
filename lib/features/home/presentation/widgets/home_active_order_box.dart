@@ -17,7 +17,7 @@ class HomeActiveOrderBox extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.primaryDarkGreen.withOpacity(0.08),
+          color: AppColors.primaryDarkGreen.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: AppColors.primaryDarkGreen,

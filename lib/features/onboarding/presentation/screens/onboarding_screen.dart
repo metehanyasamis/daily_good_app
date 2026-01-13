@@ -39,7 +39,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     {
       'title': 'Daha bilinçli bir seçim',
       'description':
-      'Daily Good ile yaptığın her alışveriş, yiyeceklerin çöpe gitmesini engeller. Küçük bir seçimle büyük bir fark yaratabilirsin.',
+      'Daily Good ile yaptığın her alışveriş, yiyeceklerin israfını engeller. Küçük bir seçimle büyük bir fark yaratabilirsin.',
       'icon': Icons.public_rounded,
     },
     {
@@ -52,15 +52,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _nextPage() async {
     if (_currentPage == _pages.length - 1) {
-      // Onboarding tamamlandı
       await PrefsService.setHasSeenOnboarding(true);
-
       ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
-
-      // 🚀 EN ÖNEMLİ EKLEME → Yeni kullanıcı statüsünü kapat
       await ref.read(appStateProvider.notifier).setIsNewUser(false);
 
-      // Lokasyon sayfasına geç
+      if (!mounted) return; // ✅ LINT FIX
+
       context.go('/location-info');
     } else {
       _pageController.nextPage(
@@ -99,9 +96,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               onPressed: () async {
                 await PrefsService.setHasSeenOnboarding(true);
                 ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
-
-                // 🚀 Yeni kullanıcı bitti
                 await ref.read(appStateProvider.notifier).setIsNewUser(false);
+
+                if (!context.mounted) return;
 
                 context.go('/location-info');
               },

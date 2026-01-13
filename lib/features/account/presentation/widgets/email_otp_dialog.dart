@@ -39,11 +39,21 @@ class _EmailOtpSheetState extends ConsumerState<EmailOtpSheet> {
   void _startTimer() {
     _timer?.cancel();
     _seconds = 120;
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (_seconds == 0) t.cancel();
-      else setState(() => _seconds--);
-    });
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+          (t) {
+        if (_seconds == 0) {
+          t.cancel();
+        } else {
+          setState(() {
+            _seconds--;
+          });
+        }
+      },
+    );
   }
+
 
   Future<void> _submit() async {
     final otp = _pin.text.trim();

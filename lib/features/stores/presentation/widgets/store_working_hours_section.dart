@@ -23,7 +23,7 @@ class StoreWorkingHoursSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(20), // Tasarımdaki gibi daha oval
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Çok hafif, modern bir gölge
+            color: Colors.black.withValues(alpha: 0.05), // Çok hafif, modern bir gölge
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),

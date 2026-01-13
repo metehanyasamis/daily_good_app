@@ -11,7 +11,6 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/info_row_widget.dart';
 
 import '../../../auth/domain/providers/auth_notifier.dart';
-import '../../../saving/providers/saving_provider.dart';
 import '../../domain/providers/user_notifier.dart';
 import '../../domain/states/user_state.dart';
 import '../widgets/email_otp_dialog.dart';
@@ -38,101 +37,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
 
 // -------------------------------------------------------------
-  /*Future<void> _logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      useRootNavigator: true,
-      builder: (_) => AlertDialog(
-        title: const Text('Oturumu Kapat'),
-        content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(false),
-            child: const Text('Vazgeç'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
-            child: const Text('Evet, Çıkış Yap'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    // 1) Tüm state'leri temizle
-    await ref.read(authNotifierProvider.notifier).logout();
-    await ref.read(appStateProvider.notifier).resetAfterLogout();
-
-    // 2) 🔥 Yönlendirmeyi microtask ile yap → dialog tamamen kapansın
-    Future.microtask(() {
-      if (mounted) {
-        context.go('/splash');
-      }
-    });
-  }
-  Future<void> _deleteAccount() async {
-    // 1. Önce gerekli araçları context ölmeden kopyala
-    final userNotifier = ref.read(userNotifierProvider.notifier);
-    final authNotifier = ref.read(authNotifierProvider.notifier);
-
-    // 🎯 KRİTİK: GoRouter'ı direkt değişkene al
-    final router = GoRouter.of(context);
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hesabı Sil'),
-        content: const Text('Tüm verileriniz silinecek. Emin misiniz?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Evet, Sil'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    // 2. Loading göster
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      useRootNavigator: true,
-      builder: (_) => Center(child: PlatformWidgets.loader()),
-    );
-
-    try {
-      debugPrint("🕹️ [UI] Backend silme başlıyor...");
-      await userNotifier.deleteUserAccount();
-
-      // 🎯 BURASI EN ÖNEMLİ KISIM:
-      // Önce yönlendiriyoruz. Ekranda AccountScreen kalmadığı için çökme riski bitiyor.
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Loading'i kapat
-        router.go('/login'); // Login'e kaç!
-
-        // 3. Login ekranına geçiş başladıktan hemen sonra yereli süpür
-        // Future.microtask veya kısa bir delay ile yaparsak AccountScreen dispose olur.
-        Future.delayed(const Duration(milliseconds: 100), () async {
-          await authNotifier.logout();
-          await PrefsService.clearAll();
-          debugPrint("🏁 [UI] Tertemiz oldu.");
-        });
-      }
-    } catch (e) {
-      debugPrint("💥 [UI-HATA] $e");
-      if (mounted) Navigator.of(context, rootNavigator: true).pop();
-    }
-  }
-
-   */
-
-// -------------------------------------------------------------
   Future<void> _logout() async {
     // 🎯 Senin PlatformDialogs sınıfını kullandık
     final confirm = await PlatformDialogs.confirm(
@@ -156,12 +60,14 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     });
   }
 
-  Future<void> _deleteAccount() async {
+  Future<void> _deleteAccountAsync() async {
     final userNotifier = ref.read(userNotifierProvider.notifier);
-    final authNotifier = ref.read(authNotifierProvider.notifier);
-    final router = GoRouter.of(context);
+    await userNotifier.deleteUserAccount();
+  }
 
-    // 🎯 Adaptive onay diyaloğu
+
+  Future<void> _deleteAccount() async {
+    // 1️⃣ UI'dan SENKRON onay al
     final confirm = await PlatformDialogs.confirm(
       context,
       title: 'Hesabı Sil',
@@ -171,9 +77,14 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       destructive: true,
     );
 
-    if (confirm != true) return;
+    if (!mounted || confirm != true) return;
 
-    // 🎯 Loading gösterimi - 'const' kaldırıldı çünkü loader dinamik
+    // 2️⃣ UI referanslarını SABİTLE (artık await yok)
+    final router = GoRouter.of(context);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final authNotifier = ref.read(authNotifierProvider.notifier);
+
+    // 3️⃣ Loader (SYNC)
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -182,21 +93,26 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     );
 
     try {
-      await userNotifier.deleteUserAccount();
+      // 4️⃣ ASYNC İŞ (context YOK)
+      await _deleteAccountAsync();
 
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Loading kapat
-        router.go('/login');
+      if (!mounted) return;
 
-        Future.delayed(const Duration(milliseconds: 100), () async {
-          await authNotifier.logout();
-          await PrefsService.clearAll();
-        });
-      }
-    } catch (e) {
-      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      // 5️⃣ UI (SYNC)
+      navigator.pop();
+      router.go('/login');
+
+      Future.microtask(() async {
+        await authNotifier.logout();
+        await PrefsService.clearAll();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      navigator.pop();
     }
   }
+
+
 
   // -------------------------------------------------------------
 // AccountScreen içindeki mevcut metodu bununla değiştir:
@@ -231,7 +147,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final userState = ref.watch(userNotifierProvider);
-    final saving = ref.watch(savingProvider);
     final user = userState.user;
 
 
@@ -413,7 +328,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 3),
           )
@@ -465,13 +380,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             _StatBox(
               icon: Icons.savings,
               // Backend: total_savings
-              value: "${stats?.totalSavings?.toStringAsFixed(0) ?? "0"} TL",
+              value: "${stats?.totalSavings.toStringAsFixed(0) ?? "0"} TL",
               label: "Tasarruf",
             ),
             _StatBox(
               icon: Icons.eco_outlined,
               // Backend: carbon_footprint_kg
-              value: "${stats?.carbonFootprint?.toStringAsFixed(1) ?? "0.0"} kg",
+              value: "${stats?.carbonFootprint.toStringAsFixed(1) ?? "0.0"} kg",
               label: "CO₂",
             ),
           ],
@@ -507,7 +422,7 @@ class _StatBox extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.primaryDarkGreen.withOpacity(0.1),
+            color: AppColors.primaryDarkGreen.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: AppColors.primaryDarkGreen),

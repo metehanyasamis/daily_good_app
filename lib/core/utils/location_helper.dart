@@ -1,4 +1,6 @@
+/*
 import 'package:geolocator/geolocator.dart';
+
 import 'package:flutter/material.dart';
 
 class LocationHelper {
@@ -34,5 +36,54 @@ class LocationHelper {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
     );
+  }
+}
+
+ */
+
+// core/utils/location_helper.dart
+import 'package:geolocator/geolocator.dart';
+
+enum LocationRequestResult {
+  success,
+  serviceOff,
+  denied,
+  deniedForever,
+  error,
+}
+
+class LocationHelper {
+  static Future<(LocationRequestResult, Position?)> requestCurrentLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return (LocationRequestResult.serviceOff, null);
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        return (LocationRequestResult.denied, null);
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        return (LocationRequestResult.deniedForever, null);
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+        ),
+      );
+
+      return (LocationRequestResult.success, position);
+    } catch (_) {
+      return (LocationRequestResult.error, null);
+    }
   }
 }

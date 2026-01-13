@@ -133,49 +133,36 @@ class FavoritesNotifier extends StateNotifier<FavoritesState> {
   }
 
 
-
   /// Ürün Favori İşlemi
   Future<void> toggleProduct(String id) async {
-    // 1. ADIM: ID'yi FavButton'ın aradığı formata getir (Küçük harf + Temiz)
+    // 1. ADIM: ID Hazırlığı
     final cleanId = id.trim().toLowerCase();
-
     final isFav = state.productIds.contains(cleanId);
-    final oldState = state;
+    final oldState = state; // Hata anında sığınacağımız liman
 
     debugPrint('⚡ [FAV_TOGGLE] İşlem: ${isFav ? "Kaldır" : "Ekle"} | ID: $cleanId');
 
-    // 2. ADIM: Yerel state'i anında güncelle (Optimistic Update)
-    // Kullanıcı beklemesin, kalp anında dolsun/boşalsın
-    if (isFav) {
-      state = state.copyWith(
-        productIds: state.productIds.where((i) => i != cleanId).toSet(),
-      );
-    } else {
-      state = state.copyWith(
-        productIds: {...state.productIds, cleanId},
-      );
-    }
+    // 2. ADIM: Yerel state'i güncelle (Sadece kodu sadeleştirdik, mantık aynı)
+    _updateProductLocal(cleanId, !isFav);
 
     try {
-      // 3. ADIM: API isteğini at
+      // 3. ADIM: API isteği
       final success = isFav
           ? await repo.removeFavoriteProduct(cleanId)
           : await repo.addFavoriteProduct(cleanId);
 
       if (!success) {
-        // API başarısızsa eski haline geri dön
         debugPrint("❌ [TOGGLE_PRODUCT] API başarısız döndü, geri alınıyor.");
-        state = oldState;
+        state = oldState; // API "false" dönerse geri al
       }
 
-      // 4. ADIM: Her durumda loadAll() çağırarak backend ile eşleş
-      // Ama loadAll() içindeki toLowerCase() düzeltmesini yapmış olman lazım!
+      // 4. ADIM: Backend ile tam eşleşme
       await loadAll();
 
     } catch (e) {
       debugPrint("⚠️ [TOGGLE_PRODUCT_ERROR]: $e");
-      state = oldState; // Hata anında kalbi eski durumuna çek
-      await loadAll();
+      state = oldState; // Uygulama çökse veya internet kopsa bile state'i eski haline çek
+      await loadAll(); // Son durumu backend'den zorla çek
     }
   }
 
@@ -205,16 +192,29 @@ class FavoritesNotifier extends StateNotifier<FavoritesState> {
 
   void _updateProductLocal(String id, bool add) {
     final newIds = Set<String>.from(state.productIds);
-    if (add) newIds.add(id); else newIds.remove(id);
+
+    if (add) {
+      newIds.add(id);
+    } else {
+      newIds.remove(id);
+    }
+
     state = state.copyWith(productIds: newIds);
   }
 
   void _updateStoreLocal(String id, bool add) {
     final newIds = Set<String>.from(state.storeIds);
     final normalizedId = id.toLowerCase(); // 🎯 Standartlaştır
-    if (add) newIds.add(normalizedId); else newIds.remove(normalizedId);
+
+    if (add) {
+      newIds.add(normalizedId);
+    } else {
+      newIds.remove(normalizedId);
+    }
+
     state = state.copyWith(storeIds: newIds);
   }
+
 
   void clear() {
     state = const FavoritesState();

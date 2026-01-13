@@ -37,7 +37,7 @@ class LegalDocumentsScreen extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.only(top: 16),
             itemCount: docList.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 1), // Kutular arası çok ince boşluk
+            separatorBuilder: (_, _) => const SizedBox(height: 1), // Kutular arası çok ince boşluk
             itemBuilder: (context, index) {
               return Container(
                 color: Colors.white, // Satır içi bembeyaz

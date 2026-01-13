@@ -87,7 +87,7 @@ class OrderDetailScreen extends ConsumerWidget {
                         physics: const NeverScrollableScrollPhysics(),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: fullOrder.items.length,
-                        separatorBuilder: (_, __) => const Divider(height: 24, color: Color(0xFFF5F5F5)),
+                        separatorBuilder: (_, _) => const Divider(height: 24, color: Color(0xFFF5F5F5)),
                         itemBuilder: (context, index) {
                           final item = fullOrder.items[index];
 
@@ -180,7 +180,7 @@ class OrderDetailScreen extends ConsumerWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
-        BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4)),
       ],
     );
   }
@@ -200,9 +200,9 @@ class OrderDetailScreen extends ConsumerWidget {
           Text(fullOrder.store.name, textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text("Sipariş No: #${fullOrder.orderNumber}", style: TextStyle(color: Colors.white.withOpacity(0.9))),
+          Text("Sipariş No: #${fullOrder.orderNumber}", style: TextStyle(color: Colors.white.withValues(alpha: 0.9))),
           Text(DateFormat('dd MMMM yyyy, HH:mm', 'tr_TR').format(fullOrder.createdAt),
-              style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12)),
         ],
       ),
     );

@@ -26,10 +26,10 @@ class HomeEmailWarningBanner extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Colors.white, // Arka plan beyaz
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primaryDarkGreen.withOpacity(0.3), width: 1.5), // İnce yeşil çerçeve
+          border: Border.all(color: AppColors.primaryDarkGreen.withValues(alpha: 0.3), width: 1.5), // İnce yeşil çerçeve
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -40,7 +40,7 @@ class HomeEmailWarningBanner extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primaryDarkGreen.withOpacity(0.1),
+                color: AppColors.primaryDarkGreen.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.mail_outline_rounded, color: AppColors.primaryDarkGreen, size: 20),

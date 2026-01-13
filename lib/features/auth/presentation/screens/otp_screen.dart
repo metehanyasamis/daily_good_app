@@ -66,8 +66,6 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
   Future<void> _resend() async {
     if (_seconds != 0) return;
 
-    final auth = ref.read(authNotifierProvider.notifier);
-
     // Notifier'daki sendOtp artık purpose beklediği için bunu ekliyoruz
     await ref.read(authNotifierProvider.notifier).sendOtp(
       phone: widget.phone,
@@ -155,7 +153,6 @@ class _OtpBottomSheetState extends ConsumerState<OtpBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final keyboardOpen = bottomInset > 0;
 
     final baseTheme = PinTheme(
       height: 56,

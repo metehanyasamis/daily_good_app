@@ -84,7 +84,7 @@ class ThankYouScreen extends ConsumerWidget { // ConsumerWidget yapıldı
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: AppColors.primaryDarkGreen.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primaryDarkGreen.withValues(alpha: 0.2)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

@@ -75,11 +75,9 @@ class AppState {
 // APP STATE NOTIFIER
 // --------------------------------------------------------------------------
 class AppStateNotifier extends StateNotifier<AppState> {
-  AppStateNotifier(this.ref, this._locationRepository)
-      : super(const AppState());
+  AppStateNotifier(this.ref) : super(const AppState());
 
   final Ref ref;
-  final LocationRepository _locationRepository;
 
   // ------------------------------------------------------------------------
   // INIT (Splash çağırır)
@@ -251,8 +249,7 @@ class AppStateNotifier extends StateNotifier<AppState> {
 // --------------------------------------------------------------------------
 final appStateProvider =
 StateNotifierProvider<AppStateNotifier, AppState>((ref) {
-  final locationRepo = ref.watch(locationRepositoryProvider);
-  return AppStateNotifier(ref, locationRepo);
+  return AppStateNotifier(ref);
 });
 
 
@@ -261,7 +258,7 @@ StateNotifierProvider<AppStateNotifier, AppState>((ref) {
 // --------------------------------------------------------------------------
 class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this.ref) {
-    ref.listen(appStateProvider, (_, __) {
+    ref.listen(appStateProvider, (_, _) {
       notifyListeners();
     });
   }

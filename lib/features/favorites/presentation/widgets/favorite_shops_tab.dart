@@ -52,7 +52,7 @@ class _ShopCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08), // 0.06'yı 0.08 yaptık
+              color: Colors.black.withValues(alpha: 0.08), // 0.06'yı 0.08 yaptık
               blurRadius: 10, // 8'i 10 yaptık
             ),
           ],

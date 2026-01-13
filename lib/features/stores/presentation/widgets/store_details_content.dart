@@ -106,7 +106,7 @@ class StoreDetailsContent extends StatelessWidget {
   Widget _productCard(ProductModel product) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))]),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () => onProductTap?.call(product),
@@ -117,7 +117,7 @@ class StoreDetailsContent extends StatelessWidget {
             child: Image.network(
               sanitizeImageUrl(product.imageUrl) ?? '',
               width: 60, height: 60, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Image.asset('assets/images/sample_food3.jpg'),
+              errorBuilder: (_, _, _) => Image.asset('assets/images/sample_food3.jpg'),
             ),
           ),
           title: Text(product.name , style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -136,8 +136,23 @@ class StoreDetailsContent extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (product.listPrice != null) Text("${product.listPrice} TL", style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 11, color: Colors.grey)),
-            Text("${product.salePrice} TL", style: const TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.bold, fontSize: 16)),
+            if (product.listPrice > 0 && product.listPrice > product.salePrice)
+              Text(
+                "${product.listPrice} TL",
+                style: const TextStyle(
+                    decoration: TextDecoration.lineThrough,
+                    fontSize: 11,
+                    color: Colors.grey
+                ),
+              ),
+            Text(
+              "${product.salePrice} TL",
+              style: const TextStyle(
+                  color: AppColors.primaryDarkGreen,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16
+              ),
+            ),
           ],
         ),
         const SizedBox(width: 8),
@@ -157,7 +172,7 @@ class StoreDetailsContent extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           )

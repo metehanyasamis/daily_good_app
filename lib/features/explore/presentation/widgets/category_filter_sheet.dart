@@ -30,8 +30,6 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).padding.bottom; // Sistemsel alt boşluk
-
 
     final List<Map<String, String>> itemsRaw =
     widget.backendCategories != null
@@ -86,7 +84,7 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primaryDarkGreen.withOpacity(0.05) : Colors.grey.shade50,
+                          color: isSelected ? AppColors.primaryDarkGreen.withValues(alpha: 0.05) : Colors.grey.shade50,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                               color: isSelected ? AppColors.primaryDarkGreen : Colors.transparent,

@@ -265,7 +265,7 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isReadOnly ? Colors.grey.withOpacity(0.05) : Colors.white,
+        color: isReadOnly ? Colors.grey.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: isReadOnly ? Border.all(color: Colors.black12) : null,
       ),
@@ -282,14 +282,14 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
               Icon(
                   isReadOnly ? Icons.verified : Icons.chat_bubble_outline,
                   size: 18,
-                  color: isReadOnly ? AppColors.primaryDarkGreen.withOpacity(0.5) : Colors.black54
+                  color: isReadOnly ? AppColors.primaryDarkGreen.withValues(alpha: 0.5) : Colors.black54
               ),
             ],
           ),
           const SizedBox(height: 2),
 
           // ⭐️ Yıldız satırları (RatingRow metoduna isReadOnly gönderiyoruz)
-          ..._ratings.keys.map((c) => _ratingRow(c, isReadOnly)).toList(),
+          ..._ratings.keys.map((c) => _ratingRow(c, isReadOnly)),
 
           const SizedBox(height: 2),
 
@@ -302,7 +302,7 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
               hintText: isReadOnly ? '' : 'Görüşlerin bizim için çok değerli 💚\n(İsteğe bağlı)',
               hintStyle: const TextStyle(color: Colors.black45, fontSize: 14),
               filled: isReadOnly,
-              fillColor: Colors.black.withOpacity(0.02),
+              fillColor: Colors.black.withValues(alpha: 0.02),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(color: isReadOnly ? Colors.transparent : Colors.grey),
@@ -550,7 +550,7 @@ class _RatingFormCardState extends ConsumerState<RatingFormCard> {
                     size: 22,
                     // 🎨 Kilitli modda renk tonu %30 görünürlüğe çekildi (2-3 ton açık yeşil)
                     color: isFilled
-                        ? (isReadOnly ? AppColors.primaryDarkGreen.withOpacity(0.3) : AppColors.primaryDarkGreen)
+                        ? (isReadOnly ? AppColors.primaryDarkGreen.withValues(alpha: 0.3) : AppColors.primaryDarkGreen)
                         : Colors.grey.shade300,
                   ),
                 );

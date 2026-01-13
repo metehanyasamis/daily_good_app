@@ -34,7 +34,7 @@ class Toasts {
           margin: const EdgeInsets.symmetric(horizontal: 40),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           decoration: BoxDecoration(
-            color: Colors.black87.withOpacity(0.8),
+            color: Colors.black87.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(

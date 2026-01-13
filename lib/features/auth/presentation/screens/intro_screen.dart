@@ -56,7 +56,6 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
 
     // Tasarımın güvenli alanları
     const double horizontalPadding = 35.0;
-    const double sliderHeight = 84.0;
     const double thumbSize = 90.0;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -108,7 +107,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                     Text(
                       'Kalan yiyecekleri ucuza al,\nhem tasarruf et hem dünyayı koru.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 18,
                         height: 1.5,
                       ),
@@ -175,7 +174,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -210,7 +209,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
             children: List.generate(3, (index) {
               return Icon(
                 Icons.chevron_right_rounded,
-                color: Colors.black.withOpacity(0.3 * (index + 1)),
+                color: Colors.black.withValues(alpha: 0.3 * (index + 1)),
                 size: 28,
               );
             }),

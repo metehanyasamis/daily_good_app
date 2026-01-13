@@ -53,10 +53,21 @@ class PlatformDialogs {
                   onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(false),
                   child: Text(cancelText),
                 ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
-                child: Text(confirmText),
-              ),
+
+              if (destructive)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
+                  child: Text(confirmText),
+                )
+              else
+                TextButton(
+                  onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
+                  child: Text(confirmText),
+                ),
             ],
           ),
         ),

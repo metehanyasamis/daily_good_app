@@ -124,7 +124,7 @@ class StoreDetailScreen extends ConsumerWidget {
               Image.network(
                 bannerUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, err, __) {
+                errorBuilder: (_, err, _) {
                   debugPrint('BANNER IMAGE ERROR: $err');
                   return Image.asset(
                       'assets/images/sample_food3.jpg', fit: BoxFit.cover);
@@ -169,7 +169,7 @@ class StoreDetailScreen extends ConsumerWidget {
                       width: 60,
                       height: 60,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, err, __) {
+                      errorBuilder: (_, err, _) {
                         debugPrint('LOGO IMAGE ERROR: $err');
                         return Image.asset('assets/images/sample_food3.jpg',
                             width: 60, height: 60, fit: BoxFit.cover);
@@ -198,11 +198,11 @@ class StoreDetailScreen extends ConsumerWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
+                color: Colors.white.withValues(alpha: 0.95),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),

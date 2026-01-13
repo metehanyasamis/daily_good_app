@@ -37,7 +37,7 @@ class StoreRatingBars extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       highlightColor: Colors.transparent, // İstersen tıklama efektini özelleştirebilirsin
-      splashColor: AppColors.primaryDarkGreen.withOpacity(0.05),
+      splashColor: AppColors.primaryDarkGreen.withValues(alpha: 0.05),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -249,7 +249,7 @@ class _ContractCheckbox extends ConsumerWidget {
             ),
             // Yüklenirken veya hata anında checkbox gitmesin diye metin yer tutucu gösteriyoruz
             loading: () => const Text("Sözleşmeler hazırlanıyor...", style: TextStyle(fontSize: 13, color: Colors.grey)),
-            error: (_, __) => const Text("Sözleşmelere şu an ulaşılamıyor.", style: TextStyle(fontSize: 13, color: Colors.red)),
+            error: (_, _) => const Text("Sözleşmelere şu an ulaşılamıyor.", style: TextStyle(fontSize: 13, color: Colors.red)),
           ),
         ),
       ],
@@ -331,7 +331,7 @@ class _CartCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.primaryDarkGreen.withOpacity(0.3),
+          color: AppColors.primaryDarkGreen.withValues(alpha: 0.3),
         ),
       ),
       padding: const EdgeInsets.all(16),

@@ -67,7 +67,7 @@ class CategoryFilterOptionWidget extends StatelessWidget {
           boxShadow: isSelected
               ? [
             BoxShadow(
-              color: AppColors.primaryDarkGreen.withOpacity(0.3),
+              color: AppColors.primaryDarkGreen.withValues(alpha: 0.3),
               blurRadius: 5,
               offset: const Offset(0, 2),
             )

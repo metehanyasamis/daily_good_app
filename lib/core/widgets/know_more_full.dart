@@ -133,7 +133,7 @@ class _KnowMoreFullState extends State<KnowMoreFull>
     );
   }
 
-  Widget _divider() => Container(height: 1, color: AppColors.primaryDarkGreen.withOpacity(0.1));
+  Widget _divider() => Container(height: 1, color: AppColors.primaryDarkGreen.withValues(alpha: 0.1));
 
   void _toggleExpanded() {
     setState(() {

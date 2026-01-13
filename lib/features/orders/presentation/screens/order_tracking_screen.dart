@@ -42,7 +42,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final activeOrdersAsync = ref.watch(activeOrdersProvider);
     final settingsAsync = ref.watch(legalSettingsProvider);
 
@@ -130,7 +129,7 @@ class _UnifiedOrderCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6),
         ],
       ),
       child: Column(
@@ -153,7 +152,7 @@ class _UnifiedOrderCard extends StatelessWidget {
                   child: Image.network(
                     store.bannerImageUrl,
                     width: 48, height: 48, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.store, size: 48),
+                    errorBuilder: (_, _, _) => const Icon(Icons.store, size: 48),
                   ),
                 ),
                 const SizedBox(width: 12),

@@ -39,11 +39,21 @@ class _EmailChangeSheetState extends ConsumerState<EmailChangeSheet> {
   void _startTimer() {
     _timer?.cancel();
     _seconds = 120;
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (_seconds == 0) t.cancel();
-      else if (mounted) setState(() => _seconds--);
-    });
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+          (t) {
+        if (_seconds == 0) {
+          t.cancel();
+        } else if (mounted) {
+          setState(() {
+            _seconds--;
+          });
+        }
+      },
+    );
   }
+
 
   // 1. ADIM: YENİ MAİLE KOD GÖNDER
   Future<void> _sendOtp() async {

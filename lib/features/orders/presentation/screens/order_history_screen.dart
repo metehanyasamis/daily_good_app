@@ -168,7 +168,7 @@ class OrderHistoryScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -182,7 +182,7 @@ class OrderHistoryScreen extends ConsumerWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: AppColors.primaryDarkGreen.withOpacity(0.08),
+              color: AppColors.primaryDarkGreen.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
