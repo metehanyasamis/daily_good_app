@@ -11,21 +11,26 @@ class PlatformDialogs {
         String confirmText = 'Evet',
         String cancelText = 'Vazgeç',
         bool destructive = false,
+        bool barrierDismissible = true,
       }) async {
     if (PlatformUtils.isIOS) {
       final res = await showCupertinoDialog<bool>(
         context: context,
-        builder: (_) => CupertinoAlertDialog(
+        barrierDismissible: barrierDismissible,
+        useRootNavigator: true, // 🚀 GoRouter stack'ini bozmaması için şart
+        builder: (ctx) => CupertinoAlertDialog( // 🎯 Buradaki 'ctx' hayati önemde
           title: Text(title),
           content: Text(message),
           actions: [
-            CupertinoDialogAction(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(cancelText),
-            ),
+            if (cancelText.isNotEmpty)
+              CupertinoDialogAction(
+                // ✅ 'context' değil 'ctx' kullanıyoruz
+                onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(false),
+                child: Text(cancelText),
+              ),
             CupertinoDialogAction(
               isDestructiveAction: destructive,
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
               child: Text(confirmText),
             ),
           ],
@@ -35,13 +40,36 @@ class PlatformDialogs {
     } else {
       final res = await showDialog<bool>(
         context: context,
-        builder: (_) => AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(cancelText)),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: Text(confirmText)),
-          ],
+        barrierDismissible: barrierDismissible,
+        useRootNavigator: true, // 🚀 Şart
+        builder: (ctx) => PopScope(
+          canPop: barrierDismissible,
+          child: AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              if (cancelText.isNotEmpty)
+                TextButton(
+                  onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(false),
+                  child: Text(cancelText),
+                ),
+
+              if (destructive)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
+                  child: Text(confirmText),
+                )
+              else
+                TextButton(
+                  onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
+                  child: Text(confirmText),
+                ),
+            ],
+          ),
         ),
       );
       return res ?? false;
@@ -60,37 +88,51 @@ class PlatformDialogs {
     if (PlatformUtils.isIOS) {
       return showCupertinoDialog<String>(
         context: context,
-        builder: (_) => CupertinoAlertDialog(
+        useRootNavigator: true,
+        builder: (ctx) => CupertinoAlertDialog(
           title: Text(title),
-          content: Column(
-            children: [
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: controller,
-                placeholder: hintText,
-                keyboardType: keyboardType,
-              ),
-            ],
+          content: Padding(
+            padding: const EdgeInsets.only(top: 12.0),
+            child: CupertinoTextField(
+              controller: controller,
+              placeholder: hintText,
+              keyboardType: keyboardType,
+              autofocus: true,
+            ),
           ),
           actions: [
-            CupertinoDialogAction(onPressed: () => Navigator.pop(context), child: Text(cancelText)),
-            CupertinoDialogAction(onPressed: () => Navigator.pop(context, controller.text.trim()), child: Text(confirmText)),
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(),
+              child: Text(cancelText),
+            ),
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(controller.text.trim()),
+              child: Text(confirmText),
+            ),
           ],
         ),
       );
     } else {
       return showDialog<String>(
         context: context,
-        builder: (_) => AlertDialog(
+        useRootNavigator: true,
+        builder: (ctx) => AlertDialog(
           title: Text(title),
           content: TextField(
             controller: controller,
             keyboardType: keyboardType,
+            autofocus: true,
             decoration: InputDecoration(hintText: hintText),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text(cancelText)),
-            TextButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: Text(confirmText)),
+            TextButton(
+              onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(),
+              child: Text(cancelText),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(controller.text.trim()),
+              child: Text(confirmText),
+            ),
           ],
         ),
       );

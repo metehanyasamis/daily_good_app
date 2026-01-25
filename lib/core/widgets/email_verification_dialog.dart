@@ -1,4 +1,6 @@
+/*
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -201,3 +203,5 @@ class _EmailVerificationDialogState extends State<EmailVerificationDialog> {
     );
   }
 }
+
+ */

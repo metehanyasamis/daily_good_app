@@ -1,441 +1,415 @@
 import 'dart:math' as math;
+import 'package:daily_good/features/stores/data/model/store_detail_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../businessShop/data/mock/mock_businessShop_model.dart';
-import '../../../businessShop/data/model/businessShop_model.dart';
-import '../../data/models/product_model.dart'; // ProductModel
 
+import '../../../../core/platform/platform_widgets.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/fav_button.dart';
+import '../../../../core/widgets/know_more_full.dart';
+import '../../../../core/widgets/floating_cart_button.dart';
+import '../../../../core/widgets/product_bottom_bar.dart';
+import '../../../../core/widgets/store_delivery_info_card.dart';
 
-// Eğer AppColors sınıfı hatalı veriyorsa, AppColors yerine Colors.green.shadeX kullanabilirsiniz.
-class AppColors {
-  static const Color background = Color(0xFFF7F7F7); // Hafif gri
-  static const Color primaryDarkGreen = Color(0xFF1E8449); // Örnek koyu yeşil
-}
+import '../../../cart/domain/providers/cart_provider.dart';
+import '../../../cart/presentation/widgets/cart_warning_modal.dart';
+import '../../../settings/domain/providers/legal_settings_provider.dart';
+import '../../../stores/data/model/store_summary.dart';
+import '../../../stores/domain/providers/store_detail_provider.dart';
+import '../../../stores/presentation/widgets/store_map_card.dart';
+import '../../domain/products_notifier.dart';
+import '../../data/models/product_model.dart';
 
-
-class ProductDetailScreen extends StatefulWidget {
-  final ProductModel product;
-  const ProductDetailScreen({super.key, required this.product});
+class ProductDetailScreen extends ConsumerStatefulWidget {
+  final String productId;
+  const ProductDetailScreen({super.key, required this.productId});
 
   @override
-  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+  ConsumerState<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
 
-class _ProductDetailScreenState extends State<ProductDetailScreen> {
+class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   int qty = 1;
 
   @override
+  void initState() {
+    super.initState();
+    _fetchDetail();
+  }
+
+  void _fetchDetail() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notifier = ref.read(productsProvider.notifier);
+      notifier.clearDetail();
+      notifier.fetchDetail(widget.productId);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final p = widget.product;
+    final productState = ref.watch(productsProvider);
+    final product = productState.selectedProduct;
 
-    // 🟢 DÜZELTME: businessId ile BusinessModel'i bul
-    final BusinessModel? business = findBusinessById(p.businessId);
+    final settingsAsync = ref.watch(legalSettingsProvider);
 
-    // İşletme bulunamazsa ekranı boş döndürmek veya hata mesajı göstermek iyi bir pratik.
-    if (business == null) {
+    if (product == null || product.id != widget.productId) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Hata')),
-        body: const Center(child: Text('İşletme bilgisi bulunamadı.')),
+        body: Center(
+          child: PlatformWidgets.loader(), // 🚀 Otomatik olarak iOS'ta farklı, Android'de farklı görünür
+        ),
       );
     }
 
-    // BusinessModel'den çekilecek veriler
-    final String logoPath = business.businessShopLogoImage;
-    final String brandName = business.name;
-    final double rating = business.rating;
-    final double distanceKm = business.distance;
-    final String fullAddress = business.address;
+    final storeId = product.store.id;
+    if (storeId.isEmpty) {
+      return _ErrorScaffold(message: "Mağaza bilgisi bulunamadı.", title: product.name);
+    }
 
+    final storeState = ref.watch(storeDetailProvider(storeId));
+
+    // Durum Kontrolleri
+    if (storeState.loading) {
+      return Scaffold(
+        body: Center(
+          child: PlatformWidgets.loader(),
+        ),
+      );
+    }
+    if (storeState.error != null) return _ErrorScaffold(message: "Hata: ${storeState.error}");
+
+    final store = storeState.detail;
+    if (store == null) return const SizedBox.shrink();
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // ========= SCROLLABLE CONTENT =========
-          CustomScrollView(
-            slivers: [
-              // Kapak + overlay öğeler
-              SliverAppBar(
-                pinned: true,
-                expandedHeight: 240,
-                backgroundColor: Colors.white,
-                surfaceTintColor: Colors.white,
-                elevation: 0,
-                leading: _roundedIcon(
-                  context,
-                  Icons.arrow_back_ios_new_rounded,
-                  onTap: () => Navigator.pop(context),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            CustomScrollView(
+              slivers: [
+                _ProductHeader(product: product),
+                _ProductInfoSection(product: product),
+                const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        
+                // 🎯 ÇÖZÜM: Veri varsa gönderiyoruz, yoksa null (default metin görünecek)
+                KnowMoreFull(
+                  customInfo: settingsAsync.value?.importantInfo,
                 ),
-                centerTitle: true,
-                title: Text(
-                  // Scroll edince başlıkta işletme adı görünür
-                  brandName,
-                  style: const TextStyle(color: Colors.black),
+        
+                const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                _StoreSection(product: product, freshStore: store.toStoreSummary()),              //_RatingSection(product: product),
+                SliverToBoxAdapter(
+                  child: store.latitude != 0.0 && store.longitude != 0.0
+                      ? StoreMapCard(
+                    storeId: store.id,
+                    latitude: store.latitude,
+                    longitude: store.longitude,
+                    address: store.address,
+                  )
+                      : const SizedBox.shrink(), // Koordinat yoksa haritayı hiç çizme, patlamasın
                 ),
-                actions: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: _roundedIcon(
-                      context,
-                      Icons.favorite_border,
-                      onTap: () {},
-                    ),
-                  ),
-                ],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Ürün Banner Resmi
-                      Image.asset(
-                        p.bannerImage,
-                        fit: BoxFit.cover,
-                      ),
-                      // Sol üst "Son x" etiketi
-                      Positioned(
-                        top: 16,
-                        left: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.95),
-                            borderRadius: const BorderRadius.only(
-                              topRight: Radius.circular(12),
-                              bottomRight: Radius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            p.stockLabel,
-                            style: TextStyle(
-                              color: AppColors.primaryDarkGreen,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Dairesel logo
-                      Positioned(
-                        left: 16,
-                        bottom: 16,
-                        child: CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.white,
-                          child: ClipOval(
-                            child: Image.asset(
-                              // 🟢 DÜZELTME: Logo BusinessModel'den çekildi
-                              logoPath,
-                              width: 52,
-                              height: 52,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Başlık kartı
-              SliverToBoxAdapter(
-                child: _whiteCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Üst satır: paket adı + fiyatlar
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(p.packageName, // Paket Adı
-                                    style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    Icon(Icons.star,
-                                        size: 14,
-                                        color: AppColors.primaryDarkGreen),
-                                    const SizedBox(width: 4),
-                                    // 🟢 DÜZELTME: Puan BusinessModel'den çekildi
-                                    Text(
-                                      rating.toStringAsFixed(1),
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    const Text('•',
-                                        style: TextStyle(fontSize: 13)),
-                                    const SizedBox(width: 10),
-                                    Icon(Icons.place,
-                                        size: 14,
-                                        color: AppColors.primaryDarkGreen),
-                                    const SizedBox(width: 4),
-                                    // 🟢 DÜZELTME: Mesafe BusinessModel'den çekildi
-                                    Text('${distanceKm.toStringAsFixed(1)} km',
-                                        style: const TextStyle(fontSize: 12)),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  p.pickupTimeText, // Teslim alma saati
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey.shade700),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                '${p.oldPrice.toStringAsFixed(0)} tl', // Eski Fiyat
-                                style: const TextStyle(
-                                  decoration: TextDecoration.lineThrough,
-                                  color: Colors.grey,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              Text(
-                                '${p.newPrice.toStringAsFixed(0)} tl', // Yeni Fiyat
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: AppColors.primaryDarkGreen,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Bu pakette seni ne bekliyor? (Statik içerik)
-              SliverToBoxAdapter(
-                child: _whiteCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _sectionTitle('Bu pakette seni ne bekliyor?'),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Lezzetli sandviçler, tek porsiyonluk tatlılar, atıştırmalık kokteyller',
-                        style: TextStyle(
-                          color: Colors.grey.shade800,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _thinDivider(),
-                      const SizedBox(height: 12),
-                      _sectionTitle('Bilmeniz gerekenler'),
-                      const SizedBox(height: 8),
-                      _bullet(
-                          'Mobil Alım ve Teslimat Kuralları',
-                          icon: Icons.campaign_rounded),
-                      _dot('Mobil Alım Zorunluluğu: Bu indirimler sadece mobil uygulama üzerinden yapılan alımlarda geçerlidir.'),
-                      _dot('Teslimat saat aralığı: ${p.pickupTimeText.split(' ').last}.'),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Teslim alma bilgileri (İşletme Bilgisi)
-              SliverToBoxAdapter(
-                child: _whiteCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _sectionTitle('Teslim alma bilgileri'),
-                      const SizedBox(height: 10),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.storefront_outlined,
-                              color: AppColors.primaryDarkGreen),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 🟢 DÜZELTME: Artık BusinessModel oluşturmanıza gerek yok.
-                                // Zaten elinizde var ve onu extra olarak gönderiyorsunuz.
-                                GestureDetector(
-                                  onTap: () => context.go(
-                                    '/businessShop-detail',
-                                    extra: business, // BusinessModel objesini doğrudan gönder
-                                  ),
-                                  child: Text(
-                                    brandName, // 🟢 DÜZELTME: İşletme Adı BusinessModel'den çekildi
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF22823B),
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ),
-                                // 🟢 YENİ: Adresi de BusinessModel'den ekleyelim
-                                Text(
-                                  fullAddress,
-                                  style: TextStyle(color: Colors.grey.shade700),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.chevron_right_rounded,
-                              color: Colors.grey.shade600),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // İşletme değerlendirme (basit, statik)
-              SliverToBoxAdapter(
-                child: _whiteCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          _sectionTitle('İşletme Değerlendirme'),
-                          const SizedBox(width: 6),
-                          Icon(Icons.info_outline,
-                              size: 16, color: Colors.grey.shade500),
-                          const Spacer(),
-                          Icon(Icons.star,
-                              size: 16, color: AppColors.primaryDarkGreen),
-                          const SizedBox(width: 4),
-                          // 🟢 DÜZELTME: Puan BusinessModel'den çekildi
-                          Text('${rating.toStringAsFixed(1)} (70+)'),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _ratingRow('Servis', 4.5),
-                      _ratingRow('Ürün Miktarı', 5.0),
-                      _ratingRow('Ürün Lezzeti', 5.0),
-                      _ratingRow('Ürün Çeşitliliği', 4.0),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Harita görseli (placeholder)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      'assets/images/sample_map.png',
-                      height: 180,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 120)),
-            ],
-          ),
-
-          // ========= BOTTOM BAR (Değişiklik yapılmadı) =========
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-                borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(18)),
-              ),
-              child: Row(
-                children: [
-                  // Miktar
-                  _qtyButton(
-                    icon: Icons.remove,
-                    onTap: () => setState(() => qty = math.max(1, qty - 1)),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      '$qty',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 18),
-                    ),
-                  ),
-                  _qtyButton(
-                    icon: Icons.add,
-                    onTap: () => setState(() => qty += 1),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        // TODO: Sepete ekle / “Benim için tut” aksiyonu
-                      },
-                      child: Container(
-                        height: 56,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(40),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF3E8D4E), Color(0xFF7EDC8A)],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                        ),
-                        child: Text(
-                          // Sepete Ekle butonu metni:
-                          '${qty} adet için ${ (qty * p.newPrice).toStringAsFixed(0)} tl',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                const SliverToBoxAdapter(child: SizedBox(height: 140)),
+              ],
             ),
-          ),
-        ],
+            const FloatingCartButton(),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildBottomBar(product),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // ---- helpers ---- (Bu kısım hatalı olmadığı için değiştirilmedi)
-  Widget _roundedIcon(BuildContext context, IconData icon,
-      {VoidCallback? onTap}) { /* ... */ return Container(); }
-  Widget _whiteCard({required Widget child}) { /* ... */ return Container(); }
-  Widget _sectionTitle(String text) => Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700));
-  Widget _thinDivider() => Container(height: 1, color: Colors.grey.withOpacity(0.2));
-  Widget _bullet(String text, {IconData icon = Icons.circle}) { /* ... */ return Container(); }
-  Widget _dot(String text) { /* ... */ return Container(); }
-  Widget _ratingRow(String label, double value) { /* ... */ return Container(); }
-  Widget _qtyButton({required IconData icon, required VoidCallback onTap}) { /* ... */ return Container(); }
+  Widget _buildBottomBar(ProductModel p) {
+    return ProductBottomBar(
+      qty: qty,
+      price: p.salePrice,
+      onAdd: () => setState(() => qty++),
+      onRemove: () => setState(() => qty = math.max(1, qty - 1)),
+      onSubmit: () async {
+        final cartCtrl = ref.read(cartProvider.notifier);
+        if (cartCtrl.isSameStore(p.store.id)) {
+          return await cartCtrl.addProduct(p, qty);
+        }
+        final proceed = await showCartConflictModal(context);
+        if (proceed == true) return await cartCtrl.replaceWith(p, qty);
+        return false;
+      },
+    );
+  }
+}
+
+// --- Yardımcı Küçük Widget Bileşenleri ---
+
+class _ProductHeader extends StatelessWidget {
+  final ProductModel product;
+  const _ProductHeader({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+
+    // İndirim hesaplama
+    final discount = product.listPrice > 0
+        ? ((product.listPrice - product.salePrice) / product.listPrice * 100).round()
+        : 0;
+
+    return SliverAppBar(
+      pinned: true,
+      expandedHeight: 230 + statusBarHeight,
+      backgroundColor: Colors.white,
+      leading: _CircularIconButton(
+        icon: Icons.arrow_back_ios_new_rounded,
+        onTap: () => context.pop(),
+      ),
+      actions: [
+        // Sadece Favori Butonu kalıyor, indirim aşağıya Stack'e taşındı
+        FavButton(id: product.id, isStore: false),
+        const SizedBox(width: 12),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Ürün Görseli
+            Image.network(
+              product.imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(color: Colors.grey.shade200),
+            ),
+
+            // 🟢 SOL DUVAR: STOK ADET ETİKETİ
+            Positioned(
+              top: kToolbarHeight + 10,
+              left: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.95),
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(2, 2))
+                  ],
+                ),
+                child: Text(
+                  "${product.stock} adet",
+                  style: const TextStyle(
+                    color: AppColors.primaryDarkGreen,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+
+            // 🔴 SAĞ DUVAR: İNDİRİM ORANI ETİKETİ
+            if (discount > 0)
+              Positioned(
+                top: kToolbarHeight + 10,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primaryDarkGreen, // İndirim için kurumsal yeşil
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      bottomLeft: Radius.circular(20),
+                    ),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(-2, 2))
+                    ],
+                  ),
+                  child: Text(
+                    "-%$discount",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class _ProductInfoSection extends StatelessWidget {
+  final ProductModel product;
+  const _ProductInfoSection({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(product.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(product.deliveryTimeLabel, style: TextStyle(color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ),
+                _PriceWidget(listPrice: product.listPrice, salePrice: product.salePrice),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Text("Bu pakette seni ne bekliyor?", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(
+              product.description ?? "İçerik bilgisi bulunmamaktadır.",
+              style: TextStyle(color: Colors.grey.shade800, height: 1.4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PriceWidget extends StatelessWidget {
+  final double listPrice;
+  final double salePrice;
+  const _PriceWidget({required this.listPrice, required this.salePrice});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text("${listPrice.toStringAsFixed(0)} ₺", style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey)),
+        Text("${salePrice.toStringAsFixed(0)} ₺", style: const TextStyle(fontSize: 22, color: AppColors.primaryDarkGreen, fontWeight: FontWeight.w900)),
+      ],
+    );
+  }
+}
+
+class _StoreSection extends StatelessWidget {
+  final ProductModel product;
+  final StoreSummary? freshStore; // 👈 Taze veri
+  const _StoreSection({required this.product, this.freshStore});
+
+  @override
+  Widget build(BuildContext context) {
+    // Eğer freshStore (detaylı API'den gelen) varsa onu kullan,
+    // yoksa ürünün içindekini (puanı 0.0 olanı) kullan.
+    final storeToShow = freshStore ?? product.store;
+
+    return SliverToBoxAdapter(
+      child: StoreDeliveryInfoCard(
+        store: storeToShow, // 👈 Artık puanı dolu olanı basacak
+        onStoreTap: () => context.push('/store-detail/${storeToShow.id}'),
+      ),
+    );
+  }
+}
+
+/*
+class _RatingSection extends StatelessWidget {
+  final ProductModel product;
+  const _RatingSection({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = product.store;
+    if (s.averageRatings == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+    return SliverToBoxAdapter(
+      child: Card(
+        margin: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  const Text("İşletme Değerlendirme", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  const Icon(Icons.star, color: AppColors.primaryDarkGreen, size: 18),
+                  Text(" ${s.overallRating?.toStringAsFixed(1) ?? '0.0'}"),
+                ],
+              ),
+              const Divider(),
+              _RatingBar(label: "Lezzet", value: s.averageRatings!.productTaste),
+              _RatingBar(label: "Servis", value: s.averageRatings!.service),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+*/
+// --- Alt Bileşenler ---
+
+/*
+class _RatingBar extends StatelessWidget {
+  final String label;
+  final double value;
+  const _RatingBar({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Text(label)),
+        SizedBox(width: 100, child: LinearProgressIndicator(value: value / 5, color: AppColors.primaryDarkGreen, backgroundColor: Colors.grey.shade200)),
+      ],
+    );
+  }
+}
+
+ */
+class _CircularIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _CircularIconButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Container(
+        width: 40,
+        height: 40,
+        padding: const EdgeInsets.all(8),
+        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        child: Icon(icon, color: Colors.black, size: 18),
+      ),
+      onPressed: onTap,
+    );
+  }
+}
+
+class _ErrorScaffold extends StatelessWidget {
+  final String message;
+  final String? title;
+  const _ErrorScaffold({required this.message, this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: title != null ? AppBar(title: Text(title!)) : null,
+      body: Center(child: Text(message)),
+    );
+  }
 }

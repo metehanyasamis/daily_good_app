@@ -1,97 +1,78 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../product/data/mock/mock_product_model.dart';
-import '../../../product/data/models/product_model.dart';
+import '../../domain/favorites_notifier.dart';
 import '../../../product/presentation/widgets/product_card.dart';
 
-class FavoriteProductsTab extends StatelessWidget {
+class FavoriteProductsTab extends ConsumerWidget {
   const FavoriteProductsTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<ProductModel> favoriteProducts = mockProducts
-        .where((p) => p.stockLabel.toLowerCase().contains('kaldı'))
-        .toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 1. Tüm modelleri ve sadece ürün ID setini izle
+    final allProducts = ref.watch(favoritesProvider.select((s) => s.products));
+    final favoriteIds = ref.watch(favoritesProvider.select((s) => s.productIds));
 
-    if (favoriteProducts.isEmpty) {
-      return _buildEmptyState(context);
-    }
+    // 2. Filtreleme: Sadece ID'si hala favori setinde olan modelleri göster
+    // Notifier'daki toggleProduct sonrası set güncellendiği an burası tetiklenir
+    final activeProducts = allProducts.where((p) => favoriteIds.contains(p.id)).toList();
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: favoriteProducts.length,
-      itemBuilder: (context, index) {
-        final product = favoriteProducts[index];
-        return ProductCard(
-          product: product,
-          onTap: () => context.push('/product-detail', extra: product),
-        );
-      },
+    // 3. Boş durum kontrolünü filtreli listeye göre yap
+    if (activeProducts.isEmpty) return const _EmptyProductsState();
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(favoritesProvider.notifier).loadAll(),
+      child: ListView.builder(
+        padding: EdgeInsets.fromLTRB(
+          12,
+          12,
+          12,
+          MediaQuery.of(context).padding.bottom + 80,
+        ),
+        // 🔥 ÖNEMLİ: Filtrelenmiş listenin uzunluğunu veriyoruz
+        itemCount: activeProducts.length,
+        itemBuilder: (_, i) {
+          // 🔥 ÖNEMLİ: Filtrelenmiş listeden ürünü çekiyoruz
+          return ProductCard(product: activeProducts[i]);
+        },
+      ),
     );
   }
+}
 
-  Widget _buildEmptyState(BuildContext context) {
+class _EmptyProductsState extends StatelessWidget {
+  const _EmptyProductsState();
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 🟢 Başlık
+            const Icon(
+              Icons.favorite_outline_rounded,
+              size: 72,
+              color: AppColors.primaryDarkGreen,
+            ),
+            const SizedBox(height: 20),
             Text(
-              'Henüz Keşfedilecek Çok Lezzet Var! 🤩',
+              'Henüz Favori Ürünün Yok 💚',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppColors.primaryDarkGreen,
               ),
             ),
-            const SizedBox(height: 40),
-
-            // 🟢 Büyük ikon
-            const Icon(
-              Icons.favorite_outline,
-              size: 72,
-              color: AppColors.primaryDarkGreen,
-            ),
-            const SizedBox(height: 40),
-
-            // 🟢 Açıklama metni
+            const SizedBox(height: 30),
             Text(
-              'Favorilediğiniz tüm DailyGood mağazaları ve\n'
-                  'kurtarılmayı bekleyen sürprizleri burada görebilirsiniz.\n\n'
-                  'Hemen haritayı açın ve size en yakın lezzet duraklarını kalpleyin!',
+              'Favorilediğin tüm ürünleri burada görebilirsin.\n'
+                  'Ana sayfadan beğendiğin sürpriz paketleri kalple işaretle 💚',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 height: 1.5,
                 color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // 🟢 Placeholder kart (görsel hissi)
-            Container(
-              width: double.infinity,
-              height: 160,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primaryDarkGreen, width: 1.2),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Icon(Icons.image_outlined,
-                        size: 50, color: AppColors.primaryDarkGreen),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Icon(Icons.favorite_border,
-                        size: 35, color: AppColors.primaryDarkGreen),
-                  ),
-                ],
               ),
             ),
           ],
@@ -99,5 +80,4 @@ class FavoriteProductsTab extends StatelessWidget {
       ),
     );
   }
-
 }

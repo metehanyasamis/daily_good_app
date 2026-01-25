@@ -1,25 +1,49 @@
+import 'package:daily_good/features/orders/presentation/screens/thank_you_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-// 🔹 Feature imports
-import '../../features/account/presentation/screens/account_screen.dart';
-import '../../features/auth/presentation/screens/intro_screen.dart';
-import '../../features/businessShop/data/model/businessShop_model.dart';
-import '../../features/businessShop/presentation/screens/businessShop_details_screen.dart';
-import '../../features/explore/presentation/screens/explore_map_screen.dart';
-import '../../features/product/data/models/product_model.dart';
+// Screens
+import '../../features/account/domain/providers/user_notifier.dart';
+import '../../features/account/presentation/screens/legal_documents_screen.dart';
+import '../../features/account/presentation/screens/profile_details_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
-import '../../features/account/presentation/screens/profile_details_screen.dart';
-import '../../features/location/presentation/screens/location_info_screen.dart';
-import '../../features/location/presentation/screens/location_map_screen.dart';
+import '../../features/auth/presentation/screens/intro_screen.dart';
+import '../../features/contact/presentation/contact_screen.dart';
+import '../../features/location/presentation/screens/location_picker_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/explore/presentation/screens/explore_list_screen.dart';
+import '../../features/explore/presentation/screens/explore_map_screen.dart';
 import '../../features/favorites/presentation/screens/favorites_screen.dart';
+import '../../features/account/presentation/screens/account_screen.dart';
+import '../../features/location/presentation/screens/location_info_screen.dart';
+import '../../features/orders/data/models/order_details_response.dart';
+import '../../features/orders/data/models/order_list_item.dart';
+import '../../features/orders/presentation/screens/order_detail_screen.dart';
+import '../../features/orders/presentation/screens/order_history_screen.dart';
 import '../../features/product/presentation/screens/product_detail_screen.dart';
+import '../../features/review/presentation/screens/store_review_screen.dart';
+import '../../features/stores/presentation/screens/store_detail_screen.dart';
+
+import '../../features/notification/presentation/screens/notification_screen.dart';
+import '../../features/orders/presentation/screens/order_success_screen.dart';
+import '../../features/orders/presentation/screens/order_tracking_screen.dart';
+import '../../features/checkout/presentation/screens/payment_screen.dart';
+import '../../features/cart/presentation/screens/cart_screen.dart';
+
+import '../../core/widgets/global_error_screen.dart';
+import '../providers/app_state_provider.dart';
 import 'app_shell.dart';
+
+
+abstract class AppRoutes {
+  static const String home = 'home';
+  static const String productDetail = 'product-detail';
+  static const String storeDetail = 'store-detail';
+  static const String storeReviews = 'store-reviews';
+}
 
 CustomTransitionPage buildAnimatedPage({
   required Widget child,
@@ -27,123 +51,242 @@ CustomTransitionPage buildAnimatedPage({
 }) {
   return CustomTransitionPage(
     key: key,
-    transitionDuration: const Duration(milliseconds: 600),
-    reverseTransitionDuration: const Duration(milliseconds: 600),
+    transitionDuration: const Duration(milliseconds: 350),
     child: child,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const beginOffset = Offset(0.0, 0.08);
-      const endOffset = Offset.zero;
-
-      // 🌙 Fade yavaşça başlar
-      final fade = CurvedAnimation(
-        parent: animation,
-        curve: const Interval(0.0, 0.8, curve: Curves.easeInOutCubic),
-      );
-
-      // 🌊 Slide biraz gecikmeli başlar (daha “soft” his)
-      final slide = CurvedAnimation(
-        parent: animation,
-        curve: const Interval(0.2, 1.0, curve: Curves.easeInOutCubic),
-      );
-
-      final slideTween = Tween(begin: beginOffset, end: endOffset)
-          .chain(CurveTween(curve: Curves.easeOutCubic));
-
+    transitionsBuilder: (_, animation, _, child) {
       return FadeTransition(
-        opacity: fade,
-        child: SlideTransition(
-          position: slide.drive(slideTween),
-          child: child,
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
         ),
+        child: child,
       );
     },
   );
 }
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final routerNotifier = RouterNotifier(ref);
+
   return GoRouter(
-    initialLocation: '/splash', // ✅ uygulama artık SplashScreen ile açılır
+    navigatorKey: rootNavigatorKey,
+    initialLocation: '/splash',
+    refreshListenable: routerNotifier,
+    redirect: (context, state) {
+      final app = ref.read(appStateProvider);
+      final userState = ref.read(userNotifierProvider);
+      final user = userState.user;
+      final loc = state.uri.toString();
+
+      // 🔥 RÖNTGEN LOGLARI (Hata ayıklama için kalsın)
+      debugPrint("""
+  🔍 [ROUTER CHECK]
+  📍 Mevcut Konum: $loc
+  🔑 LoggedIn: ${app.isLoggedIn}
+  👶 NewUser: ${app.isNewUser}
+  👤 User Data: ${user != null ? 'VAR (Ad: ${user.firstName})' : 'YOK'}
+  🗺️ Location Selected: ${app.hasSelectedLocation}
+  ---------------------------------
+  """);
+
+      // 1️⃣ İSTİSNALAR (Her zaman serbest olanlar)
+      if (loc.startsWith('/order-tracking')) return null;
+      if (loc.startsWith('/store-detail')) return null;
+      if (loc.contains('/reviews')) return null;
+
+      // 2️⃣ BAŞLATMA KONTROLÜ (Initialize bitmeden hiçbir yere gidemez)
+      if (loc != "/splash" && !app.isInitialized) return "/splash";
+      if (loc == "/splash" && !app.isInitialized) return null;
+
+      // 3️⃣ AUTH KONTROLÜ (Giriş yapılmadıysa)
+      if (!app.isLoggedIn) {
+        if (loc == "/intro" || loc == "/login" || loc == "/splash") {
+          // Eğer splash bittiyse ve intro görülmediyse introya, aksi halde logine
+          if (loc == "/splash") return !app.hasSeenIntro ? "/intro" : "/login";
+          return null;
+        }
+        return "/login";
+      }
+
+      // 4️⃣ YENİ KULLANICI AKIŞI (AŞIRI KRİTİK: Konumdan önce gelmeli)
+      // Loglarda gördüğümüz "Ad: null" durumunu burada yakalıyoruz
+      if (app.isNewUser) {
+        // Profil detayları (Ad-Soyad) eksik mi?
+        if (user?.firstName == null || user!.firstName!.isEmpty) {
+          if (loc == "/profileDetail") return null;
+          return "/profileDetail";
+        }
+
+        // Onboarding süreci tamamlandı mı?
+        if (!app.hasSeenOnboarding) {
+          if (loc == "/onboarding") return null;
+          return "/onboarding";
+        }
+      }
+
+      // 5️⃣ KONUM KONTROLÜ (Sadece Profil ve Onboarding TAMAMSA bakılır)
+      if (!app.hasSelectedLocation) {
+        if (loc == "/location-info" || loc == "/location-picker") return null;
+        return "/location-info";
+      }
+
+      // 6️⃣ ANA SAYFAYA YÖNLENDİRME
+      if ((loc == "/login" || loc == "/intro" || loc == "/splash") && app.isLoggedIn && !app.isNewUser) {
+        return "/home";
+      }
+
+      // Diğer tüm durumlarda kullanıcının gitmek istediği yere izin ver
+      return null;
+    },
     routes: [
+      // ... routes listen aynen kalıyor, oraya dokunmaya gerek yok ...
       GoRoute(
         path: '/splash',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const SplashScreen()),
+        pageBuilder: (_, state) => buildAnimatedPage(child: const SplashScreen(), key: state.pageKey),
       ),
       GoRoute(
         path: '/intro',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const IntroScreen()),
+        pageBuilder: (_, state) => buildAnimatedPage(child: const IntroScreen(), key: state.pageKey),
       ),
       GoRoute(
         path: '/login',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const LoginScreen()),
-      ),
-      GoRoute(
-        path: '/profileDetail',
-        pageBuilder: (context, state) {
-          final fromOnboarding =
-              state.extra is Map && (state.extra as Map)['fromOnboarding'] == true;
-
-          return buildAnimatedPage(
-            key: state.pageKey,
-            child: ProfileDetailsScreen(fromOnboarding: fromOnboarding),
-          );
-        },
+        pageBuilder: (_, state) => buildAnimatedPage(child: const LoginScreen(), key: state.pageKey),
       ),
       GoRoute(
         path: '/onboarding',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const OnboardingScreen()),
+        pageBuilder: (_, state) => buildAnimatedPage(child: const OnboardingScreen(), key: state.pageKey),
       ),
+      GoRoute(path: '/location-info', builder: (_, _) => const LocationInfoScreen()),
+      GoRoute(path: '/location-picker', builder: (_, _) => const LocationPickerScreen()),
       GoRoute(
-        path: '/location',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const LocationInfoScreen()),
-      ),
-      GoRoute(
-        path: '/map',
-        pageBuilder: (context, state) =>
-            buildAnimatedPage(key: state.pageKey, child: const LocationMapScreen()),
-      ),
+        path: '/profileDetail',
+        builder: (context, state) {
+          final bool isFromReg = (state.extra is bool) ? (state.extra as bool) : false;
 
-      GoRoute(
-        path: '/product-detail',
-        pageBuilder: (context, state) {
-          final product = state.extra as ProductModel;
-          return buildAnimatedPage(
-            key: state.pageKey,
-            child: ProductDetailScreen(product: product),
-          );
-        },
-      ),
-      GoRoute(
-        path: '/businessShop-detail',
-        pageBuilder: (context, state) {
-          final business = state.extra as BusinessModel;
-          return buildAnimatedPage(
-            key: state.pageKey,
-            child: BusinessDetailScreen(business: business),
-          );
+          return ProfileDetailsScreen(isFromRegister: isFromReg);
         },
       ),
 
 
-      // 🔹 ShellRoute (bottom nav)
-      ShellRoute(
-        builder: (context, state, child) =>
-            AppShell(child: child, location: state.uri.toString()),
+      GoRoute(
+        path: '/product-detail/:productId',
+        name: AppRoutes.productDetail,
+        builder: (_, state) => ProductDetailScreen(productId: state.pathParameters['productId']!),
+      ),
+      GoRoute(
+        path: '/store-detail/:id',
+        name: AppRoutes.storeDetail,
+        builder: (context, state) => StoreDetailScreen(storeId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/store-reviews/:id',
+        name: AppRoutes.storeReviews,
+        pageBuilder: (context, state) {
+          final storeId = state.pathParameters['id']!;
+          return buildAnimatedPage(
+            key: state.pageKey,
+            child: StoreReviewScreen(storeId: storeId),
+          );
+        },
+      ),
+      GoRoute(path: '/payment', builder: (_, _) => const PaymentScreen()),
+      GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => NotificationScreen(),
+      ),
+      GoRoute(
+        path: '/order-success',
+        builder: (_, state) => OrderSuccessScreen(orderId: state.uri.queryParameters['id']),
+      ),
+
+
+      GoRoute(
+        path: '/order-tracking',
+        builder: (_, _) => const OrderTrackingScreen(),
+      ),
+
+      GoRoute(
+        path: '/thank-you',
+        builder: (_, _) => const ThankYouScreen(),
+      ),
+
+      GoRoute(
+        path: '/order-history',
+        builder: (context, state) => const OrderHistoryScreen(),
         routes: [
-          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+          // 🟢 Burası /order-history/detail/:orderId olur
+          GoRoute(
+            path: 'detail/:orderId',
+            builder: (context, state) {
+              // 🔥 Burayı OrderListItem olarak değiştiriyoruz
+              final orderObj = state.extra as OrderListItem;
 
-          GoRoute(path: '/explore', builder: (_, __) => const ExploreListScreen()),
-          GoRoute(path: '/explore-list', builder: (_, __) => const ExploreListScreen()),
-          GoRoute(path: '/explore-map', builder: (_, __) => const ExploreMapScreen()),
+              // Detay ekranına gönderiyoruz
+              return OrderDetailScreen(order: orderObj);
+            },
+          ),
+        ],
+      ),
 
-          GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
-          GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
+
+      GoRoute(
+        path: 'detail/:orderId',
+        builder: (context, state) {
+          // state.extra, senin gönderdiğin OrderDetailResponse objesidir.
+          final orderObj = state.extra as OrderDetailResponse;
+
+          return OrderDetailScreen(order: orderObj); // Hata veren yer burasıydı, düzeldi.
+        },
+      ),
+
+      GoRoute(
+        path: '/contact',
+        builder: (context, state) => const ContactScreen(), // Artık bu sayfa bulunabilir olacak
+      ),
+
+      GoRoute(
+        path: '/legal-documents',
+        name: 'legal_docs',
+        builder: (context, state) => const LegalDocumentsScreen(),
+      ),
+
+      GoRoute(
+        path: '/global-error',
+        builder: (context, state) => const GlobalErrorScreen(),
+      ),
+
+      ShellRoute(
+        builder: (_, state, child) => AppShell(location: state.uri.toString(), child: child),
+        routes: [
+          GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+          GoRoute(path: '/explore', builder: (_, _) => const ExploreListScreen()),
+          GoRoute(path: '/explore-map', builder: (_, _) => const ExploreMapScreen()),
+          GoRoute(path: '/favorites', builder: (_, _) => const FavoritesScreen()),
+          GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
         ],
       ),
     ],
   );
 });
+
+// RouterNotifier class'ın aynı kalıyor...
+
+class RouterNotifier extends ChangeNotifier {
+  final Ref ref;
+
+  RouterNotifier(this.ref) {
+    // appState değiştiğinde router'ı refresh et
+    ref.listen(appStateProvider, (_, _) {
+      notifyListeners();
+    });
+
+    // auth değiştiğinde de tetikle
+    ref.listen(userNotifierProvider, (_, _) {
+      notifyListeners();
+    });
+  }
+}

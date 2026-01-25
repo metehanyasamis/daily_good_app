@@ -1,150 +1,267 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/location/data/repository/location_repository.dart';
+import '../../features/location/domain/address_notifier.dart';
+import 'dio_provider.dart';
+
+
+// --------------------------------------------------------------------------
+// REPOSITORY PROVIDER
+// --------------------------------------------------------------------------
+final locationRepositoryProvider = Provider<LocationRepository>((ref) {
+  return LocationRepository(ref.watch(dioProvider));
+});
+
+
+// --------------------------------------------------------------------------
+// APP STATE MODEL
+// --------------------------------------------------------------------------
+@immutable
 class AppState {
-  final bool isFirstLaunch;
+  final bool isInitialized;
   final bool isLoggedIn;
-  final bool hasCompletedProfile;
+  final bool isNewUser;
+
+  final bool hasSeenIntro;
+  final bool hasSeenProfileDetails;
   final bool hasSeenOnboarding;
-  final bool hasLocationAccess;
-  final String? name;
-  final String? surname;
-  final String? email;
-  final String? gender;
+  final bool hasSelectedLocation;
+
+  final double? latitude;
+  final double? longitude;
 
   const AppState({
-    this.isFirstLaunch = true,
+    this.isInitialized = false,
     this.isLoggedIn = false,
-    this.hasCompletedProfile = false,
+    this.isNewUser = false,
+    this.hasSeenIntro = false,
+    this.hasSeenProfileDetails = false,
     this.hasSeenOnboarding = false,
-    this.hasLocationAccess = false,
-    this.name,
-    this.surname,
-    this.email,
-    this.gender,
-
+    this.hasSelectedLocation = false,
+    this.latitude,
+    this.longitude,
   });
 
   AppState copyWith({
-    bool? isFirstLaunch,
+    bool? isInitialized,
     bool? isLoggedIn,
-    bool? hasCompletedProfile,
+    bool? isNewUser,
+    bool? hasSeenIntro,
+    bool? hasSeenProfileDetails,
     bool? hasSeenOnboarding,
-    bool? hasLocationAccess,
-    String? name,
-    String? surname,
-    String? email,
-    String? gender,
-
+    bool? hasSelectedLocation,
+    double? latitude,
+    double? longitude,
   }) {
     return AppState(
-      isFirstLaunch: isFirstLaunch ?? this.isFirstLaunch,
+      isInitialized: isInitialized ?? this.isInitialized,
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
-      hasCompletedProfile: hasCompletedProfile ?? this.hasCompletedProfile,
+      isNewUser: isNewUser ?? this.isNewUser,
+      hasSeenIntro: hasSeenIntro ?? this.hasSeenIntro,
+      hasSeenProfileDetails:
+      hasSeenProfileDetails ?? this.hasSeenProfileDetails,
       hasSeenOnboarding: hasSeenOnboarding ?? this.hasSeenOnboarding,
-      hasLocationAccess: hasLocationAccess ?? this.hasLocationAccess,
-      name: name ?? this.name,
-      surname: surname ?? this.surname,
-      email: email ?? this.email,
-      gender: gender ?? this.gender,
-
+      hasSelectedLocation: hasSelectedLocation ?? this.hasSelectedLocation,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 }
 
+
+// --------------------------------------------------------------------------
+// APP STATE NOTIFIER
+// --------------------------------------------------------------------------
 class AppStateNotifier extends StateNotifier<AppState> {
-  AppStateNotifier() : super(const AppState()) {
-    _loadState();
-  }
+  AppStateNotifier(this.ref) : super(const AppState());
 
-  Future<void> _loadState() async {
+  final Ref ref;
+
+  // ------------------------------------------------------------------------
+  // INIT (Splash çağırır)
+  // ------------------------------------------------------------------------
+  Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
 
-    state = AppState(
-      isFirstLaunch: prefs.getBool('isFirstLaunch') ?? true,
-      isLoggedIn: prefs.getBool('isLoggedIn') ?? false,
-      hasCompletedProfile: prefs.getBool('hasCompletedProfile') ?? false,
-      hasSeenOnboarding: prefs.getBool('hasSeenOnboarding') ?? false,
-      hasLocationAccess: prefs.getBool('hasLocationAccess') ?? false,
-      name: prefs.getString('name'),
-      surname: prefs.getString('surname'),
-      email: prefs.getString('email'),
-      gender: prefs.getString('gender'),
+    final token = prefs.getString("auth_token");
 
-    );
-  }
+    bool loggedIn = prefs.getBool("logged_in") ?? false;
+    bool newUser = prefs.getBool("is_new_user") ?? false;
 
-  Future<void> _saveState() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isFirstLaunch', state.isFirstLaunch);
-    await prefs.setBool('isLoggedIn', state.isLoggedIn);
-    await prefs.setBool('hasCompletedProfile', state.hasCompletedProfile);
-    await prefs.setBool('hasSeenOnboarding', state.hasSeenOnboarding);
-    await prefs.setBool('hasLocationAccess', state.hasLocationAccess);
-    await prefs.setString('name', state.name ?? '');
-    await prefs.setString('surname', state.surname ?? '');
-    await prefs.setString('email', state.email ?? '');
-    await prefs.setString('gender', state.gender ?? '');
-  }
+    // 🔒 TOKEN YOKSA → HER ŞEYİ TEMİZLE
+    if (token == null || token.isEmpty) {
+      loggedIn = false;
+      newUser = false;
 
-  void setFirstLaunch(bool value) {
-    state = state.copyWith(isFirstLaunch: value);
-    _saveState();
-  }
+      await prefs.setBool("logged_in", false);
+      await prefs.setBool("is_new_user", false);
+    }
 
-  void setLoggedIn(bool value) {
-    state = state.copyWith(isLoggedIn: value);
-    _saveState();
-  }
-
-  void setCompletedProfile(bool value) {
-    state = state.copyWith(hasCompletedProfile: value);
-    _saveState();
-  }
-
-  void setSeenOnboarding(bool value) {
-    state = state.copyWith(hasSeenOnboarding: value);
-    _saveState();
-  }
-
-  void setLocationAccess(bool value) {
-    state = state.copyWith(hasLocationAccess: value);
-    _saveState();
-  }
-
-  void setProfileCompleted(bool value) {
-    state = state.copyWith(hasCompletedProfile: value);
-  }
-
-  void setOnboardingSeen(bool value) {
-    state = state.copyWith(hasSeenOnboarding: value);
-  }
-
-  void logout() {
-    state = state.copyWith(isLoggedIn: false);
-    _saveState();
-  }
-
-  void setProfile({
-    String? name,
-    String? surname,
-    String? email,
-    String? gender,
-  }) {
     state = state.copyWith(
-      name: name,
-      surname: surname,
-      email: email,
-      gender: gender,
-      hasCompletedProfile: true,
+      isInitialized: false,
+      isLoggedIn: loggedIn,
+      isNewUser: newUser,
+      hasSeenIntro: prefs.getBool("seen_intro") ?? false,
+      hasSeenProfileDetails:
+      prefs.getBool("seen_profile_details") ?? false,
+      hasSeenOnboarding: prefs.getBool("seen_onboarding") ?? false,
+      hasSelectedLocation:
+      prefs.getBool("selected_location") ?? false,
+      latitude: prefs.getDouble("user_lat"),
+      longitude: prefs.getDouble("user_lng"),
     );
-    _saveState();
+
+    debugPrint(
+      "✅ [APP STATE] load → "
+          "token=${token != null}, "
+          "loggedIn=$loggedIn, "
+          "newUser=$newUser, "
+          "location=${state.hasSelectedLocation}",
+    );
+
+    final savedAddress = prefs.getString("user_address");
+
+    if (state.hasSelectedLocation &&
+        state.latitude != null &&
+        state.longitude != null) {
+
+      ref.read(addressProvider.notifier).hydrateFromAppState(
+        lat: state.latitude!,
+        lng: state.longitude!,
+        address: savedAddress ?? "Lütfen Konum Seçiniz",
+      );
+    }
+
   }
 
+  // ------------------------------------------------------------------------
+  // AUTH
+  // ------------------------------------------------------------------------
+  Future<void> setLoggedIn(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("logged_in", value);
+    state = state.copyWith(isLoggedIn: value);
+  }
+
+  Future<void> setToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString("auth_token", token);
+  }
+
+  Future<void> setIsNewUser(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("is_new_user", value);
+    state = state.copyWith(isNewUser: value);
+    debugPrint("🚀 [APP STATE] isNewUser → $value");
+  }
+
+  // ------------------------------------------------------------------------
+  // FLAGS
+  // ------------------------------------------------------------------------
+  Future<void> setHasSeenIntro(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("seen_intro", value);
+    state = state.copyWith(hasSeenIntro: value);
+  }
+
+  Future<void> setHasSeenProfileDetails(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("seen_profile_details", value);
+    state = state.copyWith(hasSeenProfileDetails: value);
+  }
+
+  Future<void> setHasSeenOnboarding(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("seen_onboarding", value);
+    state = state.copyWith(hasSeenOnboarding: value);
+  }
+
+  // ------------------------------------------------------------------------
+  // ⭐ LOCATION (EN KRİTİK PARÇA)
+  // ------------------------------------------------------------------------
+  Future<void> setHasSelectedLocation(
+      bool value, {
+        double? lat,
+        double? lng,
+        String? address,
+      }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool("selected_location", value);
+
+    if (lat != null && lng != null) {
+      await prefs.setDouble("user_lat", lat);
+      await prefs.setDouble("user_lng", lng);
+    }
+
+    if (address != null && address.isNotEmpty) {
+      await prefs.setString("user_address", address);
+    }
+
+    state = state.copyWith(
+      hasSelectedLocation: value,
+      latitude: lat ?? state.latitude,
+      longitude: lng ?? state.longitude,
+    );
+
+    debugPrint(
+      "📍 [APP STATE] location selected → $value | $lat,$lng | $address",
+    );
+  }
+
+// 🎯 Splash'te veriler çekildikten sonra çağrılır
+  Future<void> completeSync() async {
+    // Şimdilik sadece log basıyoruz, istersen ekstra flag ekleyebilirsin
+    debugPrint("🏁 [APP STATE] Tüm veriler senkronize edildi.");
+  }
+
+  // 🎯 Uygulamanın tamamen hazır olduğunu ve Router'ın kapıları açabileceğini söyler
+  Future<void> setInitialized(bool value) async {
+    state = state.copyWith(isInitialized: value);
+    debugPrint("🏗️ [APP STATE] isInitialized → $value");
+  }
+
+
+  // ------------------------------------------------------------------------
+  // LOGOUT (HARD RESET)
+  // ------------------------------------------------------------------------
+  Future<void> resetAfterLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.clear();
+
+    state = const AppState(
+      isInitialized: true,
+      isLoggedIn: false,
+      isNewUser: false,
+      hasSeenIntro: true,
+    );
+
+    debugPrint("🧹 [APP STATE] resetAfterLogout");
+  }
 }
 
+
+// --------------------------------------------------------------------------
+// PROVIDER
+// --------------------------------------------------------------------------
 final appStateProvider =
 StateNotifierProvider<AppStateNotifier, AppState>((ref) {
-  return AppStateNotifier();
+  return AppStateNotifier(ref);
 });
 
+
+// --------------------------------------------------------------------------
+// ROUTER REFRESH LISTENER
+// --------------------------------------------------------------------------
+class RouterNotifier extends ChangeNotifier {
+  RouterNotifier(this.ref) {
+    ref.listen(appStateProvider, (_, _) {
+      notifyListeners();
+    });
+  }
+
+  final Ref ref;
+}

@@ -17,7 +17,7 @@ class CustomBottomNavBar extends StatelessWidget {
     return Material( // beyaz oval bar
       color: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white, // bar’ın beyaz zemini
           borderRadius: BorderRadius.only(
@@ -60,13 +60,6 @@ class CustomBottomNavBar extends StatelessWidget {
         ? 120 // HESAP için
         : 115) // diğerleri
         : 60;
-
-    // 👇 offset’i de sağa sola göre ayarla
-    final double leftOffset = (index == 0)
-        ? 28 // home biraz içerde olsun
-        : (index == 3)
-        ? 24 // hesap sağda, daha az taşsın
-        : 30;
 
     return SizedBox(
       width: width,

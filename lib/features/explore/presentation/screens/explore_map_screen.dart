@@ -1,232 +1,152 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
-import '../../../businessShop/data/mock/mock_businessShop_model.dart';
-import '../../../businessShop/data/model/businessShop_model.dart';
-import '../../../businessShop/presentation/widgets/businessShop_details_content.dart';
+import '../../../../core/widgets/custom_toggle_button.dart';
 
-class ExploreMapScreen extends StatefulWidget {
+import '../../../location/domain/address_notifier.dart';
+import '../../../product/data/repository/product_repository.dart';
+import '../../../stores/data/model/store_summary.dart';
+import '../../domain/providers/explore_store_provider.dart';
+import '../widgets/half_store_sheet.dart';
+import '../widgets/mini_store_card.dart';
+import '../widgets/store_marker_layer.dart';
+
+class ExploreMapScreen extends ConsumerStatefulWidget {
   const ExploreMapScreen({super.key});
 
   @override
-  State<ExploreMapScreen> createState() => _ExploreMapScreenState();
+  ConsumerState<ExploreMapScreen> createState() => _ExploreMapScreenState();
 }
 
-class _ExploreMapScreenState extends State<ExploreMapScreen> {
+class _ExploreMapScreenState extends ConsumerState<ExploreMapScreen> {
+  StoreSummary? _selectedStore;
+  MapboxMap? _mapboxMap;
 
-  final List<BusinessModel> _sampleBusinessShop = mockBusinessList;
-  String? _selectedShopId;
+  @override
+  Widget build(BuildContext context) {
+    final address = ref.watch(addressProvider);
+    final storesAsync = ref.watch(exploreStoreProvider);
 
-  // Seçilen işletmeyi ID'sine göre BusinessModel listesinden bulur.
-  BusinessModel? get _selectedShop {
-    if (_selectedShopId == null) return null;
-
-    try {
-      // Doğrudan BusinessModel'in id alanını kullanarak arama yapılır.
-      return _sampleBusinessShop.firstWhere((s) => s.id == _selectedShopId);
-    } catch (e) {
-      // Eğer ID bulunamazsa (güvenlik için) null döndürülür.
-      return null;
-    }
-  }
-
-  void _onPinTap(String shopId) {
-    setState(() {
-      _selectedShopId = shopId;
-    });
-  }
-
-  void _onCardTap() {
-    final business = _selectedShop;
-
-    if (business != null) {
-      // Seçilen BusinessModel objesi zaten tüm ürün verilerini içeriyor.
-
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => DraggableScrollableSheet(
-          initialChildSize: 0.55,
-          maxChildSize: 0.95,
-          minChildSize: 0.3,
-          expand: false,
-          builder: (_, controller) => Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: SingleChildScrollView(
-              controller: controller,
-              // BusinessDetailContent widget'ına BusinessModel objesi doğrudan iletilir.
-              child: BusinessDetailContent(businessShop: business),
-            ),
-          ),
+    if (!address.isSelected) {
+      return Scaffold(
+        body: Center(
+          child: PlatformWidgets.loader(),
         ),
       );
     }
-  }
 
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       extendBody: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(70),
-        child: CustomHomeAppBar(
-          address: 'Nail Bey Sok.',
-          onLocationTap: () {
-            // Lokasyon seçimi
-          },
-          onNotificationsTap: () {
-            // Bildirim ekranı
-          },
-        ),
+      appBar: CustomHomeAppBar(
+        address: address.title,
+        onLocationTap: () => context.push('/location-picker'),
+        onNotificationsTap: () {},
       ),
-      body: Stack(
-        children: [
-          // Harita yerine mock görsel
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/sample_map.png',
-              fit: BoxFit.cover,
-            ),
-          ),
+      body: storesAsync.when(
+        loading: () => Center(child: PlatformWidgets.loader()),
+        error: (err, _) => Center(child: Text("Hata: $err")),
+        data: (stores) {
 
-          // Mock pinler (id'lerin mockBusinessList'teki id'ler ile eşleştiğinden emin olun)
-          Positioned(
-            left: 60,
-            top: 220,
-            child: GestureDetector(
-              onTap: () => _onPinTap('1'), // 'Altın Fırın' id'si
-              child: Icon(Icons.location_on, color: AppColors.primaryDarkGreen, size: 36),
-            ),
-          ),
-          Positioned(
-            left: 180,
-            top: 350,
-            child: GestureDetector(
-              onTap: () => _onPinTap('2'), // 'VGreen Dükkan' id'si
-              child: Icon(Icons.location_on, color: AppColors.primaryDarkGreen, size: 36),
-            ),
-          ),
 
-          // Arama kutusu
-          Positioned(
-            top: 8,
-            left: 16,
-            right: 16,
-            child: SafeArea(
-              child: TextField(
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: 'Restoran, paket veya mekan ara',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
+          // 👇👇👇 TAM BURAYA
+          debugPrint('🟦 MAP STORES COUNT: ${stores.length}');
+          for (final s in stores) {
+            debugPrint(
+              '📍 STORE: ${s.name} lat=${s.latitude} lng=${s.longitude}',
+            );
+          }
+          // 👆👆👆
+
+          return Stack(
+            children: [
+              /// 🗺️ MAP
+              StoreMarkerLayer(
+                address: address,
+                stores: stores,
+                onMapReady: (map) => _mapboxMap = map,
+                onMapTap: () => setState(() => _selectedStore = null),
+                onStoreSelected: (store) {
+                  setState(() => _selectedStore = store);
+                },
+              ),
+
+              /// 📍 KONUMUMA GİT BUTONU (SAĞ TARAF)
+              Positioned(
+                right: 16,
+                top: 16, // AppBar'ın hemen altına
+                child: FloatingActionButton.small(
+                  heroTag: "my_location",
+                  backgroundColor: Colors.white,
+                  elevation: 4,
+                  shape: const CircleBorder(),
+                  onPressed: () {
+                    _mapboxMap?.flyTo(
+                      CameraOptions(
+                        center: Point(coordinates: Position(address.lng, address.lat)),
+                        zoom: 15.0,
+                      ),
+                      MapAnimationOptions(duration: 800),
+                    );
+                  },
+                  child: const Icon(Icons.my_location, color: AppColors.primaryDarkGreen),
                 ),
               ),
-            ),
-          ),
 
-          // Alt kart: pin seçildiğinde göster
-          if (_selectedShop != null)
-            Positioned(
-              bottom: kBottomNavigationBarHeight + 80,
-              left: 16,
-              right: 16,
-              child: GestureDetector(
-                onTap: _onCardTap,
-                // BusinessModel objesini _BusinessCard widget'ına iletiyoruz.
-                child: _BusinessCard(business: _selectedShop!),
-              ),
-            ),
-
-          // Liste butonu
-          Positioned(
-            right: 0,
-            bottom: (MediaQuery.of(context).padding.bottom > 0
-                ? MediaQuery.of(context).padding.bottom
-                : 20) + 80,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryDarkGreen,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    bottomLeft: Radius.circular(30),
-                    topRight: Radius.zero,
-                    bottomRight: Radius.zero,
+              /// 🟢 MINI STORE CARD
+              if (_selectedStore != null)
+                Positioned(
+                  left: 16,
+                  right: MediaQuery.of(context).size.width * 0.27,
+                  bottom: (MediaQuery.of(context).padding.bottom > 0
+                      ? MediaQuery.of(context).padding.bottom
+                      : 20) +
+                      80,
+                  child: MiniStoreCard(
+                    store: _selectedStore!,
+                    onTap: () => _openHalfStoreSheet(_selectedStore!),
                   ),
                 ),
+
+
+
+              /// 🔘 MAP → LIST
+              CustomToggleButton(
+                label: "Liste",
+                icon: Icons.list,
+                onPressed: () => context.go('/explore'),
               ),
-              onPressed: () {
-                // 'go_router' ile listeleme ekranına yönlendirme
-                context.push('/explore-list');
-              },
-              icon: const Icon(Icons.list, color: Colors.white),
-              label: const Text(
-                'Liste',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
-}
 
-// Alt kart widget'ı (BusinessModel objesi kullanır)
-class _BusinessCard extends StatelessWidget {
-  final BusinessModel business;
-  const _BusinessCard({required this.business});
+// ExploreMapScreen içindeki ilgili kısım:
+  void _openHalfStoreSheet(StoreSummary store) {
+    final productRepo = ref.read(productRepositoryProvider);
 
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      elevation: 6,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => HalfStoreSheet(
+        store: store,
+        // 🔥 DOĞRU ÇAĞRI: fetchProductsFlat tüm grupları birleştirip Liste döner
+        productsFuture: productRepo.fetchProductsList(
+          storeId: store.id,
+          perPage: 20,
         ),
-        child: Row(
-          children: [
-            // İşletme görseli (image alanı, bu kart için logo yerine kullanıldı)
-            CircleAvatar(
-              radius: 24,
-              backgroundImage: AssetImage(business.businessShopLogoImage),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Sınıf üyelerine nokta operatörü ile erişim
-                  Text(business.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  // Sınıf üyelerine nokta operatörü ile erişim
-                  Text(
-                    'Bugün teslim al ${business.workingHours}',
-                    style: TextStyle(color: Colors.grey[700]),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, size: 28),
-          ],
-        ),
+        onStoreTap: () => context.push('/store-detail/${store.id}'),
       ),
     );
   }
+
+
 }

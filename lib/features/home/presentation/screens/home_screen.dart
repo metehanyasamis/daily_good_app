@@ -1,475 +1,366 @@
-import 'dart:ui';
-
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../../core/platform/haptics.dart';
+import '../../../../core/platform/platform_utils.dart';
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
-import '../../../product/data/mock/mock_product_model.dart';
-import '../../../product/data/models/product_model.dart';
-import '../../../location/presentation/screens/location_picker_screen.dart';
-import '../../../product/presentation/widgets/product_card.dart';
+import '../../../../core/widgets/floating_order_button.dart';
 
-class HomeScreen extends StatefulWidget {
+import '../../../account/domain/providers/user_notifier.dart';
+import '../../../category/domain/category_notifier.dart';
+import '../../../explore/domain/providers/explore_state_provider.dart';
+import '../../../explore/presentation/widgets/explore_filter_sheet.dart';
+import '../../../location/domain/address_notifier.dart';
+
+import '../../../notification/domain/providers/notification_provider.dart';
+import '../../../orders/domain/providers/order_provider.dart';
+import '../data/models/home_state.dart';
+import '../domain/providers/home_state_provider.dart';
+
+import '../widgets/home_active_order_box.dart';
+import '../widgets/home_banner_slider.dart';
+import '../widgets/home_category_bar.dart';
+import '../widgets/home_email_warning_banner.dart';
+import '../widgets/home_location_request_sheet.dart';
+import '../widgets/home_product_list.dart';
+import '../widgets/home_section_title.dart';
+
+import 'dart:io';
+import 'package:package_info_plus/package_info_plus.dart';
+
+
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  String selectedAddress = 'Nail Bey Sok.';
-  int selectedCategoryIndex = 0;
+class _HomeScreenState extends ConsumerState<HomeScreen> {
 
-  Future<void> _selectLocation() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
-    );
-    if (result != null && result is String) {
-      setState(() => selectedAddress = result);
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() async {
+      debugPrint("🏠 [HOME] Veriler Tazeleniyor...");
+      
+      // 🎯 loadUser'ı bekle (await koyarsak veri gelene kadar banner beklemede kalır)
+      await ref.read(userNotifierProvider.notifier).loadUser();
+
+      // 🎯 2. BİLDİRİM TOKEN'INI GÜNCELLE
+      _updateNotificationToken();
+
+      // Diğerlerini de sırayla veya beraber yükle
+      ref.read(categoryProvider.notifier).load();
+
+      // 🎯 Siparişleri de tazele!
+      ref.invalidate(orderHistoryProvider);
+
+      final address = ref.read(addressProvider);
+      if (address.isSelected) {
+        ref.read(homeStateProvider.notifier).loadHome(
+          latitude: address.lat,
+          longitude: address.lng,
+        );
+      }
+    });
+  }
+
+
+  Future<void> _updateNotificationToken() async {
+    try {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken == null) return;
+
+      final deviceInfo = DeviceInfoPlugin();
+      final packageInfo = await PackageInfo.fromPlatform();
+
+      String deviceName = "Unknown";
+      String deviceId = "Unknown";
+
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        deviceName = androidInfo.model;
+        deviceId = androidInfo.id;
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        deviceName = iosInfo.name;
+        deviceId = iosInfo.identifierForVendor ?? "unknown_ios";
+      }
+
+      // Repository üzerinden backend'e gönderiyoruz
+      await ref.read(notificationRepositoryProvider).saveDeviceToken(
+        fcmToken: fcmToken,
+        deviceId: deviceId,
+        deviceName: deviceName,
+        deviceType: Platform.isAndroid ? "android" : "ios",
+        appVersion: packageInfo.version,
+      );
+
+      debugPrint("✅ [FCM] Token başarıyla backend'e kaydedildi.");
+    } catch (e) {
+      debugPrint("❌ [FCM] Token kaydedilirken hata: $e");
     }
   }
 
-  void _openNotifications() {
-    Navigator.pushNamed(context, '/notifications');
-  }
-
-  final List<String> categories = [
-    'Tümü',
-    'Yemek',
-    'Fırın &\nPastane',
-    'Kahvaltı',
-    'Market &\nManav',
-    'Vejetaryen',
-    'Vegan',
-    'Glutensiz',
-  ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background, // 👈 arka plan sabit
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(70),
-        child: CustomHomeAppBar(
-          address: selectedAddress,
-          onLocationTap: _selectLocation,
-          onNotificationsTap: _openNotifications,
-        ),
-      ),
+    final homeState = ref.watch(homeStateProvider);
+    final addressState = ref.watch(addressProvider);
+    final categoryState = ref.watch(categoryProvider);
+    final categories = categoryState.categories;
 
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          // 🔹 Banner alanı
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 0, bottom: 8), // ✅ yan padding’leri kaldırdık
-              child: _BannerSlider(), // 👈 yeni widget
-            ),
-          ),
-
-          // 🔹 Kategori bar
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: CategoryHeaderDelegate(
-              categories: categories,
-              selectedIndex: selectedCategoryIndex,
-              onSelected: (index) {
-                setState(() => selectedCategoryIndex = index);
-              },
-            ),
-          ),
-        ],
-
-        // 🔹 Ürün listesi
-        body: const _ProductSections(),
-      ),
+    debugPrint(
+      "🏠 [HOME BUILD] sections="
+          "${homeState.sectionProducts.map((k,v)=>MapEntry(k.name,v.length))}",
     );
-  }
-}
-
-class CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final List<String> categories;
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
-
-  CategoryHeaderDelegate({
-    required this.categories,
-    required this.selectedIndex,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
 
 
+    // 🔥 KONUM DEĞİŞTİĞİNDE VERİLERİ YENİLE
+    ref.listen(addressProvider, (previous, next) {
+      if (next.isSelected && (previous?.lat != next.lat || previous?.lng != next.lng)) {
+        debugPrint("📍 Konum değişti, ana sayfa yenileniyor...");
+        ref.read(homeStateProvider.notifier).loadHome(
+          latitude: next.lat,
+          longitude: next.lng,
+        );
+      }
+    });
 
-
-    // 1. Dinamik Hesaplamalar (Shrink Factor)
-    final double maxScrollExtent = maxExtent - minExtent;
-    final double shrinkFactor = (maxScrollExtent > 0)
-        ? (shrinkOffset / maxScrollExtent).clamp(0.0, 1.0)
-        : 0.0;
-
-    // Kapsayıcı yüksekliği de küçülmeli
-    final double currentContainerHeight = lerpDouble(maxExtent, minExtent, shrinkFactor)!;
-
-
-
-    return Container(
-      color: AppColors.background,
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final bool isSelected = selectedIndex == index;
-          final String category = categories[index];
-
-          // 3. isSelected'a BAĞLI OLAN DİNAMİK HESAPLAMALAR BURAYA TAŞINDI:
-          final double startIconSize = isSelected ? 70 : 62;
-          final double endIconSize = startIconSize * 0.70; // %30 küçülmüş boyut
-          final double currentIconSize = lerpDouble(startIconSize, endIconSize, shrinkFactor)!;
-
-          // DİNAMİK METİN POZİSYONU HESAPLAMASI (Transform.translate yerine)
-          // Seçili değilken dikey merkezde kalmalı (0.0)
-          // Seçiliyken, yeşil alanın ortasına çekilmeli (örneğin -10.0 birim yukarı)
-          final double verticalShift = isSelected
-              ? lerpDouble(-10.0, -2.0, shrinkFactor)! // Büyükken -10, küçükken -2 (yeşilin ortası)
-              : 0.0; // Seçili değilken hep aynı yerde kalsın
-
-// itemBuidler metodu içinde kullanılacak kısım
-          return GestureDetector(
-            onTap: () => onSelected(index),
-            child: Container( // Güvenli alan ve margin için Container kullanıldı
-              width: 78,
-              height: currentContainerHeight, // maxExtent (120) ile minExtent (110.0) arasında değişir
-              margin: const EdgeInsets.only(right: 12),
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  // 🔹 Yeşil oval arka plan (AnimatedAlign)
-                  AnimatedAlign(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeInOut,
-                    // Seçili değilken yeşil alanın küçülmüş kapsayıcının (Container) alt kenarında kalmasını sağlar.
-                    alignment: isSelected
-                    // ⚠️ DÜZELTME 1: Seçiliyken (BÜYÜK durum) 0.5'ten 0.02'ye küçülsün
-                        ? Alignment.lerp(
-                      const Alignment(0, 0.5), // Büyükken başlangıç konumu (0.5)
-                      const Alignment(0, 0.0), // Küçükken bitiş konumu (0.02)
-                      shrinkFactor,
-                    )!
-
-                    // Seçili değilken: Görünmez alanın altta tutulması (Orijinal hali)
-                        : Alignment.lerp(
-                      const Alignment(0, 1.3), // Orijinal: Görünmez alan daha aşağıda başlar
-                      Alignment.bottomCenter, // Orijinal: Küçülünce tam alta iner (1.0)
-                      shrinkFactor,
-                    )!,
-                    child: Opacity(
-                      opacity: isSelected ? 1.0 : 0.0,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        curve: Curves.easeInOut,
-                        width: lerpDouble(72, 72 * 0.80, shrinkFactor)!,
-                        height: isSelected ? lerpDouble(94, 94 * 0.60, shrinkFactor)! : 0,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryDarkGreen,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(50),
-                            topRight: Radius.circular(50), // Diğer köşeleri korumak için, eğer istiyorsanız
-                            bottomLeft: Radius.circular(30), // orijinal değerleri bırakın
-                            bottomRight: Radius.circular(30),
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                            BoxShadow(
-                              color: AppColors.primaryDarkGreen.withValues(alpha: .15),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                              : [],
-                        ),
-                      ),
-                    ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark, // Android: Siyah ikonlar
+        statusBarBrightness: Brightness.light,    // iOS: Siyah ikonlar
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(70),
+          child: CustomHomeAppBar(
+            address: addressState.title,
+            onLocationTap: () {
+              final address = ref.read(addressProvider);
+      
+              if (!address.isSelected) {
+                // Ayrı sınıf yaptığımız widget'ı burada çağırıyoruz
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                   ),
-
-                  // 🔹 YENİ: İkon ve Metin Bloğu (Transform yerine Align ile konumlandırıldı)
-                  Align(
-                    // Metin ve ikon bloğunun dikey konumu:
-                    alignment: isSelected
-                        ? Alignment.topCenter // Seçiliyken yukarıda (yeşil alanın ortası için)
-                    // Seçili değilken (shrinkFactor ile): Ortaya yakın (0.0) pozisyondan,
-                    // küçükken daha üste (Alignment(0, -0.2)) hareket eder
-                        : Alignment.lerp(
-                      const Alignment(0, -0.4), // Statik (Büyük) haldeyken dikey ortada
-                      const Alignment(0, -0.8), // Küçük haldeyken hafif yukarıda
-                      shrinkFactor,
-                    )!,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min, // Sadece içeriği kadar yer kapla
-                      children: [
-                        // Kategori İkonu
-                        AnimatedContainer(
-
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeInOut,
-                          width: currentIconSize,
-                          height: currentIconSize,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/icons/${_iconNameFor(category)}.jpg',
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                        // İki satırlı metin için minimum boşluk
-                        SizedBox(height: lerpDouble(4, 1, shrinkFactor)),
-
-                        // Kategori Yazısı (Metin kayması çözüldü)
-                        AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 200),
-                          style: TextStyle(
-                            fontSize: lerpDouble(13, 11, shrinkFactor),
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                            color: isSelected ? Colors.white : Colors.black.withOpacity(0.9),
-                          ),
-                          // Transform.translate tamamen KALDIRILDI
-                          child: Text(category, textAlign: TextAlign.center),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // 🔹 EKSİK KATEGORİLER EKLENDİ
-  String _iconNameFor(String category) {
-    final cleanCategory = category.replaceAll('\n', '');
-
-    switch (cleanCategory) {
-      case 'Tümü':
-        return 'all';
-      case 'Yemek':
-        return 'food';
-      case 'Fırın & Pastane':
-        return 'bakery';
-      case 'Kahvaltı':
-        return 'breakfast';
-      case 'Market & Manav':
-        return 'market';
-      case 'Vejetaryen': // Türkçe yazımına dikkat ederek dosya adını belirledim
-        return 'vegetarian';
-      default:
-        return 'food';
-    }
-  }
-
-  @override
-  double get maxExtent => 120;
-  @override
-  double get minExtent => 110;
-  @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
-      true;
-}
-
-class _ProductSections extends StatelessWidget {
-  const _ProductSections({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.only(
-        top: 0,
-        bottom: kBottomNavigationBarHeight + 24, // 🔥 ekstra kaydırma alanı
-      ),      children: const [
-        SectionTitle(title: "Hemen Yanımda"),
-        SampleProductList(),
-        SectionTitle(title: "Son Şans"),
-        SampleProductList(),
-        SectionTitle(title: "Yeni Mekanlar"),
-        SampleProductList(),
-        SectionTitle(title: "Bugün Al"),
-        SampleProductList(),
-        SectionTitle(title: "Yarın Al"),
-        SampleProductList(),
-        SectionTitle(title: "Favorilerim"),
-        SampleProductList(),
-        SizedBox(height: 32),
-      ],
-    );
-  }
-}
-
-class SectionTitle extends StatelessWidget {
-  final String title;
-
-  const SectionTitle({super.key, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.arrow_forward_ios, size: 16),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class SampleProductList extends StatelessWidget {
-  const SampleProductList({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final List<ProductModel> sampleHomeProducts = mockProducts;
-
-
-    return SizedBox(
-      height: 240, // kart yüksekliği
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: sampleHomeProducts.length,
-        itemBuilder: (context, index) {
-          final product = sampleHomeProducts[index];
-          return Container(
-            width: MediaQuery.of(context).size.width * 0.82, // 🔹 genişliği biraz küçült
-            margin: EdgeInsets.only(
-              right: index == sampleHomeProducts.length - 1 ? 0 : 1,
-            ),
-            child: ProductCard(product: product,
-              onTap: () => context.push('/product-detail', extra: product),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _BannerSlider extends StatefulWidget {
-  @override
-  State<_BannerSlider> createState() => _BannerSliderState();
-}
-
-class _BannerSliderState extends State<_BannerSlider> {
-  final PageController _controller = PageController(viewportFraction: 0.96);
-  int _currentIndex = 0;
-
-  final List<String> banners = [
-    'assets/images/banner_veggie.jpg',
-    'assets/images/banner_food2.jpg',
-    'assets/images/banner_food3.jpg',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
-
-    return Column(
-      children: [
-        SizedBox(
-          height: 180, // Banner yüksekliği
-          width: screenWidth,
-          child: PageView.builder(
-            controller: _controller,
-            itemCount: banners.length,
-            onPageChanged: (index) => setState(() => _currentIndex = index),
-            itemBuilder: (context, index) {
-              return AnimatedBuilder(
-                animation: _controller,
-                builder: (context, child) {
-                  double scale = 1.0;
-                  if (_controller.position.haveDimensions) {
-                    scale = (_controller.page! - index).abs().clamp(0.0, 1.0);
-                    scale = 1 - (scale * 0.08); // Hafif zoom efekti
-                  }
-
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4), // kenar boşluğu
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
-                          banners[index],
-                          fit: BoxFit.cover,
-                          width: screenWidth,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
+                  builder: (context) => const HomeLocationRequestSheet(),
+                );
+              } else {
+                context.push('/location-picker');
+              }
             },
+              onNotificationsTap: () => context.push('/notifications'),
           ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(banners.length, (index) {
-            final bool isActive = index == _currentIndex;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              height: 6,
-              width: isActive ? 18 : 6,
-              decoration: BoxDecoration(
-                color: isActive
-                    ? AppColors.primaryDarkGreen
-                    : AppColors.primaryLightGreen.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            );
-          }),
+        body: Stack(
+          children: [
+            NestedScrollView(
+              headerSliverBuilder: (context, _) => [
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: HomeBannerSlider(),
+                  ),
+                ),
+      
+                if (categories.isNotEmpty)
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: HomeCategoryBar(
+                      categories: categories,
+                      selectedIndex: homeState.selectedCategoryIndex,
+                        onSelected: (index) {
+                          // 1) home state güncelle (istersen kalsın)
+                          ref.read(homeStateProvider.notifier).setCategory(index);
+      
+                          final id = categories[index].id;
+      
+                          debugPrint("🏠➡️ [HOME_CAT→EXPLORE] index=$index id=$id");
+      
+                          // 2) Explore’a git + extra ile categoryId gönder
+                          context.push(
+                            '/explore',
+                            extra: {
+                              'fromHome': true,
+                              'categoryId': id, // ✅ int gönder, explore'da toString yaparsın
+                              // 'filter': ExploreFilterOption.hemenYaninda, // istersen boş bırak
+                            },
+                          );
+                        }
+                    ),
+      
+                  ),
+      
+                if (homeState.hasActiveOrder)
+                  SliverToBoxAdapter(
+                    child: HomeActiveOrderBox(
+                      onTap: () => context.push('/order-tracking'),
+                    ),
+                  ),
+              ],
+              body: const HomeContent(),
+            ),
+            const FloatingOrderButton(),
+          ],
         ),
-      ],
+      ),
     );
   }
+}
+
+class HomeContent extends ConsumerWidget {
+  const HomeContent({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final homeState = ref.watch(homeStateProvider);
+
+    // Yükleme ve veri kontrolü
+    final isLoading = homeState.loadingSections.values.any((v) => v);
+    final hasAnyData = homeState.sectionProducts.values.any((l) => l.isNotEmpty);
+
+    if (isLoading && !hasAnyData) {
+      return Center(
+        child: PlatformWidgets.loader(),
+      );
+    }
+
+    // Verileri lokal değişkenlere alıyoruz
+    final hemenYaninda = homeState.sectionProducts[HomeSection.hemenYaninda] ?? const [];
+    final sonSans = homeState.sectionProducts[HomeSection.sonSans] ?? const [];
+    final yeni = homeState.sectionProducts[HomeSection.yeni] ?? const [];
+    final bugun = homeState.sectionProducts[HomeSection.bugun] ?? const [];
+    final yarin = homeState.sectionProducts[HomeSection.yarin] ?? const [];
+
+    // 🚀 1. Ortak Yenileme Fonksiyonu
+    Future<void> onRefresh() async {
+      // Platforma özel dokunsal geri bildirim
+      await Haptics.light();
+
+      final address = ref.read(addressProvider);
+      if (address.isSelected) {
+        await ref.read(homeStateProvider.notifier).loadHome(
+          latitude: address.lat,
+          longitude: address.lng,
+          forceRefresh: true,
+        );
+      }
+    }
+
+    // 🚀 2. Ortak Liste İçeriği (Body)
+    // Her iki platform da bu içeriği kullanacak
+    Widget buildBody() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const HomeEmailWarningBanner(),
+          if (hemenYaninda.isNotEmpty) ...[
+            _buildSectionHeader(context, ref, "Hemen Yanında", ExploreFilterOption.hemenYaninda),
+            HomeProductList(products: hemenYaninda),
+          ],
+          if (sonSans.isNotEmpty) ...[
+            _buildSectionHeader(context, ref, "Son Şans", ExploreFilterOption.sonSans),
+            HomeProductList(products: sonSans),
+          ],
+          if (yeni.isNotEmpty) ...[
+            _buildSectionHeader(context, ref, "Yeni", ExploreFilterOption.yeni),
+            HomeProductList(products: yeni),
+          ],
+          if (bugun.isNotEmpty) ...[
+            _buildSectionHeader(context, ref, "Bugün", ExploreFilterOption.bugun),
+            HomeProductList(products: bugun),
+          ],
+          if (yarin.isNotEmpty) ...[
+            _buildSectionHeader(context, ref, "Yarın", ExploreFilterOption.yarin),
+            HomeProductList(products: yarin),
+          ],
+          const SizedBox(height: 32),
+        ],
+      );
+    }
+
+    // 🚀 3. Platforma Özel Gösterim (Adaptive UI)
+    // PlatformUtils kullanarak cihazı kontrol ediyoruz
+    if (PlatformUtils.isIOS) {
+      return CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // iOS Stili Yenileme (Native Çark)
+          CupertinoSliverRefreshControl(onRefresh: onRefresh),
+
+          SliverPadding(
+            padding: const EdgeInsets.only(bottom: kBottomNavigationBarHeight + 24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                buildBody(),
+              ]),
+            ),
+          ),
+        ],
+      );
+    } else {
+      // Android Stili Yenileme (Material Halka)
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: kBottomNavigationBarHeight + 24),
+          children: [
+            buildBody(),
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildSectionHeader(
+      BuildContext context,
+      WidgetRef ref,
+      String title,
+      ExploreFilterOption filter,
+      ) {
+    return InkWell(
+      onTap: () {
+        Haptics.light();
+
+        ref.read(exploreStateProvider.notifier).setFeedFilter(filter);
+
+        final homeState = ref.read(homeStateProvider);
+        final categories = ref.read(categoryProvider).categories;
+        final selectedCategoryId = categories.isNotEmpty
+            ? categories[homeState.selectedCategoryIndex].id
+            : null;
+
+        ref.read(exploreStateProvider.notifier)
+            .setCategoryId(selectedCategoryId?.toString());
+
+        context.push(
+          '/explore',
+          extra: {
+            'filter': filter,
+            'fromHome': true,
+            'categoryId': selectedCategoryId,
+          },
+        );
+      },
+      child: HomeSectionTitle(title: title),
+    );
+  }
+
 }

@@ -13,14 +13,14 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget, Obs
   final Color? foregroundColor;
 
   const PlatformAppBar({
-    Key? key,
+    super.key,
     required this.title,
     this.centerTitle = true,
     this.actions,
     this.leading,
     this.backgroundColor,
     this.foregroundColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
