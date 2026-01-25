@@ -84,26 +84,26 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                     // 1. Görsel Alanı
                     Center(
                       child: Image.asset(
-                        'assets/images/intro_image.png',
-                        height: size.height * 0.28,
+                        'assets/images/intros_images.png',
+                        height: size.height * 0.40,
                         fit: BoxFit.contain,
                       ),
                     ),
 
-                    const Spacer(flex: 1),
+                    const Spacer(flex: 3),
 
                     // 2. Metin Alanı
                     Text(
-                      'Hızlı,\nLezzetli,\nHesaplı! 🥣',
+                      'Gıdanı Koru,\nGeleceğine Sahip Çık!',
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(
                             color: Colors.white,
                             height: 1.1,
                             fontWeight: FontWeight.w900,
-                            fontSize: size.width * 0.12, // Responsive font
+                            fontSize: size.width * 0.08, // Responsive font
                           ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 26),
                     Text(
                       'Kalan yiyecekleri ucuza al,\nhem tasarruf et hem dünyayı koru.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(

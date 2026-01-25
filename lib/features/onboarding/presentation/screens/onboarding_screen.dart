@@ -22,31 +22,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       'title': 'Şehrinde keşif zamanı',
       'description':
       'Daily Good ile yerel restoran, kafe ve dükkanlardan günün sürpriz paketlerini uygun fiyata alabilir, hem bütçene hem doğaya katkı sağlarsın.',
-      'icon': Icons.storefront_outlined,
+      'icon': Image.asset('assets/icons/city_icon.png')
     },
     {
       'title': 'Sürpriz lezzet paketleri',
       'description':
       'İşletmeler günün sonunda tam olarak hangi yiyeceklerin kalacağını bilemezler, bu sebeple tüm paketler her zaman sürprizlerle doludur.',
-      'icon': Icons.card_travel_outlined,
+      'icon': Image.asset('assets/icons/surprise_icon.png')
     },
     {
       'title': 'Birlikte kazanalım',
       'description':
       'Farklı ürünlere uygun fiyatla ulaşırken aynı zamanda işletmelere destek olursun. Onlar israfı azaltır, sen de yeni tatlar keşfedersin.',
-      'icon': Icons.favorite_outline_rounded,
+      'icon': Image.asset('assets/icons/together_icon.png')
     },
     {
       'title': 'Daha bilinçli bir seçim',
       'description':
       'Daily Good ile yaptığın her alışveriş, yiyeceklerin israfını engeller. Küçük bir seçimle büyük bir fark yaratabilirsin.',
-      'icon': Icons.public_rounded,
+      'icon': Image.asset('assets/icons/world_icon.png')
     },
     {
       'title': 'Paketini al ve keyfini çıkar',
       'description':
       'Uygulamadaki sipariş kodunu mağazada doğrula, paketini teslim al ve gününe lezzet kat.',
-      'icon': Icons.shopping_bag_outlined,
+      'icon': Image.asset('assets/icons/dailyGoodBox_icon.png')
     },
   ];
 
@@ -121,7 +121,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 class OnboardingPage extends StatelessWidget {
   final String title;
   final String description;
-  final IconData icon;
+  final Widget icon;
   final bool isLast;
   final VoidCallback onNext;
 
@@ -148,10 +148,10 @@ class OnboardingPage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: size.width * 0.25,
-              color: Theme.of(context).colorScheme.primary,
+            SizedBox(
+              width: size.width * 0.25,
+              height: size.width * 0.25,
+              child: icon, // ✅ direkt widget bas
             ),
             const SizedBox(height: 48),
             Text(
