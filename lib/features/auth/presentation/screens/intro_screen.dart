@@ -85,7 +85,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                     Center(
                       child: Image.asset(
                         'assets/images/intros_images.png',
-                        height: size.height * 0.40,
+                        height: size.height * 0.25,
                         fit: BoxFit.contain,
                       ),
                     ),

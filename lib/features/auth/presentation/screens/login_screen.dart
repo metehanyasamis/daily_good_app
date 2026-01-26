@@ -49,6 +49,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return raw;
   }
 
+  TextInputFormatter _phoneFormatter() {
+    return TextInputFormatter.withFunction((oldValue, newValue) {
+      debugPrint('📱 [PHONE_FORMATTER] onTap() - old: ${oldValue.text}, new: ${newValue.text}');
+      
+      final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length > 10) return oldValue;
+
+      String formatted = '';
+      if (digits.isNotEmpty) {
+        if (digits.length <= 3) {
+          formatted = '($digits';
+        } else if (digits.length <= 6) {
+          formatted = '(${digits.substring(0, 3)}) ${digits.substring(3)}';
+        } else if (digits.length <= 8) {
+          formatted = '(${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6)}';
+        } else {
+          formatted = '(${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6, 8)}-${digits.substring(8)}';
+        }
+      }
+
+      int cursorPosition = formatted.length;
+      if (newValue.selection.baseOffset < oldValue.selection.baseOffset && formatted.length < oldValue.text.length) {
+        cursorPosition = newValue.selection.baseOffset;
+      }
+
+      return TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: cursorPosition.clamp(0, formatted.length)),
+      );
+    });
+  }
+
   void _error(String msg) {
     if (!mounted) return;
 
@@ -280,19 +312,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildPhoneField() {
+    debugPrint('📱 [PHONE_FIELD] build()');
     return TextField(
       controller: _phoneController,
       keyboardType: TextInputType.phone,
       inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(10),
+        _phoneFormatter(),
+        LengthLimitingTextInputFormatter(17),
       ],
       decoration: InputDecoration(
         prefixText: "+90 ",
-        hintText: "Telefon numarası",
+        hintText: "Telefon numaranızı girin",
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(40),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(
+            color: AppColors.primaryDarkGreen,
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(40),
+          borderSide: BorderSide(
+            color: AppColors.primaryDarkGreen,
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(40),
+          borderSide: BorderSide(
+            color: AppColors.primaryDarkGreen,
+            width: 2,
+          ),
         ),
         fillColor: AppColors.background,
         filled: true,

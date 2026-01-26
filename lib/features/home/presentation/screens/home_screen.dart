@@ -21,6 +21,7 @@ import '../../../location/domain/address_notifier.dart';
 
 import '../../../notification/domain/providers/notification_provider.dart';
 import '../../../orders/domain/providers/order_provider.dart';
+import '../../domain/providers/banner_provider.dart';
 import '../data/models/home_state.dart';
 import '../domain/providers/home_state_provider.dart';
 
@@ -60,6 +61,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
       // Diğerlerini de sırayla veya beraber yükle
       ref.read(categoryProvider.notifier).load();
+
+      // 🎯 Banner'ları yükle
+      ref.read(bannerProvider.notifier).loadBanners();
 
       // 🎯 Siparişleri de tazele!
       ref.invalidate(orderHistoryProvider);
