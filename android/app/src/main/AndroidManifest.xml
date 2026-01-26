@@ -35,7 +35,7 @@
     </queries>
 
     <application
-        android:label="daily_good"
+        android:label="DailyGood"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 

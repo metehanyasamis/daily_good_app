@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/banner_model.dart';
 import '../../domain/providers/banner_provider.dart';
@@ -76,130 +78,160 @@ class _HomeBannerSliderState extends ConsumerState<HomeBannerSlider> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('🏠 [BANNER_SLIDER] build()');
     final bannerState = ref.watch(bannerProvider);
     final w = MediaQuery.of(context).size.width;
 
+    debugPrint('🏠 [BANNER_SLIDER] build() - isLoading: ${bannerState.isLoading}, banners: ${bannerState.banners.length}, error: ${bannerState.error}');
+
     ref.listen(bannerProvider, (previous, next) {
+      debugPrint('🏠 [BANNER_SLIDER] State changed - isLoading: ${next.isLoading}, banners: ${next.banners.length}');
       if (previous?.banners.isEmpty == true && next.banners.isNotEmpty) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _initializeController(next.banners.length);
-          }
-        });
+        if (mounted) {
+          _initializeController(next.banners.length);
+          setState(() {}); // Rebuild to show PageView
+        }
       }
     });
 
-    if (bannerState.isLoading && bannerState.banners.isEmpty) {
-      return SizedBox(
-        height: 180,
-        width: w,
-        child: Center(
-          child: CircularProgressIndicator(
-            color: AppColors.primaryDarkGreen,
-          ),
-        ),
-      );
-    }
-
+    // ⚠️ ÖNEMLİ: Banner yoksa veya hata varsa TAMAMEN GİZLE (hiçbir şey gösterme)
     if (bannerState.banners.isEmpty) {
+      // Loading durumunda bile maksimum 5 saniye göster, sonra gizle
+      if (bannerState.isLoading && bannerState.error == null) {
+        // İlk 5 saniye loading göster
+        return FutureBuilder(
+          future: Future.delayed(const Duration(seconds: 5)),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              // 5 saniye sonra hala banner yoksa gizle
+              debugPrint('🏠 [BANNER_SLIDER] Timeout - hiding banner area after 5 seconds');
+              return const SizedBox.shrink();
+            }
+            // İlk 5 saniye loading göster
+            return SizedBox(
+              height: 180,
+              width: w,
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primaryDarkGreen,
+                ),
+              ),
+            );
+          },
+        );
+      }
+      // Banner yoksa veya hata varsa tamamen gizle
+      debugPrint('🏠 [BANNER_SLIDER] No banners to display - hiding completely');
       return const SizedBox.shrink();
     }
 
     final banners = bannerState.banners;
     final bannerCount = banners.length;
 
-    if (_controller == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _initializeController(bannerCount);
-        }
-      });
+    // Controller'ı hemen initialize et (eğer yoksa ve banner varsa)
+    if (_controller == null && bannerCount > 0) {
+      _initializeController(bannerCount);
     }
 
     return Column(
+      mainAxisSize: MainAxisSize.min, // Overflow'u önlemek için
       children: [
-        SizedBox(
-          height: 180,
-          width: w,
-          child: _controller == null
-              ? Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primaryDarkGreen,
-                  ),
-                )
-              : NotificationListener<ScrollNotification>(
-                  onNotification: (n) {
-                    if (n is ScrollStartNotification ||
-                        n is UserScrollNotification ||
-                        n is ScrollUpdateNotification) {
-                      _pauseThenResume(bannerCount);
-                    }
-                    return false;
-                  },
-                  child: PageView.builder(
-                    controller: _controller,
-                    onPageChanged: (idx) {
-                      virtualPage = idx;
-                      setState(() => _currentIndex = idx % bannerCount);
+        ClipRect(
+          child: SizedBox(
+            height: 180,
+            width: w,
+            child: _controller == null
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primaryDarkGreen,
+                    ),
+                  )
+                : NotificationListener<ScrollNotification>(
+                    onNotification: (n) {
+                      if (n is ScrollStartNotification ||
+                          n is UserScrollNotification ||
+                          n is ScrollUpdateNotification) {
+                        _pauseThenResume(bannerCount);
+                      }
+                      return false;
                     },
-                    itemBuilder: (context, index) {
-                      final real = index % bannerCount;
-                      final banner = banners[real];
-                      final imageUrl = BannerModel.normalizeImageUrl(banner.imagePath);
+                    child: PageView.builder(
+                      controller: _controller,
+                      itemCount: bannerCount > 0 ? bannerCount * 2000 : 0, // Infinite scroll için büyük sayı
+                      onPageChanged: (idx) {
+                        virtualPage = idx;
+                        setState(() => _currentIndex = idx % bannerCount);
+                      },
+                      itemBuilder: (context, index) {
+                        final real = index % bannerCount;
+                        final banner = banners[real];
+                        final imageUrl = BannerModel.normalizeImageUrl(banner.imagePath);
 
-                      return AnimatedBuilder(
-                        animation: _controller!,
-                        builder: (context, _) {
-                          double scale = 1.0;
+                        return AnimatedBuilder(
+                          animation: _controller!,
+                          builder: (context, _) {
+                            double scale = 1.0;
 
-                          if (_controller!.hasClients &&
-                              _controller!.position.haveDimensions) {
-                            final page = _controller!.page ?? virtualPage.toDouble();
-                            scale = (page - index).abs().clamp(0.0, 1.0);
-                            scale = 1 - (scale * 0.08);
-                          }
+                            if (_controller!.hasClients &&
+                                _controller!.position.haveDimensions) {
+                              final page = _controller!.page ?? virtualPage.toDouble();
+                              scale = (page - index).abs().clamp(0.0, 1.0);
+                              scale = 1 - (scale * 0.08);
+                            }
 
-                          return Transform.scale(
-                            scale: scale,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
+                            return ClipRect(
+                              child: Transform.scale(
+                                scale: scale,
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.08),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: imageUrl.isNotEmpty
-                                    ? Image.network(
-                                        imageUrl,
-                                        fit: BoxFit.cover,
-                                        width: w,
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) return child;
-                                          return Container(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: imageUrl.isNotEmpty
+                                        ? CachedNetworkImage(
+                                            imageUrl: imageUrl,
+                                            fit: BoxFit.cover,
                                             width: w,
                                             height: 180,
-                                            color: AppColors.primaryLightGreen.withValues(alpha: 0.1),
-                                            child: Center(
-                                              child: CircularProgressIndicator(
-                                                value: loadingProgress.expectedTotalBytes != null
-                                                    ? loadingProgress.cumulativeBytesLoaded /
-                                                        loadingProgress.expectedTotalBytes!
-                                                    : null,
-                                                color: AppColors.primaryDarkGreen,
+                                            memCacheHeight: 360,
+                                            placeholder: (context, url) => Container(
+                                              width: w,
+                                              height: 180,
+                                              color: AppColors.primaryLightGreen.withValues(alpha: 0.1),
+                                              child: Center(
+                                                child: SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: PlatformWidgets.loader(
+                                                    strokeWidth: 2,
+                                                    color: AppColors.primaryDarkGreen,
+                                                    radius: 12,
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                          );
-                                        },
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
+                                            errorWidget: (context, url, error) {
+                                              debugPrint('❌ [BANNER_SLIDER] Image load error: $error');
+                                              return Container(
+                                                width: w,
+                                                height: 180,
+                                                color: AppColors.primaryLightGreen.withValues(alpha: 0.1),
+                                                child: Icon(
+                                                  Icons.image_not_supported,
+                                                  color: AppColors.primaryDarkGreen.withValues(alpha: 0.3),
+                                                ),
+                                              );
+                                            },
+                                          )
+                                        : Container(
                                             width: w,
                                             height: 180,
                                             color: AppColors.primaryLightGreen.withValues(alpha: 0.1),
@@ -207,26 +239,17 @@ class _HomeBannerSliderState extends ConsumerState<HomeBannerSlider> {
                                               Icons.image_not_supported,
                                               color: AppColors.primaryDarkGreen.withValues(alpha: 0.3),
                                             ),
-                                          );
-                                        },
-                                      )
-                                    : Container(
-                                        width: w,
-                                        height: 180,
-                                        color: AppColors.primaryLightGreen.withValues(alpha: 0.1),
-                                        child: Icon(
-                                          Icons.image_not_supported,
-                                          color: AppColors.primaryDarkGreen.withValues(alpha: 0.3),
-                                        ),
-                                      ),
+                                          ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      );
-                    },
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
-                ),
+          ),
         ),
 
         const SizedBox(height: 8),
@@ -234,6 +257,7 @@ class _HomeBannerSliderState extends ConsumerState<HomeBannerSlider> {
         // 🔹 Indicator
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: List.generate(bannerCount, (i) {
             final active = i == _currentIndex;
 

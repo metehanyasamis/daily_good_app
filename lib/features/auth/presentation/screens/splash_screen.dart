@@ -41,7 +41,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _startup() async {
     debugPrint("🚀 [SPLASH] Startup süreci başlatıldı...");
-    final stopwatch = Stopwatch()..start();
+    final startTime = DateTime.now();
+    const minimumSplashDuration = Duration(seconds: 2); // Minimum 2 saniye göster
 
     try {
       // 1) TEMEL AYARLAR VE VERSİYON KONTROLÜ (PARALEL)
@@ -50,7 +51,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         ref.read(appStateProvider.notifier).load(),
         _checkAppVersion(),
       ]);
-      debugPrint("⚙️ [SPLASH] Temel kontroller bitti. Geçen süre: ${stopwatch.elapsedMilliseconds}ms");
+      final elapsed1 = DateTime.now().difference(startTime);
+      debugPrint("⚙️ [SPLASH] Temel kontroller bitti. Geçen süre: ${elapsed1.inMilliseconds}ms");
 
       // 2) TOKEN KONTROLÜ
       final token = await PrefsService.readToken();
@@ -91,8 +93,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       debugPrint("📦 [STACKTRACE]: $stack");
       // Hata olsa bile kullanıcıyı içeride hapsetmiyoruz.
     } finally {
-      stopwatch.stop();
-      debugPrint("🎯 [SPLASH] Startup bitti. Toplam Süre: ${stopwatch.elapsed.inSeconds}sn. Yönlendiriliyor...");
+      // ⏱️ MİNİMUM 2 SANİYE GARANTİSİ: İşlemler hızlı biterse bile 2 saniye göster
+      final totalElapsed = DateTime.now().difference(startTime);
+      if (totalElapsed < minimumSplashDuration) {
+        final remaining = minimumSplashDuration - totalElapsed;
+        debugPrint("⏳ [SPLASH] Minimum süre garantisi: ${remaining.inMilliseconds}ms daha bekleniyor...");
+        await Future.delayed(remaining);
+      }
+      
+      final finalElapsed = DateTime.now().difference(startTime);
+      debugPrint("🎯 [SPLASH] Startup bitti. Toplam Süre: ${finalElapsed.inSeconds}sn. Yönlendiriliyor...");
 
       // Uygulamayı 'hazır' hale getir. Router bu değişkeni dinlediği için otomatik yönlenecek.
       await ref.read(appStateProvider.notifier).setInitialized(true);

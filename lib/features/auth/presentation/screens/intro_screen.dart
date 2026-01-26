@@ -61,14 +61,15 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light, // Android: Beyaz ikonlar
-        statusBarBrightness: Brightness.dark, // iOS: Beyaz ikonlar
+        statusBarIconBrightness: Brightness.dark, // Android: Koyu ikonlar (beyaz arka plan için)
+        statusBarBrightness: Brightness.light, // iOS: Koyu ikonlar (beyaz arka plan için)
       ),
       child: Scaffold(
+        backgroundColor: Colors.white,
         body: Container(
           width: double.infinity,
           height: double.infinity,
-          decoration: const BoxDecoration(gradient: AppGradients.dark),
+          color: Colors.white,
           child: FadeTransition(
             opacity: _fadeIn,
             child: SafeArea(
@@ -84,8 +85,8 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                     // 1. Görsel Alanı
                     Center(
                       child: Image.asset(
-                        'assets/images/intros_images.png',
-                        height: size.height * 0.25,
+                        'assets/images/intro_imagess.png',
+                        height: size.height * 0.35,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -97,7 +98,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                       'Gıdanı Koru,\nGeleceğine Sahip Çık!',
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(
-                            color: Colors.white,
+                            color: AppColors.primaryDarkGreen,
                             height: 1.1,
                             fontWeight: FontWeight.w900,
                             fontSize: size.width * 0.08, // Responsive font
@@ -107,7 +108,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                     Text(
                       'Kalan yiyecekleri ucuza al,\nhem tasarruf et hem dünyayı koru.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: AppColors.primaryLightGreen,
                         fontSize: 18,
                         height: 1.5,
                       ),

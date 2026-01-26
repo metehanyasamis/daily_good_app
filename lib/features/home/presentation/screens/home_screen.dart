@@ -59,11 +59,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // 🎯 2. BİLDİRİM TOKEN'INI GÜNCELLE
       _updateNotificationToken();
 
-      // Diğerlerini de sırayla veya beraber yükle
-      ref.read(categoryProvider.notifier).load();
-
-      // 🎯 Banner'ları yükle
-      ref.read(bannerProvider.notifier).loadBanners();
+      // Diğerlerini de sırayla veya beraber yükle (paralel)
+      // ⚠️ Banner yükleme başarısız olsa bile diğer işlemler devam etsin
+      await Future.wait([
+        ref.read(categoryProvider.notifier).load(),
+        ref.read(bannerProvider.notifier).loadBanners().catchError((e) {
+          debugPrint('⚠️ [HOME] Banner loading failed, continuing anyway: $e');
+        }),
+      ]);
 
       // 🎯 Siparişleri de tazele!
       ref.invalidate(orderHistoryProvider);
