@@ -65,11 +65,11 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
         statusBarBrightness: Brightness.light, // iOS: Koyu ikonlar (beyaz arka plan için)
       ),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primaryDarkGreen,
         body: Container(
           width: double.infinity,
           height: double.infinity,
-          color: Colors.white,
+          color: AppColors.primaryDarkGreen,
           child: FadeTransition(
             opacity: _fadeIn,
             child: SafeArea(
@@ -85,8 +85,8 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                     // 1. Görsel Alanı
                     Center(
                       child: Image.asset(
-                        'assets/images/intro_imagess.png',
-                        height: size.height * 0.35,
+                        'assets/images/intro_image.png',
+                        height: size.height * 0.30,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -98,7 +98,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                       'Gıdanı Koru,\nGeleceğine Sahip Çık!',
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(
-                            color: AppColors.primaryDarkGreen,
+                            color: AppColors.textProductCardBrandName,
                             height: 1.1,
                             fontWeight: FontWeight.w900,
                             fontSize: size.width * 0.08, // Responsive font
@@ -108,7 +108,7 @@ class _IntroScreenState extends ConsumerState<IntroScreen>
                     Text(
                       'Kalan yiyecekleri ucuza al,\nhem tasarruf et hem dünyayı koru.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.primaryLightGreen,
+                        color: AppColors.textProductCardBrandName,
                         fontSize: 18,
                         height: 1.5,
                       ),

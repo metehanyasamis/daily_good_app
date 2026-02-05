@@ -200,13 +200,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       
                           debugPrint("🏠➡️ [HOME_CAT→EXPLORE] index=$index id=$id");
       
+                          // Kategori seçildiğinde feed filter temizlenmeli (çakışma önleme)
+                          ref.read(exploreStateProvider.notifier).setFeedFilter(null);
+                          ref.read(exploreStateProvider.notifier).setCategoryId(id.toString());
+      
                           // 2) Explore’a git + extra ile categoryId gönder
                           context.push(
                             '/explore',
                             extra: {
                               'fromHome': true,
                               'categoryId': id, // ✅ int gönder, explore'da toString yaparsın
-                              // 'filter': ExploreFilterOption.hemenYaninda, // istersen boş bırak
+                              // 'filter': null, // Kategori seçildiğinde feed filter yok
                             },
                           );
                         }
@@ -346,23 +350,17 @@ class HomeContent extends ConsumerWidget {
       onTap: () {
         Haptics.light();
 
+        // Feed filter'lar (hemenYaninda, yeni, vb.) aktifken kategori filtresi gönderilmemeli
+        // Backend bu kombinasyonu desteklemiyor veya yanlış sonuç döndürüyor
         ref.read(exploreStateProvider.notifier).setFeedFilter(filter);
-
-        final homeState = ref.read(homeStateProvider);
-        final categories = ref.read(categoryProvider).categories;
-        final selectedCategoryId = categories.isNotEmpty
-            ? categories[homeState.selectedCategoryIndex].id
-            : null;
-
-        ref.read(exploreStateProvider.notifier)
-            .setCategoryId(selectedCategoryId?.toString());
+        ref.read(exploreStateProvider.notifier).setCategoryId(null);
 
         context.push(
           '/explore',
           extra: {
             'filter': filter,
             'fromHome': true,
-            'categoryId': selectedCategoryId,
+            'categoryId': null, // Feed filter aktifken kategori null
           },
         );
       },

@@ -31,29 +31,22 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
   @override
   Widget build(BuildContext context) {
 
-    final List<Map<String, String>> itemsRaw =
+    // Backend tek kaynak: liste tamamen backend'den (Tümü dahil). Fallback: enum listesi.
+    final List<Map<String, String>> items =
     widget.backendCategories != null
         ? widget.backendCategories!.map((cat) {
       final d = cat as dynamic;
       return {
-        'id': d.id.toString(),
-        'name': (d.name ?? d.title ?? d.id).toString(),
+        'id': d.id?.toString() ?? '',
+        'name': (d.name ?? d.title ?? d.id ?? '').toString(),
       };
     }).toList()
         : CategoryFilterOption.values.map((opt) {
       return {
-        'id': opt.name,
+        'id': opt == CategoryFilterOption.all ? '' : opt.name,
         'name': categoryLabel(opt),
       };
     }).toList();
-
-    final List<Map<String, String>> items = [
-      {
-        'id': '',
-        'name': 'Tümü',
-      },
-      ...itemsRaw,
-    ];
 
     return Container(
       decoration: const BoxDecoration(

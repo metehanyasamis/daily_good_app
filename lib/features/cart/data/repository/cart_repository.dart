@@ -9,10 +9,20 @@ class CartRepository {
   // GET
   Future<List<CartItem>> getCart() async {
     final res = await _dio.get('/customer/cart');
-
-    return (res.data['data'] as List)
-        .map((e) => CartResponseModel.fromJson(e).toDomain())
-        .toList();
+    final data = res.data['data'];
+    if (data == null) return [];
+    final list = data is List ? data : [data];
+    final items = <CartItem>[];
+    for (final e in list) {
+      if (e == null || e is! Map<String, dynamic>) continue;
+      try {
+        items.add(CartResponseModel.fromJson(Map<String, dynamic>.from(e)).toDomain());
+      } catch (_) {
+        // Tek bozuk item tüm listeyi düşürmesin
+        continue;
+      }
+    }
+    return items;
   }
 
   // ADD

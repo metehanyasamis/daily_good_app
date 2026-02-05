@@ -16,6 +16,7 @@ import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 
 import '../../../../core/widgets/navigation_link.dart';
+import '../../../checkout/data/repository/checkout_repository.dart';
 import '../../../settings/domain/providers/legal_settings_provider.dart';
 import '../../domain/models/cart_item.dart';
 import '../../domain/providers/cart_provider.dart';
@@ -32,12 +33,71 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   final TextEditingController _noteController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isAgreed = true;
+  bool _isCheckoutLoading = false;
 
   @override
   void dispose() {
     _noteController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _onSepetiOnaylaPressed(
+    BuildContext context,
+    List<CartItem> items,
+    double total,
+  ) async {
+    if (!_isAgreed) {
+      HapticFeedback.vibrate();
+      Toasts.error(context, "Devam etmek için sözleşmeleri onaylamalısınız.");
+      return;
+    }
+    if (items.isEmpty) {
+      Toasts.error(context, "Sepetiniz boş.");
+      return;
+    }
+
+    setState(() => _isCheckoutLoading = true);
+    debugPrint("🔔 [CART] Sepeti Onayla: checkout API çağrılıyor...");
+
+    try {
+      final repo = ref.read(checkoutRepositoryProvider);
+      final storeId = items.first.shopId;
+      final body = {
+        'store_id': storeId,
+        'total_amount': total,
+        'payment_method': 'credit_card',
+        'payment_data': <String, dynamic>{},
+        'items': items.map((c) {
+          final lineTotal = c.price * c.quantity;
+          return {
+            'product_id': c.productId,
+            'quantity': c.quantity,
+            'unit_price': c.price,
+            'total_price': lineTotal,
+          };
+        }).toList(),
+      };
+
+      final checkoutUrl = await repo.createMobileCheckout(body);
+      debugPrint("🔔 [CART] Checkout URL alındı, WebView açılıyor.");
+
+      if (!mounted) return;
+      await context.push(
+        '/payment-webview',
+        extra: {'checkout_url': checkoutUrl},
+      );
+    } catch (e) {
+      debugPrint("🔔 [CART] Checkout hatası: $e");
+      if (mounted) {
+        Toasts.error(
+          context,
+          e is Exception ? e.toString().replaceFirst('Exception: ', '') : 'Ödeme sayfası açılamadı.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCheckoutLoading = false);
+    }
   }
 
   @override
@@ -152,32 +212,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: CustomButton(
-              text: "Sepeti Onayla",
+              text: _isCheckoutLoading ? "Yönlendiriliyor..." : "Sepeti Onayla",
               price: total,
-              showPrice: true,
-                  onPressed: () {
-                    if (!_isAgreed) {
-                      // 🎯 Hata titreşimi ile kullanıcıyı uyaralım
-                      HapticFeedback.vibrate();
-
-                      // 🚀 Yeni nesil adaptive toast yapımız
-                      Toasts.error(context, "Devam etmek için sözleşmeleri onaylamalısınız.");
-
-                      return; // Fonksiyondan çık, ödeme sayfasına gitme
-                    }
-
-                    // 🎯 Onay tamamsa, geçişten önce hafif bir "başarı" tıkı verelim
-                    HapticFeedback.lightImpact();
-
-                    // Tik varsa ödemeye devam et
-                    context.push(
-                      '/payment',
-                      extra: {
-                        'total': total,
-                        'note': _noteController.text,
-                      },
-                    );
-                  },
+              showPrice: !_isCheckoutLoading,
+                  onPressed: _isCheckoutLoading
+                      ? () {}
+                      : () => _onSepetiOnaylaPressed(context, items, total),
                         ),
                       ),
             ),

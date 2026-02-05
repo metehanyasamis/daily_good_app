@@ -31,6 +31,7 @@ import '../../features/notification/presentation/screens/notification_screen.dar
 import '../../features/orders/presentation/screens/order_success_screen.dart';
 import '../../features/orders/presentation/screens/order_tracking_screen.dart';
 import '../../features/checkout/presentation/screens/payment_screen.dart';
+import '../../features/checkout/presentation/screens/payment_webview_screen.dart';
 import '../../features/cart/presentation/screens/cart_screen.dart';
 
 import '../../core/widgets/global_error_screen.dart';
@@ -94,6 +95,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // 1️⃣ İSTİSNALAR (Her zaman serbest olanlar)
       if (loc.startsWith('/order-tracking')) return null;
+      if (loc.startsWith('/order-success')) return null;
       if (loc.startsWith('/store-detail')) return null;
       if (loc.contains('/reviews')) return null;
 
@@ -193,6 +195,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/payment', builder: (_, _) => const PaymentScreen()),
+      GoRoute(
+        path: '/payment-webview',
+        builder: (_, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final checkoutUrl = extra?['checkout_url'] as String? ?? '';
+          return PaymentWebViewScreen(checkoutUrl: checkoutUrl);
+        },
+      ),
       GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
       GoRoute(
         path: '/notifications',

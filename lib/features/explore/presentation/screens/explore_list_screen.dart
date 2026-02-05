@@ -567,18 +567,15 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
         onApply: (selectedMap) {
           Navigator.pop(context);
 
-          // Sheet'ten gelen id:
-          // - backend kategorilerinde normalde "1", "2" vs
-          // - "Tümü" için biz id'yi "" yapalım (sheet tarafında)
+          // Sheet'ten gelen id/name (backend tek kaynak)
           final rawId = (selectedMap['id'] ?? '').toString().trim();
+          final pickedName = (selectedMap['name'] ?? 'Tümü').toString().trim();
 
-          // ✅ Backend'e gidecek gerçek değer:
-          // "" => null (Tümü)
-          final pickedId = rawId.isEmpty ? null : rawId;
+          // Tümü seçili ise null gitmeli; API'ye categoryId=null giderse tümü döner
+          final bool isAll = pickedName.toLowerCase() == 'tümü' || rawId.isEmpty;
+          final pickedId = isAll ? null : rawId;
 
-          final pickedName = (selectedMap['name'] ?? 'Tümü').toString();
-
-          debugPrint("🏷️ [CATEGORY_APPLY] rawId='$rawId' -> pickedId=$pickedId name=$pickedName");
+          debugPrint("🏷️ [CATEGORY_APPLY] rawId='$rawId' name=$pickedName -> pickedId=${pickedId ?? 'null (Tümü)'}");
 
           setState(() {
             // UI state

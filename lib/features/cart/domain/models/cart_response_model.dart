@@ -1,5 +1,12 @@
 import '../../domain/models/cart_item.dart';
 
+/// Backend'den gelen null veya farklı tipli alanları String'e güvenle çevirir.
+String _safeString(dynamic value) {
+  if (value == null) return '';
+  if (value is String) return value;
+  return value.toString();
+}
+
 class CartResponseModel {
   final String id;
   final ProductDetailCart product;
@@ -21,13 +28,13 @@ class CartResponseModel {
 
   factory CartResponseModel.fromJson(Map<String, dynamic> json) {
     return CartResponseModel(
-      id: json['id'] as String,
-      product: ProductDetailCart.fromJson(json['product']),
-      quantity: json['quantity'],
-      unitPrice: (json['unit_price'] as num).toDouble(),
-      totalPrice: (json['total_price'] as num).toDouble(),
-      store: StoreCartDetail.fromJson(json['store']),
-      brand: BrandCartDetail.fromJson(json['brand']),
+      id: _safeString(json['id']),
+      product: ProductDetailCart.fromJson(Map<String, dynamic>.from(json['product'] ?? {})),
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+      unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
+      totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0.0,
+      store: StoreCartDetail.fromJson(Map<String, dynamic>.from(json['store'] ?? {})),
+      brand: BrandCartDetail.fromJson(Map<String, dynamic>.from(json['brand'] ?? {})),
     );
   }
 
@@ -70,10 +77,10 @@ class ProductDetailCart {
 
   factory ProductDetailCart.fromJson(Map<String, dynamic> json) {
     return ProductDetailCart(
-      id: json['id'],
-      name: json['name'],
-      salePrice: (json['sale_price'] as num).toDouble(),
-      listPrice: (json['list_price'] as num).toDouble(),
+      id: _safeString(json['id']),
+      name: _safeString(json['name']),
+      salePrice: (json['sale_price'] as num?)?.toDouble() ?? 0.0,
+      listPrice: (json['list_price'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
@@ -95,11 +102,11 @@ class StoreCartDetail {
 
   factory StoreCartDetail.fromJson(Map<String, dynamic> json) {
     return StoreCartDetail(
-      id: json['id'],
-      name: json['name'],
-      address: json['address'],
-      latitude: json['latitude'],
-      longitude: json['longitude'],
+      id: _safeString(json['id']),
+      name: _safeString(json['name']),
+      address: _safeString(json['address']),
+      latitude: _safeString(json['latitude']),
+      longitude: _safeString(json['longitude']),
     );
   }
 }
@@ -112,8 +119,8 @@ class BrandCartDetail {
 
   factory BrandCartDetail.fromJson(Map<String, dynamic> json) {
     return BrandCartDetail(
-      name: json['name'],
-      logo: json['logo'],
+      name: _safeString(json['name']),
+      logo: _safeString(json['logo']),
     );
   }
 }
