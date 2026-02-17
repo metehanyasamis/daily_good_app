@@ -251,9 +251,18 @@ class _ProductInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Tarih formatlama yardımcı fonksiyonu
+    String formatDate(String? dateStr) {
+      if (dateStr == null || dateStr == "null" || dateStr.isEmpty) return "-";
+      try {
+        final date = DateTime.parse(dateStr);
+        return "${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}";
+      } catch (_) { return dateStr; }
+    }
+
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -261,24 +270,79 @@ class _ProductInfoSection extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(product.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      Text(product.deliveryTimeLabel, style: TextStyle(color: Colors.grey.shade600)),
-                    ],
+                  child: Text(
+                      product.name,
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)
                   ),
                 ),
                 _PriceWidget(listPrice: product.listPrice, salePrice: product.salePrice),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             const Text("Bu pakette seni ne bekliyor?", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
             Text(
               product.description ?? "İçerik bilgisi bulunmamaktadır.",
-              style: TextStyle(color: Colors.grey.shade800, height: 1.4),
+              style: TextStyle(color: Colors.grey.shade800, height: 1.4, fontSize: 15),
             ),
+            const SizedBox(height: 16),
+
+            // --- YENİ REFACTOR EDİLEN BÖLÜM: TARİH VE SAAT ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.primaryDarkGreen.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Tarih Bilgisi
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_rounded, size: 20, color: AppColors.primaryDarkGreen),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          "${formatDate(product.startDate)} - ${formatDate(product.endDate)} tarihlerinde",
+                          style: const TextStyle(
+                              fontSize: 14,
+                              //fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                  ),
+                  // Saat Bilgisi
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time_filled_rounded, size: 20, color: AppColors.primaryDarkGreen),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          "${product.startHour.substring(0, 5)} - ${product.endHour.substring(0, 5)} saatleri arasında",
+                          style: const TextStyle(
+                              fontSize: 14,
+                              //fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // -----------------------------------------------
+
           ],
         ),
       ),
@@ -323,63 +387,7 @@ class _StoreSection extends StatelessWidget {
   }
 }
 
-/*
-class _RatingSection extends StatelessWidget {
-  final ProductModel product;
-  const _RatingSection({required this.product});
 
-  @override
-  Widget build(BuildContext context) {
-    final s = product.store;
-    if (s.averageRatings == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
-
-    return SliverToBoxAdapter(
-      child: Card(
-        margin: const EdgeInsets.all(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  const Text("İşletme Değerlendirme", style: TextStyle(fontWeight: FontWeight.bold)),
-                  const Spacer(),
-                  const Icon(Icons.star, color: AppColors.primaryDarkGreen, size: 18),
-                  Text(" ${s.overallRating?.toStringAsFixed(1) ?? '0.0'}"),
-                ],
-              ),
-              const Divider(),
-              _RatingBar(label: "Lezzet", value: s.averageRatings!.productTaste),
-              _RatingBar(label: "Servis", value: s.averageRatings!.service),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-*/
-// --- Alt Bileşenler ---
-
-/*
-class _RatingBar extends StatelessWidget {
-  final String label;
-  final double value;
-  const _RatingBar({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: Text(label)),
-        SizedBox(width: 100, child: LinearProgressIndicator(value: value / 5, color: AppColors.primaryDarkGreen, backgroundColor: Colors.grey.shade200)),
-      ],
-    );
-  }
-}
-
- */
 class _CircularIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;

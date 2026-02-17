@@ -75,7 +75,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           PageView.builder(
             controller: _pageController,
             itemCount: _pages.length,
-            onPageChanged: (index) => setState(() => _currentPage = index),
+            onPageChanged: (index) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                }
+              });
+            },
             itemBuilder: (context, index) {
               final page = _pages[index];
               final isLast = index == _pages.length - 1;

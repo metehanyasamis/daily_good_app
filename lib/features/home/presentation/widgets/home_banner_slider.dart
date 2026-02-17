@@ -84,12 +84,13 @@ class _HomeBannerSliderState extends ConsumerState<HomeBannerSlider> {
     debugPrint('🏠 [BANNER_SLIDER] build() - isLoading: ${bannerState.isLoading}, banners: ${bannerState.banners.length}, error: ${bannerState.error}');
 
     ref.listen(bannerProvider, (previous, next) {
-      debugPrint('🏠 [BANNER_SLIDER] State changed - isLoading: ${next.isLoading}, banners: ${next.banners.length}');
       if (previous?.banners.isEmpty == true && next.banners.isNotEmpty) {
-        if (mounted) {
-          _initializeController(next.banners.length);
-          setState(() {}); // Rebuild to show PageView
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _initializeController(next.banners.length);
+            setState(() {});
+          }
+        });
       }
     });
 
@@ -156,10 +157,14 @@ class _HomeBannerSliderState extends ConsumerState<HomeBannerSlider> {
                     },
                     child: PageView.builder(
                       controller: _controller,
-                      itemCount: bannerCount > 0 ? bannerCount * 2000 : 0, // Infinite scroll için büyük sayı
+                      itemCount: bannerCount > 0 ? bannerCount * 100 : 0,
                       onPageChanged: (idx) {
-                        virtualPage = idx;
-                        setState(() => _currentIndex = idx % bannerCount);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            virtualPage = idx;
+                            setState(() => _currentIndex = idx % bannerCount);
+                          }
+                        });
                       },
                       itemBuilder: (context, index) {
                         final real = index % bannerCount;

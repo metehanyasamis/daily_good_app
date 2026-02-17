@@ -193,34 +193,44 @@ class ProductCard extends StatelessWidget {
                 children: [
                   // LEFT
                   Expanded(
-                    child: Column(
+                    child: // lib/features/product/presentation/widgets/product_card.dart içinde ilgili bölüm:
+
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           product.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: Colors.black87,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          product.deliveryTimeLabel, // Artik TimeFormatter'i burada çagirmaya gerek yok
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 4), // Boşluğu biraz artırdık
+                        Row(
+                          children: [
+                            const Icon(
+                                Icons.access_time_rounded,
+                                size: 14,
+                                color: Colors.grey
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                product.deliveryTimeLabel,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-
                       ],
-                    ),
+                    )
                   ),
                   const SizedBox(width: 10),
 

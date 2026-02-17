@@ -125,33 +125,14 @@ class ProductModel {
     );
   }
 
+// Hem ProductModel hem ProductDetail içindeki deliveryTimeLabel'ı bununla değiştir:
   String get deliveryTimeLabel {
     if (startHour.isEmpty || endHour.isEmpty) return "Teslimat saati belirtilmedi";
 
-    final sH = startHour.split(':').take(2).join(':');
-    final eH = endHour.split(':').take(2).join(':');
+    // Saniye kısımlarını temizle (örn: 09:00:00 -> 09:00)
+    final sH = startHour.contains(':') ? startHour.split(':').take(2).join(':') : startHour;
+    final eH = endHour.contains(':') ? endHour.split(':').take(2).join(':') : endHour;
 
-    try {
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-
-      if (startDate.isNotEmpty && startDate != "null") {
-        final deliveryDateRaw = DateTime.parse(startDate);
-        final deliveryDate = DateTime(deliveryDateRaw.year, deliveryDateRaw.month, deliveryDateRaw.day);
-        final diffInDays = deliveryDate.difference(today).inDays;
-
-        if (diffInDays == 0) return "Bugün teslim al: $sH - $eH";
-        if (diffInDays == 1) return "Yarın teslim al: $sH - $eH";
-        return "${deliveryDate.day.toString().padLeft(2, '0')}.${deliveryDate.month.toString().padLeft(2, '0')} teslim al: $sH - $eH";
-      }
-
-      int startInt = int.parse(sH.replaceAll(':', ''));
-      int endInt = int.parse(eH.replaceAll(':', ''));
-      if (endInt < startInt) return "Yarın teslim al: $sH - $eH";
-
-      return "Bugün teslim al: $sH - $eH";
-    } catch (e) {
-      return "Bugün teslim al: $sH - $eH";
-    }
+    return "$sH - $eH arasında teslim al";
   }
 }
