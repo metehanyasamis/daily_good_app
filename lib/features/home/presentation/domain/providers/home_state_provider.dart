@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../location/domain/address_notifier.dart';
 import '../../../../product/data/repository/product_repository.dart';
 import '../../data/models/home_state.dart';
 
@@ -59,7 +60,20 @@ class HomeStateNotifier extends StateNotifier<HomeState> {
 
 
 
-final homeStateProvider =
-StateNotifierProvider<HomeStateNotifier, HomeState>((ref) {
-  return HomeStateNotifier(ref.read(productRepositoryProvider));
+final homeStateProvider = StateNotifierProvider<HomeStateNotifier, HomeState>((ref) {
+  // 📍 ADRESİ İZLE: Adres her değiştiğinde bu provider tetiklenir.
+  final address = ref.watch(addressProvider);
+  final repo = ref.watch(productRepositoryProvider);
+
+  // Notifier'ı oluştur ve YENİ konumla veriyi hemen çek
+  final notifier = HomeStateNotifier(repo);
+
+  // 🚀 Adres değiştiği an 30 saniye kilidine takılmadan (forceRefresh: true) veriyi tazele
+  notifier.loadHome(
+      latitude: address.lat,
+      longitude: address.lng,
+      forceRefresh: true
+  );
+
+  return notifier;
 });

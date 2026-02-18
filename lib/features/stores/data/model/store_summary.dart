@@ -1,8 +1,11 @@
 // lib/features/stores/data/model/store_summary.dart
 
+import 'package:flutter/material.dart';
+
 class StoreSummary {
   final String id;
   final String name;
+  final String? displayName;
   final String address;
 
   final double? latitude;
@@ -24,6 +27,7 @@ class StoreSummary {
   StoreSummary({
     required this.id,
     required this.name,
+    this.displayName,
     required this.address,
     required this.imageUrl,
     this.latitude,
@@ -37,11 +41,40 @@ class StoreSummary {
     this.averageRatings,
   });
 
+  // 🔥 UI İÇİN FORMATLI İSİM GETTER'I
+  // Kullanımı: Text(store.formattedName)
+  String get formattedName {
+    // 1. Marka varsa markayı, yoksa uzun ismi baz al
+    String mainName = brand?.name ?? name;
+
+    // 2. Display Name (Şube) varsa parantez içine ekle
+    if (displayName != null && displayName!.isNotEmpty) {
+      return "$mainName ($displayName)";
+    }
+
+    // 3. Yoksa sadece ana ismi dön
+    return mainName;
+  }
+
   factory StoreSummary.fromJson(Map<String, dynamic> json) {
+
+    // 🔥🔥🔥 BURAYA BAK: Backend veriyi yolluyor mu? 🔥🔥🔥
+    if (json['display_name'] != null) {
+      debugPrint("🚀 [API GELEN] ${json['name']} için display_name: ${json['display_name']}");
+    } else {
+      debugPrint("⚠️ [API EKSİK] ${json['name']} için display_name NULL geldi!");
+    }
+
+
     return StoreSummary(
       // 🔥 ID null gelirse boş string vererek patlamayı önlüyoruz
       id: json["id"]?.toString() ?? "",
       name: json["name"] ?? "Bilinmeyen Mağaza",
+
+      displayName: json["display_name"],
+
+
+
       address: json["address"] ?? "",
 
       // Hem banner hem image url kontrolü
@@ -74,6 +107,7 @@ class StoreSummary {
   StoreSummary copyWith({
     String? id,
     String? name,
+    String? displayName,
     String? address,
     String? imageUrl,
     double? latitude,
@@ -89,6 +123,7 @@ class StoreSummary {
     return StoreSummary(
       id: id ?? this.id,
       name: name ?? this.name,
+      displayName: displayName ?? this.displayName,
       address: address ?? this.address,
       imageUrl: imageUrl ?? this.imageUrl,
       latitude: latitude ?? this.latitude,

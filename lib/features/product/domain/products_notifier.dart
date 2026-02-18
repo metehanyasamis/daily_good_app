@@ -172,17 +172,24 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
 // lib/features/product/domain/products_notifier.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../location/domain/address_notifier.dart';
 import '../data/repository/product_repository.dart';
 import 'products_state.dart';
 
-final productsProvider =
-StateNotifierProvider<ProductsNotifier, ProductsState>((ref) {
-  return ProductsNotifier(ref.read(productRepositoryProvider));
+final productsProvider = StateNotifierProvider<ProductsNotifier, ProductsState>((ref) {
+  // 📍 ADRESİ İZLE: Adres değişince bu provider'ı tamamen yeniler
+  ref.watch(addressProvider);
+
+  return ProductsNotifier(
+      ref.watch(productRepositoryProvider),
+      ref
+  );
 });
 
 class ProductsNotifier extends StateNotifier<ProductsState> {
   final ProductRepository repo;
-  ProductsNotifier(this.repo) : super(const ProductsState());
+  final Ref ref;
+  ProductsNotifier(this.repo, this.ref) : super(const ProductsState());
 
   int _reqId = 0; // ✅ en son istek kazanır
 
@@ -349,11 +356,21 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
   }
 
   // detail...
+// lib/features/product/domain/products_notifier.dart içindeki fetchDetail
+
   Future<void> fetchDetail(String productId) async {
     state = state.copyWith(isLoadingDetail: true, clearError: true);
-
     try {
-      final product = await repo.getProductDetail(productId);
+      // 1. 📍 Güncel adresi notifier içinden oku
+      final address = ref.read(addressProvider);
+
+      // 2. 🚀 Repo'ya koordinatları gönder (Repo'yu bu parametreleri alacak şekilde güncellediğini varsayıyorum)
+      final product = await repo.getProductDetail(
+        productId,
+        lat: address.lat, // Backend bu koordinatlara göre mesafeyi hesaplayacak
+        lng: address.lng,
+      );
+
       state = state.copyWith(
         selectedProduct: product,
         isLoadingDetail: false,

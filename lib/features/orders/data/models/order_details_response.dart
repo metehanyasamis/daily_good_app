@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class OrderDetailResponse {
   final String id;
   final String orderNumber;
@@ -32,6 +34,24 @@ class OrderDetailResponse {
   });
 
   factory OrderDetailResponse.fromJson(Map<String, dynamic> json) {
+
+    // 🕵️‍♂️🕵️‍♂️🕵️‍♂️ KANIT LOGLARI (Bunu ekle) 🕵️‍♂️🕵️‍♂️🕵️‍♂️
+    try {
+      debugPrint("=================================================================");
+      debugPrint("🕵️‍♂️ [KANIT] Sipariş ID: ${json['id']}");
+      debugPrint("🕵️‍♂️ [KANIT] Raw Review Objesi: ${json['review']}"); // Burası null mı dolu mu?
+
+      if (json['review'] != null) {
+        debugPrint("🕵️‍♂️ [KANIT] Review ID: ${json['review']['id']}");
+      } else {
+        debugPrint("🕵️‍♂️ [KANIT] Review NULL geldi! Backend göndermiyor.");
+      }
+      debugPrint("=================================================================");
+    } catch (e) {
+      debugPrint("🕵️‍♂️ [KANIT] Log basarken hata oldu: $e");
+    }
+    // 🕵️‍♂️🕵️‍♂️🕵️‍♂️ KANIT BİTİŞ 🕵️‍♂️🕵️‍♂️🕵️‍♂️
+
     return OrderDetailResponse(
       id: json['id'].toString(),
       orderNumber: json['order_number'] ?? '',

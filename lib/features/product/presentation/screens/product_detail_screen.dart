@@ -14,6 +14,7 @@ import '../../../../core/widgets/store_delivery_info_card.dart';
 
 import '../../../cart/domain/providers/cart_provider.dart';
 import '../../../cart/presentation/widgets/cart_warning_modal.dart';
+import '../../../location/domain/address_notifier.dart';
 import '../../../settings/domain/providers/legal_settings_provider.dart';
 import '../../../stores/data/model/store_summary.dart';
 import '../../../stores/domain/providers/store_detail_provider.dart';
@@ -48,10 +49,24 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+// Sadece birer kez tanımlayın
     final productState = ref.watch(productsProvider);
-    final product = productState.selectedProduct;
-
     final settingsAsync = ref.watch(legalSettingsProvider);
+    final address = ref.watch(addressProvider);
+
+    ref.listen(addressProvider, (previous, next) {
+      if (previous?.lat != next.lat || previous?.lng != next.lng) {
+        debugPrint('📍 Konum değişti, detay temizlenip yeniden çekiliyor...');
+
+        // 1. ÖNCE: Mevcut datayı sil (Böylece ekranda eski mesafe kalmaz, loader çıkar)
+        ref.read(productsProvider.notifier).clearDetail();
+
+        // 2. SONRA: Yeni konumla detayı çek
+        ref.read(productsProvider.notifier).fetchDetail(widget.productId);
+      }
+    });
+
+    final product = productState.selectedProduct;
 
     if (product == null || product.id != widget.productId) {
       return Scaffold(
@@ -91,12 +106,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 _ProductHeader(product: product),
                 _ProductInfoSection(product: product),
                 const SliverToBoxAdapter(child: SizedBox(height: 8)),
-        
+
                 // 🎯 ÇÖZÜM: Veri varsa gönderiyoruz, yoksa null (default metin görünecek)
                 KnowMoreFull(
                   customInfo: settingsAsync.value?.importantInfo,
                 ),
-        
+
                 const SliverToBoxAdapter(child: SizedBox(height: 8)),
                 _StoreSection(product: product, freshStore: store.toStoreSummary()),              //_RatingSection(product: product),
                 SliverToBoxAdapter(
@@ -368,19 +383,37 @@ class _PriceWidget extends StatelessWidget {
 }
 
 class _StoreSection extends StatelessWidget {
-  final ProductModel product;
-  final StoreSummary? freshStore; // 👈 Taze veri
-  const _StoreSection({required this.product, this.freshStore});
+  final ProductModel product;      // Listeden gelen (Dolu verili)
+  final StoreSummary? freshStore;  // API'den gelen (İsmi eksik olan)
+
+  const _StoreSection({
+    required this.product,
+    this.freshStore,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Eğer freshStore (detaylı API'den gelen) varsa onu kullan,
-    // yoksa ürünün içindekini (puanı 0.0 olanı) kullan.
-    final storeToShow = freshStore ?? product.store;
+    // 1. Varsayılan olarak taze veriyi, yoksa listeden geleni al
+    StoreSummary storeToShow = freshStore ?? product.store;
+
+    // 🔥 KRİTİK NOKTA: YAMA İŞLEMİ 🔥
+    // Eğer taze veri geldiyse (freshStore != null)
+    // AMA içinde displayName yoksa (null veya boşsa)...
+    if (freshStore != null && (freshStore!.displayName == null || freshStore!.displayName!.isEmpty)) {
+
+      // ...ve Listeden gelen üründe bu bilgi varsa:
+      if (product.store.displayName != null && product.store.displayName!.isNotEmpty) {
+
+        // Taze verinin kopyasını alıp, eksik olan ismi eskisiyle tamamlıyoruz.
+        storeToShow = freshStore!.copyWith(
+          displayName: product.store.displayName,
+        );
+      }
+    }
 
     return SliverToBoxAdapter(
       child: StoreDeliveryInfoCard(
-        store: storeToShow, // 👈 Artık puanı dolu olanı basacak
+        store: storeToShow,
         onStoreTap: () => context.push('/store-detail/${storeToShow.id}'),
       ),
     );

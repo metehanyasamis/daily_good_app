@@ -47,7 +47,7 @@ class BannerRepository {
       debugPrint('📥 [BANNER_REPO] response type: ${response.data.runtimeType}');
 
       final raw = response.data;
-      debugPrint('📥 [BANNER_REPO] raw data keys: ${raw is Map ? (raw as Map).keys.toList() : 'not a map'}');
+      debugPrint('📥 [BANNER_REPO] raw data keys: ${raw is Map ? (raw).keys.toList() : 'not a map'}');
 
       if (raw is Map && raw['success'] == false) {
         debugPrint('❌ [BANNER_REPO] success=false message=${raw['message']}');
@@ -67,13 +67,13 @@ class BannerRepository {
         return [];
       }
 
-      if ((data as List).isEmpty) {
+      if ((data).isEmpty) {
         debugPrint('⚠️ [BANNER_REPO] data list is empty');
         return [];
       }
 
       debugPrint('📥 [BANNER_REPO] Processing ${data.length} banner items...');
-      final banners = (data as List)
+      final banners = (data)
           .map((e) {
             try {
               return BannerModel.fromJson(e as Map<String, dynamic>);

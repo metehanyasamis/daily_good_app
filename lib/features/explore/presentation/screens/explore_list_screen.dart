@@ -557,42 +557,48 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
 
   void _handleCategorySelection(dynamic categoriesRaw) async {
     final categoriesList = _extractCategories(categoriesRaw);
+
+    // Sheet açıldığında mevcut seçili ID'yi gönderiyoruz
+    debugPrint("🚀 [EXPLORE] Sheet Açılıyor. Mevcut Seçili ID: $selectedCategoryId");
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => CategoryFilterSheet(
-        selectedId: selectedCategoryId,
+        selectedId: selectedCategoryId, // Null ise 'Tümü' seçili açılır
         backendCategories: categoriesList.isNotEmpty ? categoriesList : null,
         onApply: (selectedMap) {
           Navigator.pop(context);
 
-          // Sheet'ten gelen id/name (backend tek kaynak)
-          final rawId = (selectedMap['id'] ?? '').toString().trim();
-          final pickedName = (selectedMap['name'] ?? 'Tümü').toString().trim();
+          final rawId = selectedMap['id']; // Sheet zaten bunu String? olarak gönderiyor
+          final pickedName = selectedMap['name'] ?? 'Tümü';
 
-          // Tümü seçili ise null gitmeli; API'ye categoryId=null giderse tümü döner
-          final bool isAll = pickedName.toLowerCase() == 'tümü' || rawId.isEmpty;
-          final pickedId = isAll ? null : rawId;
+          // 🚨 Tümü Kontrolü: ID null ise veya "null" stringi ise
+          final String? finalPickedId = (rawId == null || rawId == "null" || rawId.toString().trim().isEmpty)
+              ? null
+              : rawId;
 
-          debugPrint("🏷️ [CATEGORY_APPLY] rawId='$rawId' name=$pickedName -> pickedId=${pickedId ?? 'null (Tümü)'}");
+          debugPrint("🏷️ [CATEGORY_APPLY_CALLBACK] İsim: $pickedName -> Final ID: $finalPickedId");
 
           setState(() {
-            // UI state
-            selectedCategoryId = pickedId;          // null ise Tümü
-            selectedCategoryName = pickedName;      // header'da göstereceksen
+            selectedCategoryId = finalPickedId;
+            selectedCategoryName = pickedName;
+
+            // UI'daki yatay bar (varsa) için enum ayarı
+            if (finalPickedId == null) {
+              selectedCategory = CategoryFilterOption.all;
+            } else {
+              selectedCategory = CategoryFilterOption.custom;
+            }
           });
 
-          // ✅ Global state'e de aynısını yaz
-          ref.read(exploreStateProvider.notifier).setCategoryId(pickedId);
+          // Notifier'a işle
+          ref.read(exploreStateProvider.notifier).setCategoryId(finalPickedId);
 
-          // (İstersen: kategori değişince pagination/sayfa resetle)
-          // ref.read(productsProvider.notifier).reset(); gibi bir şeyin varsa burada çağır
-
+          // Listeyi yenile (Fetch fonksiyonun null ID'yi görünce tümünü çekecek)
           _fetchData();
         },
-
-
       ),
     );
   }

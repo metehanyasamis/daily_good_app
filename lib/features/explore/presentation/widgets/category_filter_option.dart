@@ -10,9 +10,8 @@ enum CategoryFilterOption {
   vegetarian,
   vegan,
   glutenFree,
+  custom, // ✅ Added 'custom' here to fix the error
 }
-
-
 
 // Kategorileri kullanıcı dostu etiketlere çeviren fonksiyon
 String categoryLabel(CategoryFilterOption c) {
@@ -33,10 +32,10 @@ String categoryLabel(CategoryFilterOption c) {
       return "Vegan";
     case CategoryFilterOption.glutenFree:
       return "Glutensiz";
+    case CategoryFilterOption.custom: // ✅ Added the label for 'custom'
+      return "Özel"; // You can change "Özel" to whatever label you prefer
   }
 }
-
-
 
 // Kategori Filtre Butonu için kullanılan Widget
 class CategoryFilterOptionWidget extends StatelessWidget {

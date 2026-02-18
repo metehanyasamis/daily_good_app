@@ -5,6 +5,7 @@ import '../../../stores/data/model/store_summary.dart';
 class StoreInProductDetail {
   final String id;
   final String name;
+  final String? displayName;
   final String address;
   final String phone;
   final double latitude;
@@ -16,6 +17,7 @@ class StoreInProductDetail {
   StoreInProductDetail({
     required this.id,
     required this.name,
+    this.displayName,
     required this.address,
     required this.phone,
     required this.latitude,
@@ -24,6 +26,16 @@ class StoreInProductDetail {
     required this.overallRating,
     this.distanceKm, // 👈 2. BURASI: Mesafeyi ekledik
   });
+
+  // 🔥 "McDonalds (Kadıköy)" Formatını Veren Getter
+  String get formattedName {
+    // Burada Brand objesi olmadığı için direkt name kullanıyoruz.
+    // Eğer displayName varsa parantez içine ekliyoruz.
+    if (displayName != null && displayName!.isNotEmpty) {
+      return "$name ($displayName)";
+    }
+    return name;
+  }
 
   factory StoreInProductDetail.fromJson(Map<String, dynamic>? json) {
     double toDouble(dynamic value) {
@@ -37,6 +49,7 @@ class StoreInProductDetail {
     return StoreInProductDetail(
       id: json['id']?.toString() ?? "",
       name: json['name']?.toString() ?? "Bilinmeyen Mağaza",
+      displayName: json['display_name']?.toString(),
       address: json['address']?.toString() ?? "",
       phone: json['phone']?.toString() ?? "",
       latitude: toDouble(json['latitude']),
@@ -67,6 +80,7 @@ class StoreInProductDetail {
     return StoreSummary(
       id: id,
       name: name,
+      displayName: displayName,
       address: address,
       latitude: latitude,
       longitude: longitude,

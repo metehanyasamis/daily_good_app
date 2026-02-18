@@ -40,7 +40,7 @@ void showRatingInfoDialog(BuildContext context) {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            "Puan ortalaması, son 1 yıl içerisinde bu işletmeden sipariş vermiş kullanıcıların deneyimlerine dayanır.",
+            "Puan ortalaması, son 1 yıl içerisinde bu işletmeden sipariş vermiş en az 5 farklı kullanıcının deneyimlerine dayanır.",
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey.shade600,

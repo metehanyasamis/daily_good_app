@@ -28,11 +28,7 @@ class ProductCard extends StatelessWidget {
         ? ((oldPrice - newPrice) / oldPrice * 100).round()
         : 0;
 
-
     final stockLabel = _stockLabel(product.stock);
-
-    // Store logo: backend varsa buradan çek
-    // StoreSummary içinde brand.logoUrl vb yoksa fallback olur.
     final storeLogoUrl = _tryGetStoreLogoUrl(product);
 
     return GestureDetector(
@@ -156,9 +152,9 @@ class ProductCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            product.store.name,
-                            maxLines: 1, // Tek satırda tut
-                            overflow: TextOverflow.ellipsis, // Sığmazsa ... yap
+                            product.store.formattedName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -193,7 +189,7 @@ class ProductCard extends StatelessWidget {
                 children: [
                   // LEFT
                   Expanded(
-                    child: // lib/features/product/presentation/widgets/product_card.dart içinde ilgili bölüm:
+                    child:
 
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

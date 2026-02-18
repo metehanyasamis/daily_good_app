@@ -30,8 +30,6 @@ class LegalDocumentsScreen extends ConsumerWidget {
             {'title': 'Üyelik Sözleşmesi', 'url': c['uyelik_sozlesmesi']?.url},
             {'title': 'KVKK Aydınlatma Metni', 'url': c['kvkk_aydinlatma_metni']?.url},
             {'title': 'Gizlilik Sözleşmesi', 'url': c['gizlilik_sozlesmesi']?.url},
-            {'title': 'Ön Bilgilendirme Formu', 'url': c['on_bilgilendirme_formu']?.url},
-            {'title': 'Mesafeli Satış Sözleşmesi', 'url': c['mesafeli_satis_sozlesmesi']?.url},
           ];
 
           return ListView.separated(

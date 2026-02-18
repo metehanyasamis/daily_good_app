@@ -15,6 +15,15 @@ class StoreDeliveryInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    // 🔥 DEBUG BAŞLANGIÇ
+    debugPrint("🏁 [DELIVERY CARD] Render Oluyor...");
+    debugPrint("   -> Name: ${store.name}");
+    debugPrint("   -> DisplayName: ${store.displayName}"); // Burası NULL geliyorsa sorun Mapper'dadır
+    debugPrint("   -> Formatted: ${store.formattedName}");
+    // 🔥 DEBUG BİTİŞ
+
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
@@ -54,7 +63,7 @@ class StoreDeliveryInfoCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            store.name,
+                            store.formattedName,
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,

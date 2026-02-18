@@ -18,6 +18,7 @@ List<dynamic> asList(dynamic v) {
 class StoreDetailModel {
   final String id;
   final String name;
+  final String displayName;
   final String address;
   final String imageUrl;
   final double latitude;
@@ -38,6 +39,7 @@ class StoreDetailModel {
   StoreDetailModel({
     required this.id,
     required this.name,
+    required this.displayName,
     required this.address,
     required this.imageUrl,
     required this.latitude,
@@ -118,6 +120,7 @@ class StoreDetailModel {
       return StoreDetailModel(
         id: json['id']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
+        displayName: json['display_name']?.toString() ?? '',
         address: json['address']?.toString() ?? '',
         imageUrl: image,
         latitude: lat,
@@ -176,6 +179,7 @@ extension StoreDetailMapper on StoreDetailModel {
     return StoreSummary(
       id: id,
       name: name,
+      displayName: displayName,
       address: address,
       latitude: latitude,
       longitude: longitude,

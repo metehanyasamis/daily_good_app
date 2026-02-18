@@ -750,9 +750,23 @@ class ProductRepository {
   // ------------------------------------------------------------
   // ✅ Detail
   // ------------------------------------------------------------
-  Future<ProductModel> getProductDetail(String id) async {
+// lib/features/product/data/repository/product_repository.dart içindeki ilgili metod
+
+  Future<ProductModel> getProductDetail(
+      String id, {
+        double? lat, // 👈 Bu parametreyi ekleyin
+        double? lng, // 👈 Bu parametreyi ekleyin
+      }) async {
     debugPrint('📡 [REPO_DETAIL] GET /products/$id');
-    final res = await _dio.get('/products/$id');
+
+    // Konum bilgilerini query parameters olarak ekliyoruz
+    final res = await _dio.get(
+      '/products/$id',
+      queryParameters: {
+        if (lat != null) 'latitude': lat,
+        if (lng != null) 'longitude': lng,
+      },
+    );
 
     if (res.data is! Map) {
       throw FormatException('Detail response not Map: ${res.data.runtimeType}');
@@ -765,8 +779,6 @@ class ProductRepository {
     }
 
     final data = raw['data'];
-    debugPrint('📥 [REPO_DETAIL] dataType=${data.runtimeType}');
-
     if (data is Map) {
       return ProductModel.fromJsonMap(Map<String, dynamic>.from(data));
     }
