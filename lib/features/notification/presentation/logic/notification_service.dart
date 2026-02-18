@@ -8,22 +8,6 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
   FlutterLocalNotificationsPlugin();
 
-  /*
-  /// Başlatma
-  static Future<void> init() async {
-    tz.initializeTimeZones();
-
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosInit = DarwinInitializationSettings();
-
-
-    const initSettings =
-    InitializationSettings(android: androidInit, iOS: iosInit);
-
-    await _notifications.initialize(initSettings);
-  }
-
-   */
 
   static Future<void> init() async {
     tz.initializeTimeZones();

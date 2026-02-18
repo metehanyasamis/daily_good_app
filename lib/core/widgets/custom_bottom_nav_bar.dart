@@ -38,10 +38,10 @@ class CustomBottomNavBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _item(0, Icons.home_outlined,   'ANASAYFA'),
-            _item(1, Icons.search,          'KEŞFET'),
-            _item(2, Icons.favorite_border, 'FAVORİ'),
-            _item(3, Icons.person_outline,  'HESAP'),
+            Expanded(flex: currentIndex == 0 ? 2 : 1, child: _item(0, Icons.home_outlined,   'ANASAYFA')),
+            Expanded(flex: currentIndex == 1 ? 2 : 1, child: _item(1, Icons.search,          'KEŞFET')),
+            Expanded(flex: currentIndex == 2 ? 2 : 1, child: _item(2, Icons.favorite_border, 'FAVORİ')),
+            Expanded(flex: currentIndex == 3 ? 2 : 1, child: _item(3, Icons.person_outline,  'HESAP')),
           ],
         ),
       ),
@@ -51,42 +51,33 @@ class CustomBottomNavBar extends StatelessWidget {
   Widget _item(int index, IconData icon, String label) {
     final bool selected = currentIndex == index;
 
-    // genişliği biraz azalttık, overflow çözülür
-    // 👇 her item’a özel genişlik (en uzun yazı ANASAYFA)
-    final double width = selected
-        ? (index == 0
-        ? 130 // ANASAYFA için
-        : index == 3
-        ? 120 // HESAP için
-        : 115) // diğerleri
-        : 60;
-
-    return SizedBox(
-      width: width,
-      height: 48,
-      child: GestureDetector(
-        onTap: () => onTabSelected(index),
+    return GestureDetector( // SizedBox'ı kaldırdık, Expanded sayesinde alanı Row belirleyecek
+      onTap: () => onTabSelected(index),
+      child: Container(
+        height: 48,
+        color: Colors.transparent, // Tıklama alanını genişletmek için
         child: Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.centerLeft,
           children: [
-            // kapsül (arkada)
             if (selected)
               Positioned(
-                left: 33, // 👈 yazı biraz sağa kayar, ikonun altına girmez
+                left: 20, // İkonun biraz altından başlasın
+                right: 0,  // Metnin sağa taşmasını engellemek için sağ sınırı belirle
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.only(left: 28, right: 12, top: 8, bottom: 8),
                   decoration: BoxDecoration(
                     color: AppColors.primaryLightGreen,
                     borderRadius: BorderRadius.circular(26),
                   ),
                   child: Text(
                     label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis, // 🔥 Sığmazsa "ANAS..." yapar, taşırmaz!
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 12, // Yazıyı biraz küçültmek güvenli olur
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
-                      //color: Colors.black87,
                     ),
                   ),
                 ),

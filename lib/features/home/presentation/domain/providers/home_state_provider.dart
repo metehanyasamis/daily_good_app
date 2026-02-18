@@ -23,9 +23,8 @@ class HomeStateNotifier extends StateNotifier<HomeState> {
   Future<void> loadHome({
     required double latitude,
     required double longitude,
-    bool forceRefresh = false, // 🔄 Elle çekince (Pull to refresh) kilidi kırmak için
+    bool forceRefresh = false,
   }) async {
-    // ⏱️ ZAMAN KONTROLÜ: Eğer son 30 saniye içinde çekildiyse ve zorlanmıyorsa ÇIK!
     if (!forceRefresh && _lastFetchTime != null &&
         DateTime.now().difference(_lastFetchTime!) < const Duration(seconds: 30)) {
       debugPrint("🏠 [HOME] İstek reddedildi: Veriler zaten güncel (30sn kuralı).");
@@ -45,12 +44,18 @@ class HomeStateNotifier extends StateNotifier<HomeState> {
         longitude: longitude,
       );
 
+      // 🔥 KRİTİK DÜZELTME: Veri gelene kadar sayfa kapanmış olabilir.
+      // Eğer notifier kapandıysa (dispose), state güncellemeye çalışma!
+      if (!mounted) return;
+
       state = state.copyWith(
         sectionProducts: sections,
         loadingSections: { for (var s in HomeSection.values) s: false },
       );
     } catch (e) {
-      // Hata durumunda loading'i kapatmayı unutma
+      // 🔥 Buraya da eklemelisin çünkü hata aldığında da state güncelliyorsun.
+      if (!mounted) return;
+
       state = state.copyWith(
         loadingSections: { for (var s in HomeSection.values) s: false },
       );

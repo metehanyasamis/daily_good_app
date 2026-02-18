@@ -42,7 +42,7 @@ class NotificationRepository {
     try {
       debugPrint("📡 [REPO-NOTIF] FCM Token kaydediliyor...");
       await _dio.post(
-        '/customer/notifications/token',
+        '/customer/notifications',
         data: {
           "device_type": deviceType,
           "fcm_token": fcmToken,

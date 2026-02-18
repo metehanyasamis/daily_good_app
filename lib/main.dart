@@ -35,18 +35,6 @@ Future<void> main() async {
   };
 
 
-  /*
-  // 🔥 GLOBAL AYAR: Uygulamanın sistem çubuklarıyla olan ilişkisini düzenler
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent, // Üst bar şeffaf olsun
-    statusBarIconBrightness: Brightness.dark, // Üst ikonlar (saat vs) koyu
-    systemNavigationBarColor: Colors.white, // Alt bar (Android butonları) arkası beyaz
-    systemNavigationBarIconBrightness: Brightness.dark, // Alt bar ikonları koyu
-  ));
-
-
-   */
-
   /// 🌍 ENV
   await dotenv.load(fileName: '.env');
 
@@ -63,8 +51,6 @@ Future<void> main() async {
   // 1. Local Notification Servisini Başlat
   await NotificationService.init();
 
-  // 2. İzin İste (iOS ve Android 13+)
-  await NotificationPermission.request();
 
   // 3. Token'ı al (Zaten yapmışsın, kalsın)
   String? token = await FirebaseMessaging.instance.getToken();

@@ -20,6 +20,7 @@ import '../../../explore/presentation/widgets/explore_filter_sheet.dart';
 import '../../../location/domain/address_notifier.dart';
 
 import '../../../notification/domain/providers/notification_provider.dart';
+import '../../../notification/presentation/logic/notification_permission.dart';
 import '../../../orders/domain/providers/order_provider.dart';
 import '../../domain/providers/banner_provider.dart';
 import '../data/models/home_state.dart';
@@ -50,27 +51,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
 
-    Future.microtask(() async {
-      debugPrint("🏠 [HOME] Veriler Tazeleniyor...");
-      
-      // 🎯 loadUser'ı bekle (await koyarsak veri gelene kadar banner beklemede kalır)
-      await ref.read(userNotifierProvider.notifier).loadUser();
+    Future.microtask(() {
+      // 🚀 1. İZİNLERİ ANINDA TETİKLE (Hiçbir şeyi bekleme!)
+      NotificationPermission.request();
 
-      // 🎯 2. BİLDİRİM TOKEN'INI GÜNCELLE
+      debugPrint("🏠 [HOME] Veriler paralel yükleniyor...");
+
+      // 🚀 2. BEKLEMESİZ (NON-BLOCKING) BAŞLAT
+      // await koymuyoruz ki ekran çizilmeye devam etsin
+      ref.read(userNotifierProvider.notifier).loadUser();
       _updateNotificationToken();
 
-      // Diğerlerini de sırayla veya beraber yükle (paralel)
-      // ⚠️ Banner yükleme başarısız olsa bile diğer işlemler devam etsin
-      await Future.wait([
+      // 🚀 3. VERİLERİ PARALEL ÇEK
+      Future.wait([
         ref.read(categoryProvider.notifier).load(),
-        ref.read(bannerProvider.notifier).loadBanners().catchError((e) {
-          debugPrint('⚠️ [HOME] Banner loading failed, continuing anyway: $e');
-        }),
+        ref.read(bannerProvider.notifier).loadBanners().catchError((e) => null),
       ]);
 
-      // 🎯 Siparişleri de tazele!
-      ref.invalidate(orderHistoryProvider);
-
+      // Konum seçiliyse ana sayfayı yükle
       final address = ref.read(addressProvider);
       if (address.isSelected) {
         ref.read(homeStateProvider.notifier).loadHome(
