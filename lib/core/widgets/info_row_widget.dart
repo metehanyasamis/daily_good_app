@@ -42,13 +42,13 @@ class InfoRowWidget extends StatelessWidget {
           ),
           if (isVerified != null)
             Padding(
-              padding: const EdgeInsets.only(left: 28, top: 4),
+              padding: const EdgeInsets.only(left: 28, top: 2),
               child: Row(
                 children: [
                   Icon(
                     isVerified! ? Icons.check_circle : Icons.info_outline,
                     color: isVerified! ? Colors.green : Colors.orange,
-                    size: 16,
+                    size: 12,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -58,9 +58,15 @@ class InfoRowWidget extends StatelessWidget {
                       color: isVerified! ? Colors.green : Colors.orange,
                     ),
                   ),
+                  const SizedBox(width: 4),
                   if (!isVerified! && onVerify != null)
                     TextButton(
                       onPressed: onVerify,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Padding'i daralttık
+                        minimumSize: Size.zero, // Minimum yükseklik zorunluluğunu kaldırdık
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Tıklama alanını metne göre daralttık
+                      ),
                       child: const Text(
                         'Şimdi Doğrula',
                         style: TextStyle(fontSize: 12),

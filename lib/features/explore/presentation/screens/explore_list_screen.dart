@@ -402,7 +402,7 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
       appBar: CustomHomeAppBar(
         address: address.title,
         onLocationTap: () => context.push('/location-picker'),
-        onNotificationsTap: () {},
+        onNotificationsTap: () => context.push('/notifications'),
         // 🔥 GÜNCELLEDİK: canPop varsa butonu göster
         leadingOverride: (context.canPop() || _fromHomeFlag)
             ? IconButton(

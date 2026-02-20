@@ -98,7 +98,7 @@ class _ExploreFilterSheetState extends State<ExploreFilterSheet> {
             ),
           ),
 
-          const Divider(height: 32, indent: 24, endIndent: 24),
+          Divider(height: 32, indent: 24, endIndent: 24, color: Colors.grey.shade300,),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),

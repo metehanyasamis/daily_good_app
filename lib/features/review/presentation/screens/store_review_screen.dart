@@ -1,3 +1,4 @@
+import 'package:daily_good/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/platform/platform_widgets.dart';
@@ -45,18 +46,18 @@ class StoreReviewScreen extends ConsumerWidget {
     final state = ref.watch(storeDetailProvider(storeId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.textSecondary),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           "Değerlendirmeler",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 18),
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
         ),
         centerTitle: true,
       ),
@@ -138,12 +139,15 @@ class StoreReviewScreen extends ConsumerWidget {
 
   Widget _buildReviewItem(ReviewModel review) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // Dikey padding'i daralttık
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,10 +172,10 @@ class StoreReviewScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             review.comment ?? "Yorum belirtilmemiş.",
-            style: const TextStyle(color: Colors.black87, fontSize: 14, height: 1.5),
+            style: const TextStyle(color: Colors.black87, fontSize: 12, height: 1.3),
           ),
         ],
       ),

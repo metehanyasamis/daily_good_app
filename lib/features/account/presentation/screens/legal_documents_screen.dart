@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart'; // ✅ BU IMPORT ŞART
 import '../../../../core/platform/platform_widgets.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../settings/domain/providers/legal_settings_provider.dart';
 
 
@@ -10,18 +11,23 @@ class LegalDocumentsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    debugPrint("🚀 [LegalDocumentsScreen] Sade liste oluşturuluyor.");
     final settingsAsync = ref.watch(legalSettingsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5), // Hafif gri zemin
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Yasal Bilgiler",
-            style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+        elevation: 0,
         backgroundColor: Colors.white,
-        elevation: 0.5,
+        surfaceTintColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.textSecondary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "Yasal Bilgiler",
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
+        ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: settingsAsync.when(
         data: (settings) {
@@ -32,27 +38,74 @@ class LegalDocumentsScreen extends ConsumerWidget {
             {'title': 'Gizlilik Sözleşmesi', 'url': c['gizlilik_sozlesmesi']?.url},
           ];
 
-          return ListView.separated(
-            padding: const EdgeInsets.only(top: 16),
-            itemCount: docList.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 1), // Kutular arası çok ince boşluk
-            itemBuilder: (context, index) {
-              return Container(
-                color: Colors.white, // Satır içi bembeyaz
-                child: ListTile(
-                  title: Text(docList[index]['title']!,
-                      style: const TextStyle(fontSize: 14, color: Colors.black87)),
-                  trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-                  onTap: () => _showLegalSheet(context, docList[index]['title']!, docList[index]['url']),
-                ),
-              );
-            },
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: _buildCard(
+              title: "Sözleşmeler ve Metinler",
+              children: docList.map((doc) {
+                final isLast = docList.indexOf(doc) == docList.length - 1;
+                return Column(
+                  children: [
+                    InkWell(
+                      onTap: () => _showLegalSheet(context, doc['title']!, doc['url']),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 14), // Satır ferahlığı burada
+                        child: Row(
+                          children: [
+                            const Icon(Icons.description_outlined, size: 20, color: AppColors.primaryDarkGreen),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                doc['title']!,
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (!isLast) Divider(height: 1, color: Colors.grey.shade300), // Satır arası ince çizgi
+                  ],
+                );
+              }).toList(),
+            ),
           );
         },
-        loading: () => Center(
-          child: PlatformWidgets.loader(),
-        ),
+        loading: () => Center(child: PlatformWidgets.loader()),
         error: (e, _) => Center(child: Text("Hata: $e")),
+      ),
+    );
+  }
+
+  Widget _buildCard({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ...children,
+        ],
       ),
     );
   }
@@ -142,7 +195,7 @@ class LegalDocumentsScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1, color: Colors.grey.shade300),
 
                   // --- WEBVIEW İÇERİĞİ ---
                   Expanded(

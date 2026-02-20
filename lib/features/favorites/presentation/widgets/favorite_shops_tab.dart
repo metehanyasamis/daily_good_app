@@ -100,8 +100,7 @@ class _ShopCard extends StatelessWidget {
             ),
 
             // Banner altı çok ince ayraç çizgisi
-            Divider(height: 1, thickness: 0.5, color: Colors.grey.shade100),
-
+            Divider(height: 1, thickness: 0.5, color: Colors.grey.shade300),
             // --- İÇERİK ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),

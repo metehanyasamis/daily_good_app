@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -17,7 +18,6 @@ import 'core/theme/app_theme.dart';
 import 'core/widgets/global_error_screen.dart';
 import 'features/notification/data/models/notification_model.dart';
 import 'features/notification/domain/providers/notification_provider.dart';
-import 'features/notification/presentation/logic/notification_permission.dart';
 import 'features/notification/presentation/logic/notification_service.dart';
 
 Future<void> main() async {
@@ -52,11 +52,6 @@ Future<void> main() async {
   await NotificationService.init();
 
 
-  // 3. Token'ı al (Zaten yapmışsın, kalsın)
-  String? token = await FirebaseMessaging.instance.getToken();
-  print("🔥 FCM TOKEN: $token");
-
-
   /// 📅 Türkçe tarih formatları
   await initializeDateFormatting('tr_TR');
 
@@ -82,7 +77,9 @@ class _BootstrapState extends ConsumerState<Bootstrap> {
     super.initState();
 
     // 1. Token'ı Backend'e gönder
-    _uploadToken();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _uploadToken();
+    });
 
     // 2. Uygulama AÇIKKEN (Foreground) bildirim gelirse
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -124,8 +121,26 @@ class _BootstrapState extends ConsumerState<Bootstrap> {
 
   Future<void> _uploadToken() async {
     try {
-      String? token = await FirebaseMessaging.instance.getToken();
-      if (token == null) return;
+      // iOS’ta permission / APNS token süreci
+      if (Platform.isIOS) {
+        await FirebaseMessaging.instance.requestPermission(
+          alert: true, badge: true, sound: true,
+        );
+
+        for (int i = 0; i < 3; i++) {
+          final apns = await FirebaseMessaging.instance.getAPNSToken();
+          if (apns != null) break;
+          await Future.delayed(const Duration(seconds: 1));
+        }
+      }
+
+
+      // Artık FCM token almayı dene (crash etmeyecek)
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken == null) {
+        debugPrint("⚠️ FCM token null (henüz hazır değil).");
+        return;
+      }
 
       final deviceInfo = DeviceInfoPlugin();
       final packageInfo = await PackageInfo.fromPlatform();
@@ -133,10 +148,9 @@ class _BootstrapState extends ConsumerState<Bootstrap> {
       String deviceId = "unknown";
       String deviceName = "Unknown Device";
 
-      // 📱 Cihaz bilgilerini dinamik alalım
       if (Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
-        deviceId = androidInfo.id; // Cihazın benzersiz ID'si
+        deviceId = androidInfo.id;
         deviceName = "${androidInfo.brand} ${androidInfo.model}";
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
@@ -144,18 +158,18 @@ class _BootstrapState extends ConsumerState<Bootstrap> {
         deviceName = iosInfo.name;
       }
 
-      // 🚀 Backend'e gerçek verileri gönderiyoruz
       await ref.read(notificationRepositoryProvider).saveDeviceToken(
-        fcmToken: token,
-        deviceId: deviceId, // Artık "device_id_123" değil!
-        deviceName: deviceName, // "Samsung S21" veya "iPhone 13" gibi
-        deviceType: PlatformUtils.name.toLowerCase(), // Senin sınıfın: "android" veya "ios"
-        appVersion: packageInfo.version, // package_info_plus ile dinamik sürüm: "1.0.4"
+        fcmToken: fcmToken,
+        deviceId: deviceId,
+        deviceName: deviceName,
+        deviceType: PlatformUtils.name.toLowerCase(),
+        appVersion: packageInfo.version,
       );
 
       debugPrint("✅ Cihaz kaydı başarılı: $deviceName ($deviceId)");
-    } catch (e) {
+    } catch (e, st) {
       debugPrint("❌ Cihaz kaydı hatası: $e");
+      debugPrint("$st");
     }
   }
 
@@ -176,6 +190,21 @@ class _BootstrapState extends ConsumerState<Bootstrap> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: router,
+
+      // --- EKLEMEN GEREKEN KISIM BURASI ---
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate, // Özellikle bu iOS picker için şart
+      ],
+      supportedLocales: const [
+        Locale('tr', 'TR'), // Türkçe
+        Locale('en', 'US'), // İngilizce (Yedek olarak kalsın)
+      ],
+      locale: const Locale('tr', 'TR'), // Uygulamayı Türkçe'ye zorla
+      // ------------------------------------
+
+
       // 🔥 GLOBAL KLAVYE KAPATMA DOKUNUŞU BURADA:
       builder: (context, child) {
         return GestureDetector(

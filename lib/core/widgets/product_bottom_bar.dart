@@ -64,7 +64,7 @@ class ProductBottomBar extends StatelessWidget {
                     child: Text(
                       isDisabled
                           ? 'Stok Tükendi'
-                          : '$qty adet için ${(qty * price).toStringAsFixed(0)} TL',
+                          : '${(qty * price).toStringAsFixed(0)} TL',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 17,

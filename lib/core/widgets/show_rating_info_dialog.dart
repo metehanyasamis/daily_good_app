@@ -1,4 +1,7 @@
-import 'package:flutter/material.dart';
+
+//Şuan ki versiyonda bu info yok
+
+/*import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
@@ -102,3 +105,5 @@ Widget _buildCategoryChip(String label) {
     ),
   );
 }
+
+ */

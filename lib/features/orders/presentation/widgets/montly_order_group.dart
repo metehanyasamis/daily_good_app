@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/order_list_item.dart';
+
 // 🚀 KRİTİK IMPORT:
 import '../screens/order_history_screen.dart';
 
@@ -39,10 +40,16 @@ class _MonthlyOrderGroupState extends State<MonthlyOrderGroup> {
               children: [
                 Text(
                   "${widget.monthTitle} (${widget.orders.length} Sipariş)",
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
                 Icon(
-                  _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  _isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
                   color: AppColors.primaryDarkGreen,
                 ),
               ],
@@ -53,8 +60,12 @@ class _MonthlyOrderGroupState extends State<MonthlyOrderGroup> {
           Column(
             children: widget.orders.map((order) {
               return GestureDetector(
-                onTap: () => context.push('/order-history/detail/${order.id}', extra: order),
-                child: buildOrderCard( // 👈 Artık hatasız çalışacak
+                onTap: () => context.push(
+                  '/order-history/detail/${order.id}',
+                  extra: order,
+                ),
+                child: buildOrderCard(
+                  // 👈 Artık hatasız çalışacak
                   context: context,
                   order: order,
                   dateFormatter: widget.dateFormatter,
@@ -62,7 +73,7 @@ class _MonthlyOrderGroupState extends State<MonthlyOrderGroup> {
               );
             }).toList(),
           ),
-        const Divider(height: 1, color: Colors.black12),
+        Divider(thickness: 1, color: Colors.grey.shade300),
       ],
     );
   }

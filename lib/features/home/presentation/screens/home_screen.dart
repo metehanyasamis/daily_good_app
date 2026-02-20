@@ -21,7 +21,6 @@ import '../../../location/domain/address_notifier.dart';
 
 import '../../../notification/domain/providers/notification_provider.dart';
 import '../../../notification/presentation/logic/notification_permission.dart';
-import '../../../orders/domain/providers/order_provider.dart';
 import '../../domain/providers/banner_provider.dart';
 import '../data/models/home_state.dart';
 import '../domain/providers/home_state_provider.dart';
@@ -179,7 +178,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               headerSliverBuilder: (context, _) => [
                 const SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    padding: EdgeInsets.only(left: 8, right: 8, top: 8),
                     child: HomeBannerSlider(),
                   ),
                 ),
