@@ -9,8 +9,6 @@ import '../../../../core/data/prefs_service.dart';
 import '../../../../core/platform/dialogs.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/app_state_provider.dart';
-import '../../../favorites/domain/favorites_notifier.dart';
-import '../../../product/domain/products_notifier.dart';
 import '../../../settings/data/repository/version_repository.dart';
 import '../../domain/providers/auth_notifier.dart';
 

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/daily_phone_field.dart';
 import '../../../../core/widgets/social_button.dart';
 import '../../../settings/domain/providers/legal_settings_provider.dart';
 import '../../domain/providers/auth_notifier.dart';
@@ -42,6 +43,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // ---------------------------------------------------------------------------
 
   String _normalizePhone(String input) {
+    // Sadece rakamları al
+    String raw = input.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // Eğer başında 90 varsa onu at (sunucu 05xx bekliyorsa)
+    if (raw.startsWith('90')) {
+      raw = raw.substring(2);
+    }
+
+    // Başına 0 ekle (05xx formatı için)
+    if (raw.length == 10) return "0$raw";
+    return raw;
+  }
+
+  /*
+  String _normalizePhone(String input) {
     final raw = input.replaceAll(RegExp(r'[^0-9]'), '');
     if (raw.length == 10) return "0$raw";
     if (raw.length == 11 && raw.startsWith("0")) return raw;
@@ -49,6 +65,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return raw;
   }
 
+   */
+
+/*
   TextInputFormatter _phoneFormatter() {
     return TextInputFormatter.withFunction((oldValue, newValue) {
       debugPrint('📱 [PHONE_FORMATTER] onTap() - old: ${oldValue.text}, new: ${newValue.text}');
@@ -80,6 +99,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     });
   }
+
+   */
 
   void _error(String msg) {
     if (!mounted) return;
@@ -311,6 +332,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
+  /*
   Widget _buildPhoneField() {
     debugPrint('📱 [PHONE_FIELD] build()');
     return TextField(
@@ -350,6 +372,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+
+   */
+
+
+  Widget _buildPhoneField() {
+    debugPrint('📱 [PHONE_FIELD] build()');
+    return DailyPhoneField(
+      controller: _phoneController,
+    );
+  }
+
+
 
   Widget _buildSubmitButton(bool isLoading) {
     return GestureDetector(

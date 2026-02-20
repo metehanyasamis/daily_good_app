@@ -25,188 +25,6 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(70);
 
-  /*
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cartCount = ref.watch(cartCountProvider);
-    final notificationCount = ref.watch(notificationBadgeProvider);
-
-    final double topPadding = MediaQuery.of(context).padding.top;
-    final shortAddress = formatShortAddress(address);
-
-    return Container(
-      padding: EdgeInsets.only(
-        top: topPadding + 8,
-        left: 16,
-        right: 16,
-        bottom: 8,
-      ),
-      child: SizedBox(
-        height: 48,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            /// =========================
-            /// 🟡 ORTA — ADRES (GERÇEK ORTA)
-            /// =========================
-            GestureDetector(
-              onTap: onLocationTap,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.location_on,
-                    size: 16,
-                    color: AppColors.primaryDarkGreen,
-                  ),
-                  const SizedBox(width: 4),
-
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.40,
-                    ),
-                    child: Text(
-                      shortAddress,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.primaryDarkGreen,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14, // 🔒 SABİT
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 2),
-
-                  const Icon(
-                    Icons.keyboard_arrow_down,
-                    size: 18,
-                    color: AppColors.primaryDarkGreen,
-                  ),
-                ],
-              ),
-            ),
-
-
-            /// =========================
-            /// 🟢 SOL — LOGO
-            /// =========================
-            Positioned(
-              left: 0,
-              child: leadingOverride ??
-                  Image.asset(
-                    'assets/logos/dailyGood_tekSaatLogo.png',
-                    height: 42,
-                  ),
-            ),
-
-            /// =========================
-            /// 🔴 SAĞ — BİLDİRİM + SEPET
-            /// =========================
-
-            Positioned(
-              right: 0,
-              child: Row(
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      IconButton(
-                        onPressed: onNotificationsTap,
-                        icon: const Icon(
-                          Icons.notifications_none_rounded,
-                          color: AppColors.primaryDarkGreen,
-                          size: 24,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 28,
-                          minHeight: 36,
-                        ),
-                      ),
-                      // 🔴 Kırmızı Nokta / Sayı
-                      if (notificationCount > 0)
-                        Positioned(
-                          right: 2,
-                          top: 2,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 5,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.redAccent,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '$notificationCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      IconButton(
-                        onPressed: () => context.push('/cart'),
-                        icon: const Icon(
-                          Icons.shopping_cart_outlined,
-                          color: AppColors.primaryDarkGreen,
-                          size: 22,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
-                        ),
-                      ),
-                      if (cartCount > 0)
-                        Positioned(
-                          right: -2,
-                          top: -2,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 5,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.redAccent,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '$cartCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-
-
-          ],
-        ),
-      ),
-    );
-  }
-
-   */
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cartCount = ref.watch(cartCountProvider);
@@ -215,6 +33,9 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final shortAddress = formatShortAddress(address);
 
     return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white),
+
       padding: EdgeInsets.only(top: topPadding + 8, left: 16, right: 16, bottom: 8),
       child: SizedBox(
         height: 48,
@@ -232,23 +53,31 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
               alignment: Alignment.center,
               child: GestureDetector(
                 onTap: onLocationTap,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.location_on, size: 16, color: AppColors.primaryDarkGreen),
-                    const SizedBox(width: 4),
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.35),
-                      child: Text(
-                        shortAddress,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.w600, fontSize: 14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.background, // 👈 istediğin arka plan
+                    borderRadius: BorderRadius.circular(20), // opsiyonel
+                    border: Border.all(color: AppColors.primaryDarkGreen, width: 0.5),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.location_on, size: 16, color: AppColors.primaryDarkGreen),
+                      const SizedBox(width: 4),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.35),
+                        child: Text(
+                          shortAddress,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: AppColors.primaryDarkGreen, fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 2),
-                    const Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.primaryDarkGreen),
-                  ],
+                      const SizedBox(width: 2),
+                      const Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.primaryDarkGreen),
+                    ],
+                  ),
                 ),
               ),
             ),

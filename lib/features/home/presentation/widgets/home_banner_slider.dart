@@ -183,72 +183,68 @@ class _HomeBannerSliderState extends ConsumerState<HomeBannerSlider> {
                               scale = 1 - (scale * 0.08);
                             }
 
-                            return ClipRect(
-                              child: Transform.scale(
-                                scale: scale,
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.08),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: imageUrl.isNotEmpty
-                                        ? CachedNetworkImage(
+                            return AnimatedBuilder(
+                              animation: _controller!,
+                              builder: (context, _) {
+                                double scale = 1.0;
+
+                                if (_controller!.hasClients && _controller!.position.haveDimensions) {
+                                  final page = _controller!.page ?? virtualPage.toDouble();
+                                  final diff = (page - index).abs().clamp(0.0, 1.0);
+                                  scale = 1 - (diff * 0.08);
+                                }
+
+                                return Transform.scale(
+                                  scale: scale,
+                                  child: Padding(
+                                    // ✅ margin yerine burada küçük spacing (istersen 0 yap)
+                                    padding: const EdgeInsets.symmetric(horizontal: 0),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: DecoratedBox(
+                                        // ✅ image gelene kadar da boşluk "beyaz" görünmesin
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryLightGreen.withValues(alpha: 0.08),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.08),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: SizedBox(
+                                          height: 180,
+                                          width: double.infinity,
+                                          child: CachedNetworkImage(
                                             imageUrl: imageUrl,
-                                            fit: BoxFit.cover,
-                                            width: w,
-                                            height: 180,
-                                            memCacheHeight: 360,
-                                            placeholder: (context, url) => Container(
-                                              width: w,
-                                              height: 180,
-                                              color: AppColors.primaryLightGreen.withValues(alpha: 0.1),
-                                              child: Center(
-                                                child: SizedBox(
-                                                  width: 24,
-                                                  height: 24,
-                                                  child: PlatformWidgets.loader(
-                                                    strokeWidth: 2,
-                                                    color: AppColors.primaryDarkGreen,
-                                                    radius: 12,
-                                                  ),
+                                            fit: BoxFit.fill, // ✅ tam oturması için (cover kırpabilir)
+                                            placeholder: (context, url) => Center(
+                                              child: SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: PlatformWidgets.loader(
+                                                  strokeWidth: 2,
+                                                  color: AppColors.primaryDarkGreen,
+                                                  radius: 12,
                                                 ),
                                               ),
                                             ),
-                                            errorWidget: (context, url, error) {
-                                              debugPrint('❌ [BANNER_SLIDER] Image load error: $error');
-                                              return Container(
-                                                width: w,
-                                                height: 180,
-                                                color: AppColors.primaryLightGreen.withValues(alpha: 0.1),
-                                                child: Icon(
-                                                  Icons.image_not_supported,
-                                                  color: AppColors.primaryDarkGreen.withValues(alpha: 0.3),
-                                                ),
-                                              );
-                                            },
-                                          )
-                                        : Container(
-                                            width: w,
-                                            height: 180,
-                                            color: AppColors.primaryLightGreen.withValues(alpha: 0.1),
-                                            child: Icon(
-                                              Icons.image_not_supported,
-                                              color: AppColors.primaryDarkGreen.withValues(alpha: 0.3),
+                                            errorWidget: (context, url, error) => Center(
+                                              child: Icon(
+                                                Icons.image_not_supported,
+                                                color: AppColors.primaryDarkGreen.withValues(alpha: 0.3),
+                                              ),
                                             ),
                                           ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             );
+
                           },
                         );
                       },

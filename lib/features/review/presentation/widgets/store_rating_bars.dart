@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/show_rating_info_dialog.dart';
 import '../../../stores/data/model/store_detail_model.dart';
 
 class StoreRatingBars extends StatelessWidget {
@@ -54,6 +53,9 @@ class StoreRatingBars extends StatelessWidget {
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(width: 4),
+
+                    //işletme değerlendirme şuanda yok!
+                    /*
                     GestureDetector(
                       // ℹ️ Bilgi diyaloğu hala çalışır, InkWell ile çakışmaz
                       onTap: () => showRatingInfoDialog(context),
@@ -63,6 +65,9 @@ class StoreRatingBars extends StatelessWidget {
                           color: Colors.grey
                       ),
                     ),
+
+                     */
+
                   ],
                 ),
 

@@ -4,99 +4,148 @@ import '../models/notification_model.dart';
 
 class NotificationRepository {
   final Dio _dio;
-
   NotificationRepository(this._dio);
 
-  // 1. Bildirimleri Listele (GET /customer/notifications)
-  // NOT: Dökümanda bu endpoint başında /api/v1 yok, direkt /customer ile başlıyor.
-  Future<List<NotificationModel>> getNotifications({int page = 1, String status = 'sent'}) async {
+  // 1) Bildirimleri Listele (GET /customer/notifications)
+  Future<List<NotificationModel>> getNotifications({
+    int page = 1,
+    String status = 'sent',
+    bool? read,
+  }) async {
     try {
-      debugPrint("📡 [REPO-NOTIF] Bildirimler çekiliyor... Sayfa: $page");
-      final response = await _dio.get(
+      debugPrint("📡 [REPO-NOTIF] getNotifications page=$page status=$status read=$read");
+
+      final res = await _dio.get(
         '/customer/notifications',
         queryParameters: {
           'page': page,
           'per_page': 15,
-          'status': status, // pending, sent, failed
+          'status': status,
+          if (read != null) 'read': read,
         },
       );
 
-      final List data = response.data['data'] ?? [];
-      debugPrint("📥 [REPO-NOTIF] Gelen bildirim sayısı: ${data.length}");
+      final code = res.statusCode ?? 0;
+      if (code < 200 || code >= 300) {
+        throw DioException(
+          requestOptions: res.requestOptions,
+          response: res,
+          type: DioExceptionType.badResponse,
+        );
+      }
 
-      return data.map((json) => NotificationModel.fromJson(json)).toList();
-    } catch (e) {
-      debugPrint("❌ [REPO-NOTIF] Liste çekme hatası: $e");
+      final List data = (res.data['data'] as List?) ?? [];
+      debugPrint("📥 [REPO-NOTIF] notifications count=${data.length}");
+
+      return data.map((j) => NotificationModel.fromJson(j)).toList();
+    } on DioException catch (e) {
+      debugPrint("❌ [REPO-NOTIF] getNotifications failed: ${e.response?.statusCode} ${e.response?.data}");
       rethrow;
     }
   }
 
-  // 2. FCM Token Kaydet (POST /customer/notifications/token)
+  // 2) FCM Token Kaydet/Güncelle (POST /customer/notifications/token)
   Future<void> saveDeviceToken({
+    required String deviceType,
     required String fcmToken,
     required String deviceId,
     required String deviceName,
-    required String deviceType,
     required String appVersion,
   }) async {
+    final payload = {
+      "device_type": deviceType,
+      "fcm_token": fcmToken,
+      "device_id": deviceId,
+      "device_name": deviceName,
+      "app_version": appVersion,
+    };
+
     try {
-      debugPrint("📡 [REPO-NOTIF] FCM Token kaydediliyor...");
-      await _dio.post(
-        '/customer/notifications',
-        data: {
-          "device_type": deviceType,
-          "fcm_token": fcmToken,
-          "device_id": deviceId,
-          "device_name": deviceName,
-          "app_version": appVersion,
-        },
+      debugPrint("📡 [REPO-NOTIF] saveDeviceToken -> /customer/notifications/token");
+
+      final res = await _dio.post('/customer/notifications/token', data: payload);
+      final code = res.statusCode ?? 0;
+
+      if (code == 200 || code == 201) {
+        debugPrint("✅ [REPO-NOTIF] saveDeviceToken OK (status=$code)");
+        return;
+      }
+
+      debugPrint("❌ [REPO-NOTIF] saveDeviceToken unexpected status=$code data=${res.data}");
+      throw DioException(
+        requestOptions: res.requestOptions,
+        response: res,
+        type: DioExceptionType.badResponse,
       );
-      debugPrint("✅ [REPO-NOTIF] Token başarıyla backend'e iletildi.");
-    } catch (e) {
-      debugPrint("❌ [REPO-NOTIF] Token kaydetme hatası: $e");
+    } on DioException catch (e) {
+      debugPrint("❌ [REPO-NOTIF] saveDeviceToken failed: ${e.response?.statusCode} ${e.response?.data}");
       rethrow;
     }
   }
 
-  // 3. Okundu İşaretle (POST /api/v1/customer/notifications/{id}/read)
-  // DİKKAT: Dökümanda bu endpoint /api/v1/ ile başlıyor.
-  Future<void> markAsRead(String id) async {
+  // 3) FCM Token Sil (DELETE /customer/notifications/token)
+  Future<void> deleteDeviceToken({required String fcmToken}) async {
     try {
-      debugPrint("📡 [REPO-NOTIF] Bildirim okundu işaretleniyor: $id");
-      await _dio.post('/api/v1/customer/notifications/$id/read');
-    } catch (e) {
-      debugPrint("❌ [REPO-NOTIF] Okundu işaretleme hatası: $e");
-    }
-  }
+      debugPrint("📡 [REPO-NOTIF] deleteDeviceToken -> /customer/notifications/token");
 
-  // 4. Tümünü Okundu İşaretle (POST /api/v1/customer/notifications/mark-all-read)
-  Future<void> markAllAsRead() async {
-    try {
-      debugPrint("📡 [REPO-NOTIF] Tüm bildirimler okundu işaretleniyor...");
-      await _dio.post('/api/v1/customer/notifications/mark-all-read');
-    } catch (e) {
-      debugPrint("❌ [REPO-NOTIF] Tümünü okundu işaretleme hatası: $e");
-    }
-  }
+      final res = await _dio.delete(
+        '/customer/notifications/token',
+        data: {"fcm_token": fcmToken},
+      );
 
-  // 5. Bildirim Sil (DELETE /api/v1/customer/notifications/{id})
-  Future<void> deleteNotification(String id) async {
-    try {
-      debugPrint("📡 [REPO-NOTIF] Bildirim siliniyor: $id");
-      await _dio.delete('/api/v1/customer/notifications/$id');
-    } catch (e) {
-      debugPrint("❌ [REPO-NOTIF] Bildirim silme hatası: $e");
+      final code = res.statusCode ?? 0;
+      if (code == 200) {
+        debugPrint("✅ [REPO-NOTIF] deleteDeviceToken OK");
+        return;
+      }
+
+      debugPrint("❌ [REPO-NOTIF] deleteDeviceToken unexpected status=$code data=${res.data}");
+      throw DioException(
+        requestOptions: res.requestOptions,
+        response: res,
+        type: DioExceptionType.badResponse,
+      );
+    } on DioException catch (e) {
+      debugPrint("❌ [REPO-NOTIF] deleteDeviceToken failed: ${e.response?.statusCode} ${e.response?.data}");
       rethrow;
     }
   }
 
-  // 6. Okunmamış Bildirim Sayısı (GET /api/v1/customer/notifications/unread-count)
+  // 4) Okunmamış Bildirim Sayısı (GET /api/v1/customer/notifications/unread-count)
   Future<int> getUnreadCount() async {
     try {
-      final response = await _dio.get('/api/v1/customer/notifications/unread-count');
-      return response.data['data']?['unread_count'] ?? 0;
-    } catch (e) {
+      final res = await _dio.get('/customer/notifications/unread-count');
+      return res.data['data']?['unread_count'] ?? 0;
+    } catch (_) {
       return 0;
+    }
+  }
+
+  // 5) Okundu İşaretle
+  Future<void> markAsRead(String id) async {
+    try {
+      await _dio.post('/customer/notifications/$id/read');
+    } catch (e) {
+      debugPrint("❌ [REPO-NOTIF] markAsRead failed: $e");
+    }
+  }
+
+  // 6) Tümünü Okundu İşaretle
+  Future<void> markAllAsRead() async {
+    try {
+      await _dio.post('/customer/notifications/mark-all-read');
+    } catch (e) {
+      debugPrint("❌ [REPO-NOTIF] markAllAsRead failed: $e");
+    }
+  }
+
+  // 7) Bildirim Sil
+  Future<void> deleteNotification(String id) async {
+    try {
+      await _dio.delete('/customer/notifications/$id');
+    } catch (e) {
+      debugPrint("❌ [REPO-NOTIF] deleteNotification failed: $e");
+      rethrow;
     }
   }
 }

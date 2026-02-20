@@ -118,7 +118,7 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppColors.primaryDarkGreen.withOpacity(0.08) // values.alpha yerine opacity daha güvenli
+                          ? AppColors.primaryDarkGreen.withValues(alpha: 0.08) // values.alpha yerine opacity daha güvenli
                           : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
@@ -161,7 +161,7 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 )

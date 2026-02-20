@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/phone_input_formatter.dart';
+import '../../../../core/widgets/daily_phone_field.dart';
 import '../../data/models/user_model.dart';
 import '../../domain/providers/user_notifier.dart';
 import '../../domain/states/user_state.dart';
@@ -27,6 +29,8 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   final _nameController = TextEditingController();
   final _surnameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+
   bool _initialized = false;
   DateTime? _selectedBirthDate;
 
@@ -35,7 +39,18 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     _nameController.dispose();
     _surnameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     super.dispose();
+  }
+
+  // 👈 BU FONKSİYON EKSİKTİ, LOGIN'DEKİYLE AYNI OLMALI
+  String _normalizePhone(String input) {
+    String raw = input.replaceAll(RegExp(r'[^0-9]'), '');
+    if (raw.startsWith('90')) {
+      raw = raw.substring(2);
+    }
+    if (raw.length == 10) return "0$raw";
+    return raw;
   }
 
   void _populate(UserState state) {
@@ -43,9 +58,28 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     _nameController.text = u.firstName ?? "";
     _surnameController.text = u.lastName ?? "";
     _emailController.text = u.email ?? "";
-    _selectedBirthDate = u.birthDate != null
-        ? DateTime.tryParse(u.birthDate!)
-        : null;
+
+    // 1. Önce sadece rakamları ayıklayalım (Kirden arındıralım)
+    String raw = u.phone.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // 2. Başında 90 veya 0 varsa temizleyelim (Tertemiz 5xx kalsın)
+    if (raw.startsWith('90')) raw = raw.substring(2);
+    if (raw.startsWith('0')) raw = raw.substring(1);
+
+    // 3. TurkishPhoneFormatter'ı manuel tetikleyelim
+    final formatter = TurkishPhoneFormatter();
+
+    // Formatter'a sanki kullanıcı 5xx... yazmış gibi boş bir başlangıçtan
+    // şu anki rakamlara geçiş yapmasını söylüyoruz.
+    final formattedValue = formatter.formatEditUpdate(
+      TextEditingValue.empty,
+      TextEditingValue(text: '+90 $raw'),
+    );
+
+    // 4. İŞTE BURASI KRİTİK: text yerine 'value' set ediyoruz ki imleç ve maske otursun
+    _phoneController.value = formattedValue;
+
+    _selectedBirthDate = u.birthDate != null ? DateTime.tryParse(u.birthDate!) : null;
   }
 
   // --- SAVE METODU ---
@@ -60,7 +94,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
 
     final userToSave = UserModel(
       id: state.user?.id ?? "",
-      phone: state.user?.phone ?? "",
+      phone: _normalizePhone(_phoneController.text),
       firstName: _nameController.text.trim(),
       lastName: _surnameController.text.trim(),
       email: _emailController.text.trim(),
@@ -85,13 +119,12 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     }
   }
 
-  // --- E-POSTA KUTUSU (Hata buradaydı, düzeltildi) ---
   Widget _emailActionTile(UserModel user) {
     // 1. ADIM: Sadece boolean değere bak, null kontrolü yapma!
     final bool isVerified = user.isEmailVerified;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -222,6 +255,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
               ),
               Expanded(
                 child: CupertinoDatePicker(
+                  use24hFormat: true,
                   mode: CupertinoDatePickerMode.date,
                   initialDateTime: _selectedBirthDate ?? DateTime(2000),
                   maximumDate: DateTime.now(),
@@ -268,6 +302,28 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
+
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          leading: widget.isFromRegister
+              ? const SizedBox.shrink()
+              : IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.black,
+            ),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text(
+            "Profil Detayları",
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
+          ),
+          centerTitle: true,
+        ),
+
+        /*
         appBar: AppBar(
           title: const Text(
             "Profil Detayları",
@@ -286,6 +342,8 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                   onPressed: () => context.pop(),
                 ),
         ),
+
+         */
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -304,7 +362,10 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                     : _emailEditableField(),
                 const SizedBox(height: 20),
                 _label("Telefon"),
-                _readonlyPhone(user?.phone ?? ""),
+                DailyPhoneField(
+                  controller: _phoneController,
+                  enabled: false, // Profilde telefon genelde kilitli olur
+                ),
                 const SizedBox(height: 20),
                 _label("Doğum Tarihi"),
                 _birthDateTile(),
@@ -341,7 +402,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       prefixIcon: Icon(icon, color: AppColors.primaryDarkGreen),
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(vertical: 8),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
@@ -364,23 +425,6 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
       ),
-    ),
-  );
-
-  Widget _readonlyPhone(String value) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-    decoration: BoxDecoration(
-      color: Colors.grey[200],
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.phone_android, color: Colors.grey),
-        const SizedBox(width: 12),
-        Text(value, style: const TextStyle(color: Colors.grey, fontSize: 16)),
-        const Spacer(),
-        const Icon(Icons.lock_outline, color: Colors.grey, size: 18),
-      ],
     ),
   );
 

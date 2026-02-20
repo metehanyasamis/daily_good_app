@@ -8,11 +8,11 @@ import '../../../../core/platform/dialogs.dart';
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/phone_input_formatter.dart';
 import '../../../../core/widgets/info_row_widget.dart';
 
 import '../../../auth/domain/providers/auth_notifier.dart';
 import '../../domain/providers/user_notifier.dart';
-import '../../domain/states/user_state.dart';
 import '../widgets/email_otp_dialog.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
@@ -33,6 +33,27 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     } catch (_) {
       return "-";
     }
+  }
+
+  String _getFormattedPhone(String? phone) {
+    if (phone == null || phone.isEmpty) return "-";
+
+    // Sadece rakamları al (Gelen veride +90 veya 0 varsa temizle)
+    String cleanDigits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanDigits.startsWith('90')) cleanDigits = cleanDigits.substring(2);
+    if (cleanDigits.startsWith('0')) cleanDigits = cleanDigits.substring(1);
+
+    // Senin meşhur formatter'ını çağırıyoruz
+    final formatter = TurkishPhoneFormatter();
+
+    // Formatter'a sanki kullanıcı +90 5xx yazmış gibi boş bir başlangıçtan
+    // yeni değere geçiş simülasyonu yaptırıyoruz
+    final formattedResult = formatter.formatEditUpdate(
+      TextEditingValue.empty,
+      TextEditingValue(text: "+90 $cleanDigits"),
+    );
+
+    return formattedResult.text;
   }
 
 
@@ -171,26 +192,14 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     return Scaffold(
 
       appBar: AppBar(
-        backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
-        foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
-        systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebekeleri beyaz yapar
-        iconTheme: AppTheme.greenAppBarTheme.iconTheme,
-        titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
-        centerTitle: AppTheme.greenAppBarTheme.centerTitle,
-
-        title: const Text('Hesabım'), // Stil artık yukarıdaki titleTextStyle'dan geliyor
-
-        // Account Screen'e özel olan bottom kısmını olduğu gibi koruyoruz
-        bottom: userState.status == UserStatus.loading
-            ? const PreferredSize(
-          preferredSize: Size.fromHeight(2),
-          child: LinearProgressIndicator(
-            minHeight: 2,
-            backgroundColor: Colors.transparent, // Arka plan şeffaf kalsın
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white), // Bar beyaz olsun
-          ),
-        )
-            : null,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: const Text(
+          "Hesabım",
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
+        ),
+        centerTitle: true,
       ),
 
       body: RefreshIndicator(
@@ -200,27 +209,36 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
           child: Column(
             children: [
+              //const SizedBox(height: 5),
+
+              Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 25,
+                    backgroundColor: AppColors.textProductCardBrandName,
+                    child: Icon(Icons.person, size: 28, color: AppColors.primaryDarkGreen),
+
+                  ),
+
+                  const SizedBox(width: 8),
+                  Text(
+                    "${user.firstName ?? ''} ${user.lastName ?? ''}".trim().isEmpty
+                        ? "Profil Bilgileri Eksik"
+                        : "${user.firstName ?? ''} ${user.lastName ?? ''}",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+
+
+
+
+
               const SizedBox(height: 10),
-
-              const CircleAvatar(
-                radius: 34,
-                backgroundColor: Color(0xFFE6F4EA),
-                child: Icon(Icons.person, size: 40, color: AppColors.primaryDarkGreen),
-              ),
-
-              const SizedBox(height: 12),
-              Text(
-                "${user.firstName ?? ''} ${user.lastName ?? ''}".trim().isEmpty
-                    ? "Profil Bilgileri Eksik"
-                    : "${user.firstName ?? ''} ${user.lastName ?? ''}",
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-
-              const SizedBox(height: 20),
 
               // -------------------------------------------------- PROFILE CARD
               _buildCard(
-                title: "Profil",
+                title: "Profil Bilgileri",
                 onEdit: () {
                   Navigator.of(context, rootNavigator: true).push(
                     MaterialPageRoute(
@@ -229,14 +247,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                   );
                 },
                 children: [
-                  InfoRowWidget(
-                    icon: Icons.person,
-                    label: "Ad Soyad",
-                    value: "${user.firstName ?? ''} ${user.lastName ?? ''}".trim().isEmpty
-                        ? "-"
-                        : "${user.firstName ?? ''} ${user.lastName ?? ''}",
-                  ),
-                  const SizedBox(height: 8),
                   InfoRowWidget(
                     icon: Icons.mail_outline,
                     label: "E-posta",
@@ -249,15 +259,15 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     }
                         : null,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 2),
                   InfoRowWidget(
                     icon: Icons.phone,
                     label: "Telefon",
-                    value: user.phone,
+                    value: _getFormattedPhone(user.phone), // Ortak formatter'dan geçip geldi
                     isVerified: user.isPhoneVerified,
                     onVerify: null,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 2),
                   InfoRowWidget(
                     icon: Icons.cake,
                     label: "Doğum Tarihi",
@@ -391,7 +401,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             ),
           ],
         ),
-        const Divider(height: 24),
+        const SizedBox(height: 10),
+        Divider(thickness: 1, color: Colors.grey.shade300),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.history, color: AppColors.primaryDarkGreen),
