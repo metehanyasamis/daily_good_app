@@ -47,32 +47,35 @@ class _EmptyProductsState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 40), // Kenarlardan biraz daha pay verdik
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            const Icon(
+            const SizedBox(height: 170),
+
+            // İkon boyutu küçültüldü ve opacity eklendi (daha soft bir görünüm için)
+            Icon(
               Icons.favorite_outline_rounded,
-              size: 72,
-              color: AppColors.primaryDarkGreen,
+              size: 48,
+              color: AppColors.primaryDarkGreen.withValues(alpha: 0.5),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             Text(
               'Henüz Favori Ürünün Yok 💚',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              style: Theme.of(context).textTheme.titleMedium?.copyWith( // titleLarge -> titleMedium
                 fontWeight: FontWeight.bold,
                 color: AppColors.primaryDarkGreen,
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 12),
             Text(
               'Favorilediğin tüm ürünleri burada görebilirsin.\n'
-                  'Ana sayfadan beğendiğin sürpriz paketleri kalple işaretle 💚',
+                  'Ana sayfadan beğendiğin paketleri kalple işaretle.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                height: 1.5,
-                color: Colors.black87,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith( // bodyLarge -> bodyMedium
+                height: 1.4,
+                color: Colors.black54, // Daha soft bir siyah/gri
               ),
             ),
           ],

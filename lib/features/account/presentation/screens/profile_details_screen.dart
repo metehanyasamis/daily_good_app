@@ -310,10 +310,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           leading: widget.isFromRegister
               ? const SizedBox.shrink()
               : IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              color: Colors.black,
-            ),
+            icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.textSecondary),
             onPressed: () => context.pop(),
           ),
           title: const Text(
@@ -323,27 +320,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           centerTitle: true,
         ),
 
-        /*
-        appBar: AppBar(
-          title: const Text(
-            "Profil Detayları",
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: true,
-          leading: widget.isFromRegister
-              ? const SizedBox.shrink()
-              : IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.black,
-                  ),
-                  onPressed: () => context.pop(),
-                ),
-        ),
 
-         */
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

@@ -36,9 +36,10 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
       decoration: const BoxDecoration(
         color: Colors.white),
 
-      padding: EdgeInsets.only(top: topPadding + 8, left: 16, right: 16, bottom: 8),
+      padding: EdgeInsets.only(top: topPadding + 8, left: 16, right: 8, bottom: 8),
+
       child: SizedBox(
-        height: 48,
+        height: 45,
         child: Stack(
           children: [
             /// 🟢 SOL — LOGO (Kendi yerinde)
@@ -66,7 +67,7 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                       const Icon(Icons.location_on, size: 16, color: AppColors.primaryDarkGreen),
                       const SizedBox(width: 4),
                       ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.35),
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.32),
                         child: Text(
                           shortAddress,
                           maxLines: 1,
@@ -88,15 +89,13 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 🔔 BİLDİRİM (Sepete yaklaştırmak için sağdan padding'i azalttık)
                   _buildIconWithBadge(
                     icon: Icons.notifications_none_rounded,
                     count: notificationCount,
                     onTap: onNotificationsTap,
-                    rightPadding: 0, // Sepete yapışması için 0
+                    rightPadding: 0,
                   ),
 
-                  // 🛒 SEPET
                   _buildIconWithBadge(
                     icon: Icons.shopping_cart_outlined,
                     count: cartCount,
@@ -109,6 +108,7 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
           ],
         ),
       ),
+
     );
   }
 
@@ -127,8 +127,9 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
           IconButton(
             onPressed: onTap,
             icon: Icon(icon, color: AppColors.primaryDarkGreen, size: 24),
-            padding: const EdgeInsets.symmetric(horizontal: 4), // İkonlar arası mesafe burası
+            padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            visualDensity: VisualDensity.comfortable
           ),
           if (count > 0)
             Positioned(

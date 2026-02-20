@@ -286,8 +286,9 @@ class HomeContent extends ConsumerWidget {
             _buildSectionHeader(context, ref, "Son Şans", ExploreFilterOption.sonSans),
             HomeProductList(products: sonSans),
           ],
+
           if (yeni.isNotEmpty) ...[
-            _buildSectionHeader(context, ref, "Yeni", ExploreFilterOption.yeni),
+            _buildSectionHeader(context, ref, "Yeni Mekanlar", ExploreFilterOption.yeni),
             HomeProductList(products: yeni),
           ],
           if (bugun.isNotEmpty) ...[

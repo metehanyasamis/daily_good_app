@@ -444,7 +444,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.home_outlined, color: AppColors.textPrimary),
+              icon: const Icon(Icons.home_outlined, color: AppColors.primaryDarkGreen),
               onPressed: () => context.go('/home'),
             ),
           ],

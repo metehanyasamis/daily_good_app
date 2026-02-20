@@ -48,23 +48,26 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        // 🚀 TÜM STİLİ TEMADAN PAKET OLARAK ÇEKİYORUZ
-        backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
-        foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
-        systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebeke/Pil ikonlarını beyaz yapar
-        iconTheme: AppTheme.greenAppBarTheme.iconTheme, // Geri butonunu beyaz yapar
-        titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
-        centerTitle: AppTheme.greenAppBarTheme.centerTitle,
-
-        title: const Text("Sipariş Takibi"),
-
+        elevation: 0,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white, // Kaydırmada renk değişimini önler
+        centerTitle: true,
+        title: const Text(
+          "Sipariş Takibi",
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.home_rounded), // Renk artık iconTheme'den otomatik beyaz gelir
+            icon: const Icon(Icons.home_rounded, color: AppColors.primaryDarkGreen),
             onPressed: () => context.go('/home'),
           ),
         ],
       ),
+
       body: activeOrdersAsync.when(
         loading: () => Center(child: PlatformWidgets.loader()),
         error: (e, _) => Center(child: Text("Hata: $e")),

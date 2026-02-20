@@ -181,7 +181,7 @@ class ProductCard extends StatelessWidget {
             // ------------------------------------------------------------
             // CONTENT: name + pickup + price
             // ------------------------------------------------------------
-            Padding(
+            /*Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,8 +255,87 @@ class ProductCard extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
+            ),*/
+// ------------------------------------------------------------
+// CONTENT: name + pickup + price (YENİLENMİŞ YAPI)
+// ------------------------------------------------------------
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Üst Satır: Ürün İsmi ve Fiyatlar Yan Yana
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Ürün İsmi
+                      Expanded(
+                        child: Text(
+                          product.name,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Fiyat Grubu (Yan Yana)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          if (oldPrice > newPrice) // İndirim varsa eski fiyatı göster
+                            Text(
+                              '${oldPrice.toStringAsFixed(2)} ₺',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${newPrice.toStringAsFixed(2)} ₺',
+                            style: const TextStyle(
+                              fontSize: 16, // Yan yana olduğu için 18'den 16'ya çektik, sığması kolaylaşsın
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryDarkGreen,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
 
+                  const SizedBox(height: 6), // Biraz ferahlık
+
+                  // Alt Satır: Teslimat Bilgisi (Artık tüm genişliği kullanabilir)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.access_time_rounded,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          product.deliveryTimeLabel,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 2),
 
             // ------------------------------------------------------------

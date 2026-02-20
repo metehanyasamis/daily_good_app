@@ -189,38 +189,40 @@ class _EmptyShopsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.storefront_outlined, // Mağaza ikonunu daha modern olanla değiştirdik
-              size: 72,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: Column(
+        // Ürünler tabı ile aynı yükseklikte durması için start ve 150px boşluk
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          const SizedBox(height: 170),
+
+          // İkon boyutu küçültüldü ve daha soft bir görünüm için alpha eklendi
+          Icon(
+            Icons.storefront_outlined,
+            size: 48, // 72 -> 48 yapıldı
+            color: AppColors.primaryDarkGreen.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Favori İşletmen Bulunmuyor 🏪',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith( // titleLarge -> titleMedium
+              fontWeight: FontWeight.bold,
               color: AppColors.primaryDarkGreen,
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Favori İşletmen Bulunmuyor 🏪',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryDarkGreen,
-              ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Takip ettiğin işletmeleri burada görebilirsin.\n'
+                'Beğendiğin işletmeleri favorilerine ekleyerek yeni paketlerden haberdar ol!',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith( // bodyLarge -> bodyMedium
+              height: 1.4,
+              color: Colors.black54,
             ),
-            const SizedBox(height: 16), // Metinler arası biraz daha daraltıldı
-            Text(
-              'Takip ettiğin işletmeleri burada görebilirsin.\n'
-                  'Beğendiğin işletmeleri favorilerine ekleyerek yeni sürpriz paketlerden ilk sen haberdar ol! 💚',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                height: 1.5,
-                color: Colors.black87,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
