@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/dio_provider.dart';
 
 /// PayTR mobil ödeme: POST /customer/mobile/checkout
-/// Tam URL: https://dailygood.dijicrea.net/api/v1/customer/mobile/checkout
 final checkoutRepositoryProvider = Provider<CheckoutRepository>((ref) {
   return CheckoutRepository(ref.watch(dioProvider));
 });
