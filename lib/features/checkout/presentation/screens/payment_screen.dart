@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../cart/domain/providers/cart_provider.dart';
 import '../../../cart/domain/models/cart_item.dart'; // varsa, yoksa doğru yolu kullan
@@ -64,18 +65,28 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   // ✅ DÜZELTME: Eğer ödeme başarılıysa, sepet boş olsa bile bu bloğa girme
   if (cartItems.isEmpty && !_isPaymentSuccessful) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        // 🚀 MERKEZİ TEMADAN TÜM AYARLARI ÇEK
-        backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
-        foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
-        systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebeke ve saati beyaz yapar
-        iconTheme: AppTheme.greenAppBarTheme.iconTheme, // Geri butonu rengini beyaz yapar
-        titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle, // Başlık fontunu standartlaştırır
-        centerTitle: AppTheme.greenAppBarTheme.centerTitle,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white, // Kaydırınca renk değişmemesi için
+        centerTitle: true,
 
-        title: const Text('Ödeme'),
+        title: const Text(
+          'Ödeme',
+          style: TextStyle(
+            color: AppColors.textPrimary, // AppColors içindeki ana metin rengin
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+          ),
+        ),
       ),
-      body: const Center(child: Text('Sepetiniz boş.')),
+      body: const Center(
+        child: Text(
+          'Sepetiniz boş.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+      ),
     );
   }
 
@@ -94,18 +105,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
     return DismissKeyboard(
       child: Scaffold(
-        appBar: AppBar(
-          // 🚀 TÜM AYARLARI MERKEZİ TEMADAN PAKET OLARAK ÇEK
-          backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
-          foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
-          systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebeke, pil ve saati bembeyaz yapar
-          iconTheme: AppTheme.greenAppBarTheme.iconTheme, // Geri butonu rengini beyaz yapar
-          titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle, // Font boyutu ve kalınlığını standartlaştırır
-          centerTitle: AppTheme.greenAppBarTheme.centerTitle,
-
-          title: const Text('Ödeme'),
+        backgroundColor: AppColors.background,
+        appBar: const CustomAppBar(
+          title: 'Ödeme',
+          showBackButton: false,
         ),
-        backgroundColor: Colors.grey.shade100,
       
         body: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),

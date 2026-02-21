@@ -178,87 +178,10 @@ class ProductCard extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            // ------------------------------------------------------------
-            // CONTENT: name + pickup + price
-            // ------------------------------------------------------------
-            /*Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // LEFT
-                  Expanded(
-                    child:
 
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4), // Boşluğu biraz artırdık
-                        Row(
-                          children: [
-                            const Icon(
-                                Icons.access_time_rounded,
-                                size: 14,
-                                color: Colors.grey
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                product.deliveryTimeLabel,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[700],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    )
-                  ),
-                  const SizedBox(width: 10),
-
-                  // RIGHT (prices)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${oldPrice.toStringAsFixed(2)} ₺',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${newPrice.toStringAsFixed(2)} ₺',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryDarkGreen,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),*/
-// ------------------------------------------------------------
-// CONTENT: name + pickup + price (YENİLENMİŞ YAPI)
-// ------------------------------------------------------------
+            // ------------------------------------------------------------
+            // CONTENT: name + pickup + price (YENİLENMİŞ YAPI)
+            // ------------------------------------------------------------
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Column(
@@ -275,6 +198,7 @@ class ProductCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: Colors.black87,
+                            height: 1.1
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -326,6 +250,7 @@ class ProductCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[700],
+                            height: 1.1
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -336,13 +261,13 @@ class ProductCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 0),
 
             // ------------------------------------------------------------
             // BOTTOM LINE: distance + rating
             // ------------------------------------------------------------
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8), // Alt boşluğu biraz artırdık
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 2),
               child: Row(
                 children: [
                   // MESAFE
@@ -372,6 +297,7 @@ class ProductCard extends StatelessWidget {
                       color: Colors.black87,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
+                      height: 1.1
                     ),
                   ),
                 ],

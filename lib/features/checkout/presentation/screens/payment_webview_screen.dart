@@ -5,6 +5,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 
 /// PayTR ödeme sayfasını WebView'da açar. Backend success/fail URL'lerine
 /// gidildiğinde yakalayıp native ekrana yönlendirir.
@@ -91,18 +92,9 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
-        foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
-        systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle,
-        iconTheme: AppTheme.greenAppBarTheme.iconTheme,
-        titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
-        centerTitle: AppTheme.greenAppBarTheme.centerTitle,
-        title: const Text('Ödeme'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => context.pop(),
-        ),
+      backgroundColor: AppColors.background,
+      appBar: const CustomAppBar(
+        title: 'Ödeme',
       ),
       body: Padding(
         padding: const EdgeInsets.only(left: 16, top:16, right: 16, bottom: 32),

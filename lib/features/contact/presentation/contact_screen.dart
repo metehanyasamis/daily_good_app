@@ -392,6 +392,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/platform/toasts.dart';
+import '../../../core/widgets/custom_app_bar.dart';
 import '../../orders/data/models/order_list_item.dart';
 import '../../orders/domain/providers/order_provider.dart';
 import '../data/contact_message_model.dart';
@@ -430,25 +431,14 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     return DismissKeyboard(
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.textSecondary),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            "Bize Ulaşın",
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
-          ),
+        appBar: CustomAppBar(
+          title: 'Bize Ulaşın',
           actions: [
             IconButton(
               icon: const Icon(Icons.home_outlined, color: AppColors.primaryDarkGreen),
               onPressed: () => context.go('/home'),
             ),
           ],
-          centerTitle: true,
         ),
         body: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),

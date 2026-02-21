@@ -143,6 +143,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/platform/toasts.dart';
 import '../../../../core/platform/dialogs.dart';
@@ -208,17 +209,9 @@ class _LocationInfoScreenState extends ConsumerState<LocationInfoScreen> {
     return Scaffold(
       // ✅ Standart Arka Plan
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        title: const Text(
-          "Konum Seçimi",
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        centerTitle: true,
-        // Eğer geri dönülmesini istemiyorsan leading'i boş bırakabilirsin
-        automaticallyImplyLeading: false,
+      appBar: const CustomAppBar(
+        title: 'Konum Seçimi',
+        showBackButton: false,
       ),
       body: Center( // ✅ Kartı ekranda ortalar
         child: SingleChildScrollView(

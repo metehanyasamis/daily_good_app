@@ -123,10 +123,6 @@ class _BootstrapState extends ConsumerState<Bootstrap> {
     try {
       // iOS’ta permission / APNS token süreci
       if (Platform.isIOS) {
-        await FirebaseMessaging.instance.requestPermission(
-          alert: true, badge: true, sound: true,
-        );
-
         for (int i = 0; i < 3; i++) {
           final apns = await FirebaseMessaging.instance.getAPNSToken();
           if (apns != null) break;
@@ -207,16 +203,19 @@ class _BootstrapState extends ConsumerState<Bootstrap> {
 
       // 🔥 GLOBAL KLAVYE KAPATMA DOKUNUŞU BURADA:
       builder: (context, child) {
-        return GestureDetector(
-          onTap: () {
-            // Mevcut odağı kontrol et ve klavyeyi kapat
-            FocusScopeNode currentFocus = FocusScope.of(context);
-            if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
-              FocusManager.instance.primaryFocus?.unfocus();
-            }
-          },
-          // child! router'dan gelen o anki sayfadır
-          child: child!,
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: GestureDetector(
+            onTap: () {
+              // Mevcut odağı kontrol et ve klavyeyi kapat
+              FocusScopeNode currentFocus = FocusScope.of(context);
+              if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+                FocusManager.instance.primaryFocus?.unfocus();
+              }
+            },
+            // child! router'dan gelen o anki sayfadır
+            child: child!,
+          ),
         );
       },
     );

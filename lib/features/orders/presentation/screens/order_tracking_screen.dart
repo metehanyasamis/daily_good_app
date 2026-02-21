@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/time_formatter.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 import '../../../settings/domain/providers/legal_settings_provider.dart';
@@ -47,19 +48,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white, // Kaydırmada renk değişimini önler
-        centerTitle: true,
-        title: const Text(
-          "Sipariş Takibi",
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
-          ),
-        ),
+      appBar: CustomAppBar(
+        title: 'Sipariş Takibi',
+        showBackButton: false, // Kodunda leading olmadığı için kapattık
         actions: [
           IconButton(
             icon: const Icon(Icons.home_rounded, color: AppColors.primaryDarkGreen),

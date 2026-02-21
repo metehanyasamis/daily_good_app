@@ -8,6 +8,7 @@ import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/phone_input_formatter.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/daily_phone_field.dart';
 import '../../data/models/user_model.dart';
 import '../../domain/providers/user_notifier.dart';
@@ -303,23 +304,11 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
 
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          leading: widget.isFromRegister
-              ? const SizedBox.shrink()
-              : IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.textSecondary),
-            onPressed: () => context.pop(),
-          ),
-          title: const Text(
-            "Profil Detayları",
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
-          ),
-          centerTitle: true,
+        appBar: CustomAppBar(
+          title: 'Profil Detayları',
+          // Eğer kayıt ekranından geliyorsa geri butonunu gizle, gelmiyorsa göster
+          showBackButton: !widget.isFromRegister,
         ),
-
 
         body: SafeArea(
           child: SingleChildScrollView(

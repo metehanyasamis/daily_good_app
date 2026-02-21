@@ -24,6 +24,13 @@ class StoreDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(storeDetailProvider(storeId));
 
+
+    final mq = MediaQuery.of(context);
+    debugPrint("📱 width=${mq.size.width} textScale(14)=${mq.textScaler.scale(14)}");
+
+    final t = Theme.of(context);
+    debugPrint("platform=${t.platform} font=${t.textTheme.bodyMedium?.fontFamily}");
+
     if (state.loading) {
       return Scaffold( // 🚀 'const' kaldırıldı
         body: Center(

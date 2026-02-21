@@ -9,6 +9,7 @@ import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/phone_input_formatter.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/info_row_widget.dart';
 
 import '../../../auth/domain/providers/auth_notifier.dart';
@@ -188,18 +189,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       debugPrint("⚠️ DİKKAT: OTP ile girildi ama backend 'phone_verified_at' bilgisini boş gönderiyor.");
     }
 
-    // 3) ANA EKRAN (User artık kesinlikle null değil)
     return Scaffold(
-
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        title: const Text(
-          "Hesabım",
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        centerTitle: true,
+      appBar: const CustomAppBar(
+        title: 'Hesabım',
+        showBackButton: false,
       ),
 
       body: RefreshIndicator(

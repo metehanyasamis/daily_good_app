@@ -4,10 +4,12 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../domain/providers/order_provider.dart';
 import '../../data/models/order_list_item.dart';
 import '../widgets/montly_order_group.dart';
 
+/*
 class OrderHistoryScreen extends ConsumerWidget {
   const OrderHistoryScreen({super.key});
 
@@ -51,25 +53,6 @@ class OrderHistoryScreen extends ConsumerWidget {
             children: [
               const SizedBox(height: 10),
 
-              //Geçmiş Siparişlerdeki total kazanç ve karbon gösterisi
-              /*
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _metric(
-                      "Toplam Tasarruf",
-                      "${summary.totalSavings.toStringAsFixed(0)} ₺",
-                    ),
-                    _metric(
-                      "Karbon Kazancı",
-                      "${summary.carbonFootprintSaved.toStringAsFixed(1)} kg",
-                    ),
-                  ],
-                ),
-              ),
-              */
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.symmetric(
@@ -118,7 +101,67 @@ class OrderHistoryScreen extends ConsumerWidget {
     );
   }
 }
+*/
 
+class OrderHistoryScreen extends ConsumerWidget {
+  const OrderHistoryScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dateFormatter = DateFormat('dd MMMM yyyy', 'tr_TR');
+    final summaryAsync = ref.watch(orderHistoryProvider);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      // 🚀 Yeni CustomAppBar kullanımı - Tek satırda işi bitirdik!
+      appBar: const CustomAppBar(title: 'Geçmiş Siparişlerim'),
+
+      body: summaryAsync.when(
+        loading: () => Center(child: PlatformWidgets.loader()),
+        error: (err, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'Siparişler yüklenirken bir hata oluştu:\n$err',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.error),
+            ),
+          ),
+        ),
+        data: (summary) {
+          final orders = summary.orders;
+
+          if (orders.isEmpty) {
+            return const Center(
+              child: Text(
+                'Henüz geçmiş siparişiniz bulunmamaktadır.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+              ),
+            );
+          }
+
+          // 🗓️ Aylara göre gruplama mantığı
+          final Map<String, List<OrderListItem>> grouped = {};
+          for (final order in orders) {
+            final key = DateFormat('MMMM yyyy', 'tr_TR').format(order.createdAt);
+            grouped.putIfAbsent(key, () => []).add(order);
+          }
+
+          return ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            children: grouped.entries.map((entry) {
+              return MonthlyOrderGroup(
+                monthTitle: entry.key[0].toUpperCase() + entry.key.substring(1),
+                orders: entry.value,
+                dateFormatter: dateFormatter,
+              );
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+}
 // -----------------------------------------------------------------------------
 // 🚀 DİKKAT: BU FONKSİYONLAR CLASS DIŞINDA (TOP-LEVEL) OLMALI
 // -----------------------------------------------------------------------------

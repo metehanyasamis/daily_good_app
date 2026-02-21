@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart'; // ✅ BU IMPORT ŞART
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../settings/domain/providers/legal_settings_provider.dart';
 
 
@@ -15,19 +16,8 @@ class LegalDocumentsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.textSecondary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          "Yasal Bilgiler",
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        centerTitle: true,
+      appBar: const CustomAppBar(
+        title: 'Yasal Bilgiler',
       ),
       body: settingsAsync.when(
         data: (settings) {

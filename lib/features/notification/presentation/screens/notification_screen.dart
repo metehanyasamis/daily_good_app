@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../domain/providers/notification_provider.dart';
 
 class NotificationScreen extends ConsumerWidget {
@@ -22,22 +23,8 @@ class NotificationScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
 
       // 🟢 APPBAR (Sepet ile birebir stil)
-      appBar: AppBar(
-        // 🚀 MERKEZİ TEMADAN TÜM AYARLARI ÇEK
-        backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
-        foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
-        systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebekeleri beyaz yapar
-        iconTheme: AppTheme.greenAppBarTheme.iconTheme, // İkonları otomatik beyaz yapar
-        titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
-        centerTitle: AppTheme.greenAppBarTheme.centerTitle,
-
-        title: const Text('Bildirimler'),
-
-        // Geri butonu için artık 'color: Colors.white' yazmana gerek yok, temadan alır.
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: const CustomAppBar(
+        title: 'Bildirimler',
       ),
 
       body: notificationsAsync.when(

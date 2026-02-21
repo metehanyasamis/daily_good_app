@@ -12,6 +12,7 @@ import '../../../../core/platform/toasts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/image_utils.dart';
 import '../../../../core/widgets/contract_html_content.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/know_more_full.dart';
 
@@ -110,27 +111,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       onTap: () => _focusNode.unfocus(),
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          // 🚀 TÜM STİL AYARLARINI MERKEZİ PAKETTEN ALIYORUZ
-          backgroundColor: AppTheme.greenAppBarTheme.backgroundColor,
-          foregroundColor: AppTheme.greenAppBarTheme.foregroundColor,
-          systemOverlayStyle: AppTheme.greenAppBarTheme.systemOverlayStyle, // Şebeke/Saat ikonlarını bembeyaz yapar
-          iconTheme: AppTheme.greenAppBarTheme.iconTheme, // İkon renklerini beyaz yapar
-          titleTextStyle: AppTheme.greenAppBarTheme.titleTextStyle,
-          centerTitle: AppTheme.greenAppBarTheme.centerTitle,
-
-          title: const Text('Sepetim'),
-
-          // Özel Leading (Geri Butonu) - İkon rengini artık manuel vermene gerek yok, iconTheme'den alır
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            onPressed: () => context.pop(),
-          ),
-
-          // Özel Actions (Silme Butonu)
+        appBar: CustomAppBar(
+          title: 'Sepetim',
+          // showBackButton default true olduğu için otomatik gelir
           actions: [
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.white),
+              // İstediğin gibi yeşil renkte çöp kutusu ikonu
+              icon: const Icon(Icons.delete_outline, color: AppColors.primaryDarkGreen),
               onPressed: items.isEmpty
                   ? null
                   : () async {

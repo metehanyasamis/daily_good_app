@@ -1,9 +1,13 @@
+import 'dart:io';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/data/prefs_service.dart';
 import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/custom_button.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -49,15 +53,34 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       'icon': Image.asset('assets/icons/dailyGoodBox_icon.png')
     },
   ];
-/*
+
+  // 🚀 İzin isteme mantığını merkezi bir fonksiyona alalım
+  Future<void> _requestPermissionAndNavigate() async {
+    if (Platform.isIOS) {
+      // İzin penceresini tetikle
+      await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    }
+
+    // Prefs ve State güncellemeleri
+    await PrefsService.setHasSeenOnboarding(true);
+    ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
+    await ref.read(appStateProvider.notifier).setIsNewUser(false);
+
+    if (!mounted) return;
+    context.go('/location-info');
+  }
+
+  /*
   void _nextPage() async {
     if (_currentPage == _pages.length - 1) {
       await PrefsService.setHasSeenOnboarding(true);
       ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
       await ref.read(appStateProvider.notifier).setIsNewUser(false);
-
-      if (!mounted) return; // ✅ LINT FIX
-
+      if (!mounted) return;
       context.go('/location-info');
     } else {
       _pageController.nextPage(
@@ -66,107 +89,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       );
     }
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        title: const Text(
-          "Hoş Geldiniz", // Veya boş bırakabilirsin
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await PrefsService.setHasSeenOnboarding(true);
-              ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
-              await ref.read(appStateProvider.notifier).setIsNewUser(false);
-              if (!context.mounted) return;
-              context.go('/location-info');
-            },
-            child: const Text(
-              'Atla',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppColors.primaryDarkGreen, // Temana göre renk
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-
-      body: Stack(
-        children: [
-          PageView.builder(
-            controller: _pageController,
-            itemCount: _pages.length,
-            onPageChanged: (index) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                }
-              });
-            },
-            itemBuilder: (context, index) {
-              final page = _pages[index];
-              final isLast = index == _pages.length - 1;
-
-              return OnboardingPage(
-                title: page['title'],
-                description: page['description'],
-                icon: page['icon'],
-                isLast: isLast,
-                onNext: _nextPage,
-              );
-            },
-          ),
-          /*
-          Positioned(
-            top: 70,
-            right: 24,
-            child: TextButton(
-              onPressed: () async {
-                await PrefsService.setHasSeenOnboarding(true);
-                ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
-                await ref.read(appStateProvider.notifier).setIsNewUser(false);
-
-                if (!context.mounted) return;
-
-                context.go('/location-info');
-              },
-              child: Text(
-                'Atla',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          */
-        ],
-      ),
-    );
-  }
-  */
+*/
 
   void _nextPage() async {
     if (_currentPage == _pages.length - 1) {
-      await PrefsService.setHasSeenOnboarding(true);
-      ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
-      await ref.read(appStateProvider.notifier).setIsNewUser(false);
-      if (!mounted) return;
-      context.go('/location-info');
+      // ✅ BURAYI EKLE: Yeni hazırladığın fonksiyonu çağır
+      await _requestPermissionAndNavigate();
     } else {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
@@ -182,29 +110,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       backgroundColor: AppColors.background,
 
       // ✅ İSTEDİĞİN APPBAR YAPISI
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        title: const Text(
-          "Hoş Geldiniz", // Veya boş bırakabilirsin
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        centerTitle: true,
+      appBar: CustomAppBar(
+        title: 'Hoş Geldiniz',
+        showBackButton: false,
         actions: [
           TextButton(
             onPressed: () async {
-              await PrefsService.setHasSeenOnboarding(true);
-              ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
-              await ref.read(appStateProvider.notifier).setIsNewUser(false);
-              if (!context.mounted) return;
-              context.go('/location-info');
+              await _requestPermissionAndNavigate();
             },
             child: const Text(
               'Atla',
               style: TextStyle(
                 fontSize: 16,
-                color: AppColors.primaryDarkGreen, // Temana göre renk
+                color: AppColors.primaryDarkGreen,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -212,31 +130,59 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: _pages.length,
-        onPageChanged: (index) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _currentPage = index;
-              });
-            }
-          });
-        },
-        itemBuilder: (context, index) {
-          final page = _pages[index];
-          final isLast = index == _pages.length - 1;
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 1. Sayfalar
+          PageView.builder(
+            controller: _pageController,
+            itemCount: _pages.length,
+            onPageChanged: (index) {
+              if (mounted) {
+                setState(() {
+                  _currentPage = index;
+                });
+              }
+            },
+            itemBuilder: (context, index) {
+              final page = _pages[index];
+              final isLast = index == _pages.length - 1;
 
-          return OnboardingPage(
-            title: page['title'],
-            description: page['description'],
-            icon: page['icon'],
-            isLast: isLast,
-            onNext: _nextPage,
-          );
-        },
+              return OnboardingPage(
+                title: page['title'],
+                description: page['description'],
+                icon: page['icon'],
+                isLast: isLast,
+                onNext: _nextPage,
+              );
+            },
+          ),
+
+          // 2. Noktalar (Dots)
+          Positioned(
+            bottom: MediaQuery.of(context).size.height * 0.18, // Kartın alt kısmına hizalar
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                _pages.length,
+                    (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  height: 8,
+                  width: _currentPage == index ? 24 : 8, // Aktif nokta daha uzun görünür
+                  decoration: BoxDecoration(
+                    color: _currentPage == index
+                        ? AppColors.primaryDarkGreen
+                        : Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
+
     );
   }
 }

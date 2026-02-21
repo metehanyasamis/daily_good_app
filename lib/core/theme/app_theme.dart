@@ -23,7 +23,6 @@ class AppColors {
   static const Color lightGradientBottom = Color(0xFFEAF9EE);
 }
 
-
 class AppGradients {
   // Koyu Tema Gradient
   static const LinearGradient dark = LinearGradient(
@@ -46,78 +45,17 @@ class AppGradients {
   );
 }
 
-/*
 class AppTheme {
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     scaffoldBackgroundColor: AppColors.background,
-    colorScheme: const ColorScheme.light(
-      primary: AppColors.primaryDarkGreen,
-      secondary: AppColors.primaryLightGreen,
-      surface: AppColors.background,
-      error: AppColors.error,
-    ),
 
-    textTheme: GoogleFonts.nunitoTextTheme().copyWith(
+    // ✅ Platform farklarını azaltır
+    visualDensity: VisualDensity.standard,
+    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
 
-      headlineLarge: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-      headlineMedium: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-      titleLarge: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      titleSmall: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      bodyLarge: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
-      bodyMedium: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
-      bodySmall: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
-      labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      labelSmall: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      labelMedium: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.textProductCardBrandName),
-
-    ),
-
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primaryDarkGreen,
-        foregroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-      ),
-    ),
-
-    checkboxTheme: CheckboxThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-      fillColor: WidgetStateProperty.all(AppColors.primaryDarkGreen),
-    ),
-
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: AppColors.surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.gray),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.gray),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primaryDarkGreen),
-      ),
-    ),
-  );
-}
-
- */
-
-
-
-// AppColors zaten sende olduğu için buraya eklemiyorum, aynılarını kullanıyoruz.
-
-class AppTheme {
-  static final ThemeData lightTheme = ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: AppColors.background,
+    // ✅ Global fontFamily (ekstra garanti)
+    fontFamily: GoogleFonts.nunito().fontFamily,
 
     // --- 🚀 GLOBAL STATUS BAR VE APPBAR AYARI ---
     appBarTheme: const AppBarTheme(
@@ -130,11 +68,10 @@ class AppTheme {
         fontSize: 18,
         fontWeight: FontWeight.bold,
       ),
-      // Tüm uygulamadaki Status Bar (saat, batarya) ayarını burada yapıyoruz:
       systemOverlayStyle: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent, // Üst bar şeffaf
-        statusBarIconBrightness: Brightness.dark, // Android için siyah ikonlar
-        statusBarBrightness: Brightness.light,    // iOS için siyah ikonlar
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark, // Android
+        statusBarBrightness: Brightness.light, // iOS
       ),
     ),
     // ------------------------------------------
@@ -146,19 +83,8 @@ class AppTheme {
       error: AppColors.error,
     ),
 
-
-    textTheme: GoogleFonts.nunitoTextTheme().copyWith(
-      headlineLarge: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-      headlineMedium: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-      titleLarge: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      titleSmall: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      bodyLarge: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
-      bodyMedium: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
-      bodySmall: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
-      labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      labelSmall: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      labelMedium: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.textProductCardBrandName),
-    ),
+    // ✅ Burada “const TextStyle” ile Nunito ezme hatasını düzelttik
+    textTheme: _nunitoTextTheme(),
 
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -194,12 +120,69 @@ class AppTheme {
     ),
   );
 
+  /// ✅ Nunito textTheme’i BOZMADAN düzenleyen fonksiyon
+  static TextTheme _nunitoTextTheme() {
+    final base = GoogleFonts.nunitoTextTheme();
+
+    return base.copyWith(
+      headlineLarge: base.headlineLarge?.copyWith(
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        color: AppColors.textPrimary,
+      ),
+      headlineMedium: base.headlineMedium?.copyWith(
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
+      ),
+      titleLarge: base.titleLarge?.copyWith(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+      ),
+      titleSmall: base.titleSmall?.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+      ),
+      bodyLarge: base.bodyLarge?.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        color: AppColors.textPrimary,
+      ),
+      bodyMedium: base.bodyMedium?.copyWith(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: AppColors.textPrimary,
+      ),
+      bodySmall: base.bodySmall?.copyWith(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: AppColors.textPrimary,
+      ),
+      labelLarge: base.labelLarge?.copyWith(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+      ),
+      labelSmall: base.labelSmall?.copyWith(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+      ),
+      labelMedium: base.labelMedium?.copyWith(
+        fontSize: 20,
+        fontWeight: FontWeight.w900,
+        color: AppColors.textProductCardBrandName,
+      ),
+    );
+  }
+
   static AppBarTheme get greenAppBarTheme => const AppBarTheme(
     backgroundColor: AppColors.primaryDarkGreen,
     foregroundColor: Colors.white,
     centerTitle: true,
     elevation: 0,
-    // 🚀 OTOMATİK GERİ BUTONU DAHİL TÜM İKONLARI BEYAZ YAPAR:
     iconTheme: IconThemeData(color: Colors.white),
     actionsIconTheme: IconThemeData(color: Colors.white),
     systemOverlayStyle: SystemUiOverlayStyle(
@@ -213,5 +196,4 @@ class AppTheme {
       fontSize: 18,
     ),
   );
-
 }

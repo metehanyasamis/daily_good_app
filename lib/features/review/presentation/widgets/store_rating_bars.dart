@@ -52,7 +52,7 @@ class StoreRatingBars extends StatelessWidget {
                       "İşletme Değerlendirme",
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(width: 4),
+                    //const SizedBox(width: 4),
 
                     //işletme değerlendirme şuanda yok!
                     /*
@@ -75,16 +75,40 @@ class StoreRatingBars extends StatelessWidget {
                 // Buradaki InkWell'i sildik çünkü dışarıya aldık
                 Row(
                   children: [
-                    const Icon(Icons.star, color: AppColors.primaryDarkGreen, size: 18),
-                    const SizedBox(width: 2),
-                    Text(
-                      " ${overallRating.toStringAsFixed(1)} ($totalReviews+)",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    const Icon(
+                      Icons.star,
+                      color: AppColors.primaryDarkGreen,
+                      size: 16,
                     ),
-                    if (onTap != null)
-                      const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+
+                    const SizedBox(width: 4),
+
+                    // ⭐ Rating (14 kalıyor)
+                    Text(
+                      overallRating.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+
+                    const SizedBox(width: 2),
+
+                    // 🧾 Reviews (12 oluyor)
+                    Text(
+                      "($totalReviews+)",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+
+                    if (onTap != null) ...[
+                      const Icon(Icons.chevron_right, color: Colors.grey, size: 18),
+                    ],
                   ],
-                ),
+                )
               ],
             ),
             const SizedBox(height: 16),
