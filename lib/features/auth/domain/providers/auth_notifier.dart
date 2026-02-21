@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../../core/data/prefs_service.dart';
 import '../../../../core/providers/app_state_provider.dart';
@@ -21,14 +22,141 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final Ref ref;
   final AuthRepository repo;
 
+  // Google Sign In nesnesi (Web Client ID Selim'den gelecek olan ID)
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  late final Future<void> _googleInit = _googleSignIn.initialize(
+    // Android tarafında özellikle gerekiyorsa (Selim’den gelecek)
+    serverClientId: '172164156241-eou1ge6fjopjgjao8cbieg26pkju4g3q.apps.googleusercontent.com',
+
+    // Web için gerekiyorsa:
+    // clientId: '...',
+  );
+
   AuthNotifier({
     required this.ref,
     required this.repo,
   }) : super(const AuthState.initial());
 
 
+  // ---------------------------------------------------------------------------
+  // GOOGLE LOGIN AKIŞI (Debug Log Destekli)
+  // ---------------------------------------------------------------------------
+  Future<bool> loginWithGoogle() async {
+    debugPrint("🔵 [GOOGLE-SIGN-IN] Süreç başlatıldı...");
+
+    state = state.copyWith(
+      status: AuthStatus.loading,
+      clearErrorMessage: true,
+      clearSocialUserData: true,
+    );
+
+    try {
+      debugPrint("🔍 [GOOGLE-SIGN-IN] Google seçim paneli açılıyor...");
+      await _googleInit;
+
+      final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
+
+      if (googleUser == null) {
+        debugPrint("⚠️ [GOOGLE-SIGN-IN] Kullanıcı seçim yapmadan geri çıktı.");
+        state = state.copyWith(
+          status: AuthStatus.initial,
+          clearErrorMessage: true,
+          clearSocialUserData: true,
+        );
+        return false;
+      }
+
+      debugPrint("✅ [GOOGLE-SIGN-IN] Kullanıcı seçildi: ${googleUser.email}");
+
+      debugPrint("🔑 [GOOGLE-SIGN-IN] idToken talep ediliyor...");
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken == null) {
+        debugPrint("❌ [GOOGLE-SIGN-IN] HATA: idToken null döndü!");
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: "Google ID Token alınamadı.",
+        );
+        return false;
+      }
+
+      debugPrint("🚀 [GOOGLE-SIGN-IN] idToken alındı (İlk 20 hane): ${idToken.substring(0, 20)}...");
+
+      debugPrint("📡 [BACKEND-VERIFY] Token backend'e gönderiliyor...");
+      final userData = await repo.verifySocialToken(
+        provider: 'google',
+        idToken: idToken,
+      );
+
+      if (userData != null) {
+        debugPrint("🎉 [BACKEND-VERIFY] BAŞARILI!");
+
+        state = state.copyWith(
+          status: AuthStatus.initial,
+          socialUserData: userData,
+          clearErrorMessage: true,
+        );
+        return true;
+      }
+
+    } on DioException catch (e) {
+      final String msg = e.response?.data?['message'] ?? "Google doğrulama backend hatası.";
+      debugPrint("🚫 [DIO-ERROR] Status: ${e.response?.statusCode} | Message: $msg");
+      state = state.copyWith(status: AuthStatus.error, errorMessage: msg);
+      return false;
+    } catch (e) {
+      debugPrint("💥 [FATAL-ERROR] Beklenmedik hata: $e");
+      state = state.copyWith(status: AuthStatus.error, errorMessage: "Sistem hatası: $e");
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // REGISTER (Selim'in 4. Adımı - Google ID ile Kayıt)
+  // ---------------------------------------------------------------------------
+  Future<UserModel?> register({
+    required String phone,
+    required String firstName,
+    required String lastName,
+    required String email,
+  }) async {
+    state = state.copyWith(status: AuthStatus.loading);
+
+    try {
+      // Eğer state içinde socialUserData varsa, google_id'yi oradan alıyoruz
+      final String? googleId = state.socialUserData?['social_id'];
+
+      final user = await repo.register(
+        phone: phone,
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        googleId: googleId, // Backend'e ek olarak gönderiyoruz
+      );
+
+      if (user != null) {
+        // Normal login süreciyle aynı devam eder
+        await ref.read(userNotifierProvider.notifier).saveUser(user);
+        await ref.read(appStateProvider.notifier).setLoggedIn(true);
+        await ref.read(appStateProvider.notifier).setIsNewUser(false);
+
+        state = state.copyWith(status: AuthStatus.authenticated, user: user);
+        return user;
+      }
+
+      state = state.copyWith(status: AuthStatus.error, errorMessage: "Kayıt tamamlanamadı.");
+      return null;
+    } on DioException catch (e) {
+      final String msg = e.response?.data?['message'] ?? "Kayıt hatası.";
+      state = state.copyWith(status: AuthStatus.error, errorMessage: msg);
+      return null;
+    }
+  }
+
+
   Future<void> sendOtp({required String phone, required String purpose}) async {
-    state = const AuthState.loading();
+    state = state.copyWith(status: AuthStatus.loading);
     debugPrint("📡 [OTP REQUEST] $phone ($purpose)");
 
     try {
@@ -56,6 +184,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  void clearSocial() {
+    state = state.copyWith(
+      clearSocialUserData: true,
+      clearErrorMessage: true,
+      status: AuthStatus.initial,
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // REGISTER/OTP DOĞRULAMA

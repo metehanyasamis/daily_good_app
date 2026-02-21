@@ -8,12 +8,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../../core/widgets/custom_toggle_button.dart';
 import '../../../../core/widgets/custom_empty_state.dart';
 import '../../../category/domain/category_notifier.dart';
-import '../../../home/presentation/screens/home_screen.dart';
 import '../../../location/domain/address_notifier.dart';
 
 import '../../../product/data/models/product_model.dart';

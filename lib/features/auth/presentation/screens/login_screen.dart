@@ -110,7 +110,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     Toasts.error(context, msg);
   }
 
+  Future<void> _onGoogleLogin() async {
+    debugPrint("🖱️ [UI] Google Butonuna tıklandı.");
+    final authState = ref.read(authNotifierProvider);
+    if (authState.isLoading) return;
 
+    final auth = ref.read(authNotifierProvider.notifier);
+
+    final bool isVerified = await auth.loginWithGoogle();
+
+    if (isVerified) {
+      debugPrint("📱 [UI] Google doğrulaması bitti, telefon girişine yönlendiriliyor.");
+      if (!mounted) return;
+
+      Toasts.show(context, "Google doğrulandı, lütfen telefonunuzu girin.");
+
+      setState(() {
+        isLoginTab = false;
+        _phoneController.clear();
+      });
+    } else {
+      final errorMsg = ref.read(authNotifierProvider).errorMessage;
+      debugPrint("🛑 [UI] Google login başarısız oldu: $errorMsg");
+      if (errorMsg != null) _error(errorMsg);
+    }
+  }
 
   Future<void> _onSubmit() async {
     if (_isOtpOpen) return;
@@ -175,7 +199,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(authNotifierProvider).isLoading;
+    final authState = ref.watch(authNotifierProvider);
+
+    final bool hasSocial = authState.socialUserData != null;
+    final isLoading = authState.isLoading;
+
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
@@ -215,8 +243,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Column(
                     children: [
-                      _buildTabs(),
-                      const SizedBox(height: 28),
+                      _buildTabs(hasSocial),
+                      const SizedBox(height: 12),
+
+                      if (hasSocial) ...[
+                        GestureDetector(
+                          onTap: () {
+                            ref.read(authNotifierProvider.notifier).clearSocial();
+                            setState(() => isLoginTab = true);
+                            _phoneController.clear();
+
+                            Toasts.show(context, "Google ile devam etme iptal edildi.");
+                          },
+                          child: const Text(
+                            "Google ile devam etmeyi iptal et",
+                            style: TextStyle(
+                              fontSize: 12,
+                              decoration: TextDecoration.underline,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
                       _buildPhoneField(),
 
                       // Sadece Kayıt Ol sekmesinde 3'lü checkbox görünür
@@ -273,7 +325,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       SocialButton(
                         assetIcon: 'assets/logos/google.png',
                         text: "Google ile devam et",
-                        onTap: () {},
+                        onTap: _onGoogleLogin,
                       ),
                       const SizedBox(height: 32),
                     ],
@@ -291,7 +343,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // UI BİLEŞENLERİ (HELPERS)
   // ---------------------------------------------------------------------------
 
-  Widget _buildTabs() {
+  Widget _buildTabs(bool hasSocial) {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -300,18 +352,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
       child: Row(
         children: [
-          _tab("Giriş Yap", true),
-          _tab("Kayıt Ol", false),
+          _tab("Giriş Yap", true, hasSocial: hasSocial),
+          _tab("Kayıt Ol", false, hasSocial: hasSocial),
         ],
       ),
     );
   }
 
-  Widget _tab(String text, bool value) {
+  Widget _tab(String text, bool value, {required bool hasSocial}) {
     final active = isLoginTab == value;
+
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => isLoginTab = value),
+        onTap: () {
+          if (hasSocial && value == true) {
+            HapticFeedback.selectionClick();
+            Toasts.show(context, "Google doğrulandı. Kayıt akışına devam edin.");
+            return;
+          }
+          setState(() => isLoginTab = value);
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           height: 50,
@@ -331,49 +391,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-
-  /*
-  Widget _buildPhoneField() {
-    debugPrint('📱 [PHONE_FIELD] build()');
-    return TextField(
-      controller: _phoneController,
-      keyboardType: TextInputType.phone,
-      inputFormatters: [
-        _phoneFormatter(),
-        LengthLimitingTextInputFormatter(17),
-      ],
-      decoration: InputDecoration(
-        prefixText: "+90 ",
-        hintText: "Telefon numaranızı girin",
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(40),
-          borderSide: BorderSide(
-            color: AppColors.primaryDarkGreen,
-            width: 1.5,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(40),
-          borderSide: BorderSide(
-            color: AppColors.primaryDarkGreen,
-            width: 1.5,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(40),
-          borderSide: BorderSide(
-            color: AppColors.primaryDarkGreen,
-            width: 2,
-          ),
-        ),
-        fillColor: AppColors.background,
-        filled: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      ),
-    );
-  }
-
-   */
 
 
   Widget _buildPhoneField() {
@@ -441,7 +458,6 @@ class LoginLegalCheckbox extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsAsync = ref.watch(legalSettingsProvider);
-
     // API verisi olsa da olmasa da bu listeyi göstereceğiz
     return Column(
       children: [

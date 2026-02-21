@@ -27,7 +27,7 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+				<string>com.googleusercontent.apps.172164156241-imqvm5m5kg1nr9ebrqqsot4dep1f5o0i</string>
 			</array>
 		</dict>
 	</array>

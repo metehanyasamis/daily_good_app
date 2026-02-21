@@ -189,6 +189,81 @@ class AuthRepository {
     }
   }
 
+// ---------------------------------------------------------------------------
+  // SOSYAL TOKEN DOĞRULAMA (Google/Apple Adım 1)
+  // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>> verifySocialToken({
+    required String provider,
+    required String idToken,
+  }) async {
+    final res = await _dio.post(
+      '/customer/auth/social/verify-token',
+      data: {
+        'provider': provider,
+        'id_token': idToken,
+      },
+    );
+
+    if (res.data['success'] != true) {
+      throw DioException(
+        requestOptions: res.requestOptions,
+        response: res,
+        type: DioExceptionType.badResponse,
+        error: 'Social token verification failed',
+      );
+    }
+
+    final data = res.data['data'];
+    if (data == null) {
+      throw DioException(
+        requestOptions: res.requestOptions,
+        response: res,
+        type: DioExceptionType.badResponse,
+      );
+    }
+
+    return Map<String, dynamic>.from(data);
+  }
+
+  // ---------------------------------------------------------------------------
+  // KAYIT OL (Adım 4 - İsmi Notifier ile eşitledik: register)
+  // ---------------------------------------------------------------------------
+  Future<UserModel?> register({
+    required String phone,
+    required String firstName,
+    required String lastName,
+    required String email,
+    String? googleId,
+    String? appleId,
+  }) async {
+    try {
+      final data = {
+        "phone": phone,
+        "first_name": firstName,
+        "last_name": lastName,
+        "email": email,
+        if (googleId != null) "google_id": googleId,
+        if (appleId != null) "apple_id": appleId,
+      };
+
+      final res = await _dio.post("/customer/auth/register", data: data);
+
+      if (res.data["success"] == true) {
+        final responseData = res.data["data"];
+        final String? newToken = responseData["token"];
+
+        if (newToken != null) {
+          await PrefsService.saveToken(newToken);
+          _dio.options.headers["Authorization"] = "Bearer $newToken";
+        }
+        return UserModel.fromJson(responseData["customer"]).copyWith(token: newToken);
+      }
+      return null;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> logout() async {
     try { await _dio.post("/customer/auth/logout"); } catch (_) {}
     await PrefsService.clearToken();
