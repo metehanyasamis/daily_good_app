@@ -1,14 +1,30 @@
-// lib/core/notifications/notification_permission.dart
-import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+import '../../../../core/data/prefs_service.dart';
 
 class NotificationPermission {
-  static Future<bool> request() async {
-    final status = await Permission.notification.request();
-    return status.isGranted;
-  }
+  static Future<void> request() async {
+    // 1. Daha önce sorduk mu?
+    final hasAsked = await PrefsService.getHasAskedNotification();
+    if (hasAsked) return; // Zaten sorulmuşsa fonksiyondan çık.
 
-  static Future<bool> isGranted() async {
-    final status = await Permission.notification.status;
-    return status.isGranted;
+    // 2. iOS ise Firebase üzerinden veya permission_handler üzerinden iste
+    // FirebaseMessaging kullanmak iOS'ta daha sağlıklıdır:
+    if (Platform.isIOS) {
+      NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      // Kullanıcı ister izin versin ister vermesin, "sorduk" kabul ediyoruz.
+      await PrefsService.setHasAskedNotification(true);
+    }
+    // Android 13+ için permission_handler kullanabilirsin:
+    else if (Platform.isAndroid) {
+      // Android'de izin isteme logic'i buraya gelebilir
+      await PrefsService.setHasAskedNotification(true);
+    }
   }
 }

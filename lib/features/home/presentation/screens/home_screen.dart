@@ -11,6 +11,7 @@ import '../../../../core/platform/platform_utils.dart';
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
+import '../../../../core/widgets/custom_empty_state.dart';
 import '../../../../core/widgets/floating_order_button.dart';
 
 import '../../../account/domain/providers/user_notifier.dart';
@@ -46,38 +47,42 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
 
+
   @override
   void initState() {
     super.initState();
 
-    Future.microtask(() {
-      // 🚀 1. İZİNLERİ ANINDA TETİKLE (Hiçbir şeyi bekleme!)
-      NotificationPermission.request();
-
+    // ✅ 2) İlk açılış işleri
+    Future.microtask(() async {
       debugPrint("🏠 [HOME] Veriler paralel yükleniyor...");
 
-      // 🚀 2. BEKLEMESİZ (NON-BLOCKING) BAŞLAT
-      // await koymuyoruz ki ekran çizilmeye devam etsin
       ref.read(userNotifierProvider.notifier).loadUser();
       _updateNotificationToken();
 
-      // 🚀 3. VERİLERİ PARALEL ÇEK
       Future.wait([
         ref.read(categoryProvider.notifier).load(),
         ref.read(bannerProvider.notifier).loadBanners().catchError((e) => null),
       ]);
 
-      // Konum seçiliyse ana sayfayı yükle
+
       final address = ref.read(addressProvider);
       if (address.isSelected) {
         ref.read(homeStateProvider.notifier).loadHome(
           latitude: address.lat,
           longitude: address.lng,
+          forceRefresh: true,
         );
       }
+
+    });
+
+    // ✅ 3) (C) İzin isteğini geciktir (Home ilk frame otursun)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        NotificationPermission.request();
+      });
     });
   }
-
 
   Future<void> _updateNotificationToken() async {
     try {
@@ -139,6 +144,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       }
     });
+
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -237,15 +243,55 @@ class HomeContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final addressState = ref.watch(addressProvider);
     final homeState = ref.watch(homeStateProvider);
 
-    // Yükleme ve veri kontrolü
+    // 1. ADIM: Adresin "restore" edilip edilmediğini anlamamız lazım.
+    // Eğer başlık boşsa veya henüz prefs'ten okuma bitmediyse hiçbir şey gösterme/bekle.
+    if (!addressState.isSelected && addressState.title.isEmpty) {
+      return Center(child: PlatformWidgets.loader());
+    }
+
     final isLoading = homeState.loadingSections.values.any((v) => v);
     final hasAnyData = homeState.sectionProducts.values.any((l) => l.isNotEmpty);
 
+    // 2. ADIM: Kesin olarak konum seçilmemişse (ve okuma bittiyse)
+    if (!addressState.isSelected) {
+      return ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 60),
+            child: CustomEmptyState(
+              type: EmptyStateType.noLocation,
+              onActionTap: () => context.push('/location-picker'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 3. ADIM: Konum var ama veri henüz yükleniyor ve hiç eski veri yoksa
+    // Bu sayede "Paket Bulunamadı" demeden önce yüklenmesini bekleriz.
     if (isLoading && !hasAnyData) {
-      return Center(
-        child: PlatformWidgets.loader(),
+      return Center(child: PlatformWidgets.loader());
+    }
+
+    // 4. ADIM: Yükleme bitti, konum var ama CİDDEN veri yok
+    if (!hasAnyData && !isLoading) {
+      return ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          const HomeEmailWarningBanner(),
+          Padding(
+            padding: const EdgeInsets.only(top: 40),
+            child: CustomEmptyState(
+              type: EmptyStateType.noProduct,
+              addressTitle: addressState.title,
+              onActionTap: () => context.push('/location-picker'),
+            ),
+          ),
+        ],
       );
     }
 
@@ -308,17 +354,16 @@ class HomeContent extends ConsumerWidget {
     // PlatformUtils kullanarak cihazı kontrol ediyoruz
     if (PlatformUtils.isIOS) {
       return CustomScrollView(
+        controller: PrimaryScrollController.of(context),
+        primary: true,
+        cacheExtent: 1500,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          // iOS Stili Yenileme (Native Çark)
           CupertinoSliverRefreshControl(onRefresh: onRefresh),
-
           SliverPadding(
             padding: const EdgeInsets.only(bottom: kBottomNavigationBarHeight + 24),
             sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                buildBody(),
-              ]),
+              delegate: SliverChildListDelegate([buildBody()]),
             ),
           ),
         ],
@@ -328,11 +373,11 @@ class HomeContent extends ConsumerWidget {
       return RefreshIndicator(
         onRefresh: onRefresh,
         child: ListView(
+          controller: PrimaryScrollController.of(context),
+          cacheExtent: 1500,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(bottom: kBottomNavigationBarHeight + 24),
-          children: [
-            buildBody(),
-          ],
+          children: [buildBody()],
         ),
       );
     }
@@ -367,3 +412,6 @@ class HomeContent extends ConsumerWidget {
   }
 
 }
+
+
+

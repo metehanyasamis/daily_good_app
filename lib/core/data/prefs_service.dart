@@ -8,6 +8,8 @@ class PrefsService {
   static const _kUserData = 'user_data';
   static const _kHasSeenProfileDetails = 'has_seen_profile_details';
   static const _kHasSeenOnboarding = 'has_seen_onboarding';
+  static const _kHasAskedNotification = 'has_asked_notification_permission';
+  static const _kHasAskedLocation = 'has_asked_location_permission';
 
   // 🔥 Bellekte token saklama — race condition önler
   static String? inMemoryToken;
@@ -164,4 +166,27 @@ class PrefsService {
       isSelected: selected,
     );
   }
+
+  // --- BİLDİRİM İZNİ BAYRAĞI ---
+  static Future<void> setHasAskedNotification(bool v) async {
+    final p = await _prefs;
+    await p.setBool(_kHasAskedNotification, v);
+  }
+
+  static Future<bool> getHasAskedNotification() async {
+    final p = await _prefs;
+    return p.getBool(_kHasAskedNotification) ?? false;
+  }
+
+  // --- KONUM İZNİ BAYRAĞI ---
+  static Future<void> setHasAskedLocation(bool v) async {
+    final p = await _prefs;
+    await p.setBool(_kHasAskedLocation, v);
+  }
+
+  static Future<bool> getHasAskedLocation() async {
+    final p = await _prefs;
+    return p.getBool(_kHasAskedLocation) ?? false;
+  }
+
 }

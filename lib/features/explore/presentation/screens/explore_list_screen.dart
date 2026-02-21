@@ -8,9 +8,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/platform/platform_widgets.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/custom_home_app_bar.dart';
 import '../../../../core/widgets/custom_toggle_button.dart';
+import '../../../../core/widgets/custom_empty_state.dart';
 import '../../../category/domain/category_notifier.dart';
+import '../../../home/presentation/screens/home_screen.dart';
 import '../../../location/domain/address_notifier.dart';
 
 import '../../../product/data/models/product_model.dart';
@@ -382,6 +385,23 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
     final address = ref.watch(addressProvider);
     final categoriesRaw = ref.watch(categoryProvider);
 
+    // 🛡️ 1. KONUM SEÇİLİ DEĞİLYSE (Tüm ekranı kapsar)
+    if (!address.isSelected) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: CustomHomeAppBar(
+          address: "Konum Seçilmedi",
+          onLocationTap: () => context.push('/location-picker'),
+          onNotificationsTap: () => context.push('/notifications'),
+        ),
+        body: Center(
+          child: CustomEmptyState(
+            type: EmptyStateType.noLocation,
+            onActionTap: () => context.push('/location-picker'),
+          ),
+        ),
+      );
+    }
 
     ref.listen<ProductsState>(productsProvider, (prev, next) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -390,12 +410,10 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
       });
     });
 
-
     final currentCategoryLabel =
     selectedCategoryId == null
         ? 'Tümü'
         : _categoryNameFromId(selectedCategoryId, categoriesRaw);
-
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -403,7 +421,6 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
         address: address.title,
         onLocationTap: () => context.push('/location-picker'),
         onNotificationsTap: () => context.push('/notifications'),
-        // 🔥 GÜNCELLEDİK: canPop varsa butonu göster
         leadingOverride: (context.canPop() || _fromHomeFlag)
             ? IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
@@ -415,27 +432,30 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
         children: [
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 400),
-            child: (_isInitialLoading) // 🔥 Sadece çekim bitene kadar loader göster
+            child: _isInitialLoading
                 ? Center(
+              key: const ValueKey('loader'),
               child: PlatformWidgets.loader(),
             )
                 : CustomScrollView(
               key: const ValueKey('content_scroll'),
               slivers: [
                 _buildHeader(categoriesRaw, address, currentCategoryLabel),
-                if (_isInitialLoading)
+
+                // 🎯 2. ÜRÜN BULUNAMADI DURUMU (Filtrelerin Altında)
+                if (filteredProducts.isEmpty)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Center(
-                        child: PlatformWidgets.loader(),
+                      padding: const EdgeInsets.only(top: 60),
+                      child: CustomEmptyState(
+                        type: EmptyStateType.noProduct, // 👈 HomeEmptyState yerine CustomEmptyState
+                        addressTitle: address.title,
+                        onActionTap: () => context.push('/location-picker'),
                       ),
                     ),
-                  ),
+                  )
 
-                if (!_isInitialLoading && filteredProducts.isEmpty)
-                  const SliverFillRemaining(child: Center(child: Text("Ürün bulunamadı.")))
-
+                // 🎯 3. ÜRÜN LİSTESİ
                 else
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -450,10 +470,13 @@ class _ExploreListScreenState extends ConsumerState<ExploreListScreen> {
                       ),
                     ),
                   ),
+
                 const SliverToBoxAdapter(child: SizedBox(height: 120)),
               ],
             ),
           ),
+
+          // Harita Butonu
           CustomToggleButton(
             label: "Harita",
             icon: Icons.map_outlined,

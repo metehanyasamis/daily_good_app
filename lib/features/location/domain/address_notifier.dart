@@ -18,7 +18,7 @@ class AddressNotifier extends StateNotifier<AddressState> {
 
   AddressNotifier(this.ref, this._repo)
       : super(const AddressState()) {
-    _restoreFromPrefs(); // 🔥 APP AÇILINCA
+    _restoreFromPrefs();
   }
 
   Future<void> _restoreFromPrefs() async {
@@ -149,13 +149,14 @@ class AddressNotifier extends StateNotifier<AddressState> {
     required double lng,
     required String address,
   }) {
+
+
     state = state.copyWith(
       lat: lat,
       lng: lng,
       title: address,
       isSelected: true,
     );
-
     debugPrint("♻️ [ADDRESS] hydrated from AppState → $address");
   }
 
@@ -235,5 +236,19 @@ class AddressNotifier extends StateNotifier<AddressState> {
       neLng: neLng,
     );
   }
+
+
+  // address_notifier.dart içine ekle
+  Future<void> clearAddress() async {
+    // 1. Yerel hafızayı temizle
+    await PrefsService.saveAddress(title: '', lat: 0, lng: 0);
+
+    // 2. State'i fabrika ayarlarına döndür
+    state = const AddressState(); // isSelected false olacaktır
+
+    debugPrint("🧹 [ADDRESS] State ve Prefs temizlendi.");
+  }
+
+
 
 }

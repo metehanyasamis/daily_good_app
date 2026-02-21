@@ -93,14 +93,16 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                     icon: Icons.notifications_none_rounded,
                     count: notificationCount,
                     onTap: onNotificationsTap,
-                    rightPadding: 0,
+                    rightPadding: 12,
                   ),
+
+                  const SizedBox(width: 8),
 
                   _buildIconWithBadge(
                     icon: Icons.shopping_cart_outlined,
                     count: cartCount,
                     onTap: () => context.push('/cart'),
-                    rightPadding: 0,
+                    rightPadding: 8,
                   ),
                 ],
               ),

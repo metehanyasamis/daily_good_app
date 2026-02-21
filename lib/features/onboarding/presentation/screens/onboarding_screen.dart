@@ -9,6 +9,7 @@ import '../../../../core/providers/app_state_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/custom_button.dart';
+import '../../../notification/presentation/logic/notification_permission.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -54,24 +55,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     },
   ];
 
-  // 🚀 İzin isteme mantığını merkezi bir fonksiyona alalım
+// 🚀 İzin isteme mantığını merkezi bir fonksiyona alalım
   Future<void> _requestPermissionAndNavigate() async {
-    if (Platform.isIOS) {
-      // İzin penceresini tetikle
-      await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-    }
-
-    // Prefs ve State güncellemeleri
+    // 1. Önce State ve Prefs güncellemelerini yap
     await PrefsService.setHasSeenOnboarding(true);
-    ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
+    await ref.read(appStateProvider.notifier).setHasSeenOnboarding(true);
     await ref.read(appStateProvider.notifier).setIsNewUser(false);
 
-    if (!mounted) return;
-    context.go('/location-info');
+
+    // 3. 🎯 KRİTİK NOKTA: İzni navigasyondan SONRA ve GECİKMELİ iste
+    // 1.5 saniye bekle ki arkada Home ekranı yüklensin, veri isteği sunucuya gitsin.
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      NotificationPermission.request();
+    });
   }
 
   /*
